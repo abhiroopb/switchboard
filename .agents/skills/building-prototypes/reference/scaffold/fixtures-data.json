@@ -1,0 +1,14 @@
+{
+  "_note": "Sample data for the {{slug}} prototype. Invented values. Replace with shapes that match the real system; never paste real customer data.",
+  "generated": "{{date}}",
+  "summary": [
+    {"label": "Metric A", "value": 128, "unit": "count", "delta": 0.12},
+    {"label": "Metric B", "value": 4.6, "unit": "avg", "delta": -0.03},
+    {"label": "Metric C", "value": 92, "unit": "%", "delta": 0.01}
+  ],
+  "rows": [
+    {"id": "r1", "name": "Item one", "status": "ok", "value": 42},
+    {"id": "r2", "name": "Item two", "status": "attention", "value": 17},
+    {"id": "r3", "name": "Item three", "status": "ok", "value": 63}
+  ]
+}

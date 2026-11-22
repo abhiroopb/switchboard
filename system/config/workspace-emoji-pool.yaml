@@ -1,0 +1,103 @@
+# Emoji pool for workstream auto-assignment.
+#
+# Two layers:
+# 1. semantic_map — keyword → ranked emoji candidates. The picker scores a
+#    workstream against this map (using the kebab-name + optional body text)
+#    and returns the highest-ranked unused emoji.
+# 2. fallback_pool — generic emojis used when no semantic match scores high
+#    enough. Order matters: earlier entries are picked first.
+#
+# Used by: system/scripts/pick-workstream-emoji.py and process-new-inbox.py.
+
+semantic_map:
+  # Billing / money
+  - keywords: [payment, payments, billing, pricing, monetization, revenue, subscription, refund, budget]
+    emojis: ["💸", "💳", "💰", "🪙"]
+  # Legal / compliance / privacy
+  - keywords: [legal, compliance, privacy, gdpr, regulatory, terms, contract]
+    emojis: ["⚖️", "📜", "🛡️"]
+  # Audit / review / status
+  - keywords: [audit, review, tracker, status, portfolio, scorecard]
+    emojis: ["📐", "📋", "🗂️"]
+  # Messaging / notifications
+  - keywords: [sms, messaging, notification, notifications, push]
+    emojis: ["🛰️", "📡", "💬", "📲"]
+  # Mobile / apps
+  - keywords: [ios, iphone, android, mobile, app-store]
+    emojis: ["📱", "📲"]
+  # Web / websites
+  - keywords: [website, websites, online, web, landing-page]
+    emojis: ["🌐", "🌍", "💻", "🖥️"]
+  # Launch / onboarding / kickoff
+  - keywords: [onboarding, onboard, launch, activation, kickoff, ramp, go-live, golive]
+    emojis: ["🚀", "🛫", "🌱", "🪴"]
+  # Strategy / planning / vision
+  - keywords: [strategy, strategic, planning, plan, vision, north-star, roadmap, framework, okr, okrs]
+    emojis: ["🧠", "♟️", "🗺️", "🧭"]
+  # Design / UX / UI
+  - keywords: [design, ux, ui, ia, wireframe, mockup, figma, prototype]
+    emojis: ["🎨", "✏️", "🖌️", "🖼️"]
+  # AI / automation / ML
+  - keywords: [ai, ml, model, automation, automate, llm, gpt, agent, autonomous]
+    emojis: ["🤖", "✨", "🧠", "⚡"]
+  # Analytics / data / metrics
+  - keywords: [analytics, metrics, kpi, dashboard, report, reporting, sql, warehouse, data]
+    emojis: ["📊", "📈", "📉"]
+  # Calendar / meeting / schedule
+  - keywords: [meeting, meetings, calendar, schedule, weekly, daily, sync, standup]
+    emojis: ["📅", "📆", "🗓️"]
+  # Comms / triage / inbox / mail
+  - keywords: [inbox, triage, comms, communications, email, mail, slack-summary, gmail]
+    emojis: ["📬", "📨", "✉️", "📮"]
+  # Discovery / research / UXR
+  - keywords: [research, uxr, discovery, exploration, interview, study, survey]
+    emojis: ["🔍", "🔬", "🧪"]
+  # Writing / docs / content
+  - keywords: [writing, doc, docs, spec, prd, content, blog, newsletter]
+    emojis: ["📝", "📄", "🖋️"]
+  # People / team / hiring
+  - keywords: [people, team, hiring, org, offsite, onboarding-buddy]
+    emojis: ["🧑‍🤝‍🧑", "👥"]
+  # Settings / config / admin
+  - keywords: [setting, settings, config, configuration, admin, preferences]
+    emojis: ["⚙️", "🛠️", "🧰"]
+  # Skills / dev tooling
+  - keywords: [skill, skills, tooling, tool, devtool, sdk, cli]
+    emojis: ["🔧", "🧩"]
+  # Links / routing / urls
+  - keywords: [deep-link, deep-links, link, links, url, redirect, routing]
+    emojis: ["🔗", "🪝"]
+  # Security / access
+  - keywords: [security, access, permissions, auth, sso, password]
+    emojis: ["🔐", "🛡️"]
+  # Risk / incidents / escalation
+  - keywords: [risk, incident, outage, threat, blocker, escalation, churn]
+    emojis: ["⚠️", "🚨", "🟥"]
+  # Events / Q&A / community
+  - keywords: [event, events, webinar, panel, ama, forum, community, meetup]
+    emojis: ["🎤", "🗣️", "💬"]
+  # Search / SEO
+  - keywords: [seo, search, discoverability, indexing]
+    emojis: ["🔎", "🌐"]
+  # Experiments / tests
+  - keywords: [experiment, experiments, ab-test, test, tests, pilot]
+    emojis: ["🧪", "🎯"]
+
+# Used when nothing in semantic_map matches (or all matched candidates are
+# already taken). Order matters.
+fallback_pool:
+  - "🪄"
+  - "🛰️"
+  - "🧱"
+  - "🪜"
+  - "🧰"
+  - "🪞"
+  - "🎒"
+  - "🧊"
+  - "🪟"
+  - "🪴"
+  - "🪧"
+  - "🔮"
+  - "🧊"
+  - "📦"
+  - "📁"

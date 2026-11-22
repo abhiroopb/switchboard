@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# cmux-compatible entry point that drives wmux through cmux-shim.py.
+# Point CMUX_BIN / CMUX / CMUX_AMP_CMUX_BIN at this file on Windows (WSL2).
+set -euo pipefail
+# Parameter expansion, not $(dirname): a fork is a leaked process on Windows.
+here="${BASH_SOURCE[0]//\\//}"
+if [[ "$here" == */* ]]; then here="${here%/*}"; else here="."; fi
+exec "${PM_OS_PYTHON:-python3}" "$here/cmux-shim.py" "$@"

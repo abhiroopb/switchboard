@@ -1,0 +1,5 @@
+name: "Comms Triage"
+# Core surface: always ultra.
+agent_mode: ultra
+priority: medium
+startup_instruction: "Read routines/comms-triage/CONTEXT.md and run its Standing feedback captures before reply filters. Then start from outputs/comms-triage/live.md and pending results, silently file stale, already-replied, FYI, and other no-response items, then process only the newest fresh unresolved response-required items one at a time. Emit a routine workspace update before pausing."

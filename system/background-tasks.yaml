@@ -1,0 +1,176 @@
+# Background Tasks
+# These run via launchd (com.pm-os.background-tasks) every 30 min.
+# The executor (system/scripts/run-background-tasks.sh) runs direct commands
+# or headless Amp synthesis according to the top-level execution map.
+#
+# Fields:
+#   name: unique identifier
+#   enabled: true/false
+#   interval_minutes: how often to run (approximate, checked every 30 min)
+#   timeout_seconds: hard cap for one run of this task
+#   weekdays_only: if true, skip Sat/Sun
+#   start_hour/end_hour: local-hour execution window, end is exclusive
+#   prompt: what Amp should do for model-backed synthesis tasks; ignored when
+#           execution.<name>.type is command
+#   description: one-line human summary
+#
+# Keep background prompts safe for headless execution. Avoid tools that can
+# trigger interactive auth or browser flows. Commands run from PM_OS_ROOT.
+#
+# This is the kit's starter set. Add your own collectors (Slack, Gmail, Drive,
+# Linear, Jira, GitHub) as `type: command` tasks once you have written them;
+# see routines/comms-triage/CONTEXT.md for the contract they feed.
+
+tasks:
+  - name: todo-refresh
+    enabled: true
+    interval_minutes: 30
+    timeout_seconds: 120
+    start_hour: 7
+    end_hour: 22
+    description: "Refresh todo state every 30 minutes; notify once in the morning for three P1s, Monday for five P2 candidates, and near EOD for P1s due within 48 hours"
+
+  - name: context-snapshot
+    enabled: true
+    interval_minutes: 60
+    timeout_seconds: 600
+    description: "Hourly context snapshot (.state/context-snapshots), workstreams README, megadesk rebuild"
+
+  - name: build-workspace-signals-all
+    enabled: true
+    # The primary trigger is the `workstream-signals` plugin firing on
+    # per-workstream session.start. This backstop keeps signals fresh for
+    # workstreams that are not opened today.
+    interval_minutes: 360
+    timeout_seconds: 600
+    start_hour: 7
+    end_hour: 22
+    description: "Workspace-signals backstop (every 6h). Refreshes .signals/recent.md for every workstream so launch reads stay fresh even between workspace opens"
+
+  - name: maintain-local-retention
+    enabled: true
+    interval_minutes: 10080
+    timeout_seconds: 300
+    weekdays_only: false
+    start_hour: 4
+    end_hour: 6
+    description: "Weekly: enforce local retention and report incomplete workstream metadata without blocking maintenance."
+
+  - name: prune-comms-bodies
+    enabled: true
+    interval_minutes: 1440
+    timeout_seconds: 60
+    weekdays_only: false
+    start_hour: 4
+    end_hour: 6
+    description: "Nightly cleanup of .state/comms-bodies/ side files older than 14 days. See system/scripts/prune-comms-bodies.sh."
+
+  - name: check-claude-mem
+    # Daily health probe for the claude-mem worker (Claude Code memory) that the
+    # OS runs as a service: launchd on macOS, a systemd user service on Linux,
+    # a Task Scheduler task on Windows. Checks the service, the worker /health
+    # endpoint, the telemetry lock, and that hook autostart stays off. Exits 0
+    # with one note when Claude Code is not installed.
+    enabled: true
+    interval_minutes: 1440
+    timeout_seconds: 120
+    weekdays_only: true
+    start_hour: 8
+    end_hour: 10
+    description: "Daily probe of the OS-owned claude-mem worker (health, telemetry off, autostart off). Notifies on failure."
+
+  - name: build-daily-knowledge
+    # Canonical daily knowledge layer (system/state/knowledge/snapshot.json) that
+    # query-knowledge.py and the recall pack read: todos, workstream status,
+    # dated PM OS outputs, and this week's calendar through pmos. See
+    # system/config/temporal-contract.md.
+    enabled: true
+    interval_minutes: 30
+    timeout_seconds: 180
+    description: "Rebuild the daily knowledge layer every 30 minutes"
+
+  - name: import-memory-corpus
+    # Recall FTS index (system/recall/recall-index.sqlite3) over knowledge,
+    # workstreams, outputs, people, amp-mem and Claude Code memory files.
+    enabled: true
+    interval_minutes: 1440
+    timeout_seconds: 300
+    description: "Rebuild the recall index once a day"
+
+  - name: build-knowledge-graph
+    # Structural knowledge graph (graphify, GRAPHIFY_BACKEND=none, no LLM,
+    # nothing leaves the machine) at graphify-out/graph.json on the main
+    # checkout. Workers run `graphify query` against it before rg; see
+    # system/prompts/dispatch-core.md. About a minute per build. Skips with one
+    # note when graphify is not installed (install-all.sh installs it).
+    enabled: true
+    interval_minutes: 360
+    timeout_seconds: 900
+    description: "Rebuild the structural knowledge graph (graphify-out/graph.json) every 6 hours; skipped when graphify is not installed"
+
+  - name: local-backup-health
+    # The backup itself runs from its own nightly task (com.pm-os.local-backup).
+    # This check sends CoS one urgent line when the last run failed or the newest
+    # copy is over 48 hours old, repeated at most daily. One python process, no fork.
+    enabled: true
+    interval_minutes: 360
+    timeout_seconds: 240
+    description: "Every 6 hours: alert CoS when the nightly backup failed or is over 48 hours old"
+
+  - name: weekly-reflection
+    # Example of a model-backed synthesis task. Disabled until you want it.
+    enabled: false
+    interval_minutes: 10080
+    timeout_seconds: 900
+    weekdays_only: true
+    start_hour: 16
+    end_hour: 19
+    description: "Weekly: summarize the week's daily notes into notes/weekly/YYYY-Www.md (headless Amp)"
+    prompt: |
+      You are running headless. Take action silently. Never ask questions.
+      Read this week's files under notes/daily/ and write a one-page summary to
+      notes/weekly/<ISO week>.md with sections: shipped, decided, blocked, next week.
+      Do not send messages or touch anything outside notes/weekly/.
+
+execution:
+  todo-refresh:
+    type: command
+    command: bash system/scripts/refresh-todo-digest.sh
+  context-snapshot:
+    type: command
+    command: bash daemon/context-snapshot.sh
+  build-workspace-signals-all:
+    type: command
+    command: >-
+      for ws in workstreams/*/config.yaml; do
+        slug=$(dirname "$ws" | xargs basename);
+        python3 system/scripts/build-workspace-signals.py "$slug" 2>&1 || true;
+      done
+  maintain-local-retention:
+    type: command
+    command: >-
+      status=0;
+      python3 system/scripts/prune-rollback-backups.py --days 30 --apply || status=$?;
+      python3 system/scripts/prune-local-retention.py --apply || status=$?;
+      python3 system/scripts/lint-workstream-metadata.py || status=$?;
+      exit "$status"
+  prune-comms-bodies:
+    type: command
+    command: bash system/scripts/prune-comms-bodies.sh --apply --days 14
+  check-claude-mem:
+    type: command
+    command: command -v claude >/dev/null 2>&1 && python3 system/scripts/check-claude-mem.py || echo "claude not installed; skipped"
+  build-daily-knowledge:
+    type: command
+    command: python3 system/scripts/build-daily-knowledge.py
+  import-memory-corpus:
+    type: command
+    command: python3 system/scripts/_archive/import-memory-corpus.py --force
+  build-knowledge-graph:
+    type: command
+    command: python3 system/scripts/build-knowledge-graph.py --if-installed
+  local-backup-health:
+    type: command
+    command: python3 system/scripts/local_backup.py health --alert
+  weekly-reflection:
+    type: amp

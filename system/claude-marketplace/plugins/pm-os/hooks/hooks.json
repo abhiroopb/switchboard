@@ -1,0 +1,127 @@
+{
+  "description": "PM OS hooks. Every event runs the Amp plugin modules in system/amp-plugins through hooks/amp-bridge.ts (Bun). Kill switch: ~/.claude/pm-os-plugin-config.json {\"pm-os-bridge.disabled\": true} or per plugin {\"pm-os-guardrails.disabled\": true}. SessionStart and UserPromptSubmit also run hooks/surface-context.py, which injects the dispatch card into CoS and Launchpad sessions (kill switch {\"surface-context.disabled\": true}); on a session's first prompt of start of day, CoS, or chief of staff in a cmux or wmux pane it also registers that tab as CoS through system/scripts/cos_autobind.py (kill switch {\"cos-autobind.disabled\": true}). Notification (permission_prompt, elicitation_dialog) runs system/scripts/permission_relay.py notify, which sends a worker or owner tab's waiting prompt to the live CoS (kill switch {\"permission-relay.disabled\": true}). The blocking PreToolUse bridge step has a 10 s timeout (normal runs take about 0.2 s; a timed-out hook lets the tool run, so a hang costs at most 10 s). PreToolUse (every tool), UserPromptSubmit, and Stop also run hooks/cmux-heartbeat.py, which resends the PreToolUse that cmux 0.65.2 drops so the sidebar ⚡ stays lit on a working Claude tab (kill switch {\"cmux-heartbeat.disabled\": true}). PreToolUse on mcp__claude-in-chrome__* also runs hooks/claude-in-chrome-guard.py (system/scripts/claude_in_chrome_guard.py), which logs each Claude in Chrome call to .state/claude-in-chrome.jsonl and refuses scheduled jobs, workers with no signed-in brief line, bank and email hosts the owner did not name, browser-internal pages, and cookie or storage scripts (fails closed). PreToolUse and UserPromptSubmit also run hooks/worker-closed.py, which denies non-read-only tools in a worker tab whose task row is already terminal (no live row took the tab over, and the owner has not typed there since), so a finished worker cannot act on a late message (kill switch {\"worker-closed.disabled\": true}).",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|MultiEdit|Write|NotebookEdit|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/hooks/amp-bridge.ts\" pre-tool-use",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__claude-in-chrome__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-in-chrome-guard.py\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/cmux-heartbeat.py\" pre-tool-use",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worker-closed.py\" pre-tool-use",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Edit|MultiEdit|Write|NotebookEdit|Read|Grep|Glob|WebFetch|WebSearch|Task|Agent|Skill|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/hooks/amp-bridge.ts\" post-tool-use",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/hooks/amp-bridge.ts\" user-prompt-submit",
+            "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/surface-context.py\" user-prompt-submit",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/cmux-heartbeat.py\" user-prompt-submit",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/worker-closed.py\" user-prompt-submit",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/hooks/amp-bridge.ts\" stop",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/cmux-heartbeat.py\" stop",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/hooks/amp-bridge.ts\" session-start",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/surface-context.py\" session-start",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt|elicitation_dialog",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/../../../scripts/permission_relay.py\" notify",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

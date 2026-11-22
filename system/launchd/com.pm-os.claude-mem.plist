@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.pm-os.claude-mem</string>
+
+    <!-- claude-mem worker (Claude Code memory, replaces amp-mem, see
+         workstreams/pm-os-claude-migration). The wrapper resolves the installed
+         plugin version and execs the worker script in daemon mode in the
+         foreground. ~/.claude-mem/settings.json sets
+         CLAUDE_MEM_WORKER_AUTOSTART=false so only launchd owns the process.
+         Kill switch: launchctl bootout gui/$(id -u)/com.pm-os.claude-mem.
+         Keep this comment free of double hyphens: XML parsers reject them. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>{{PM_OS_ROOT}}/system/scripts/claude-mem-worker.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>{{HOME}}/.claude-mem</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <!-- Exit 0 means "a live worker already owns the port" (duplicate gate);
+         give launchd a pause before any respawn so a crash loop cannot spin. -->
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{PM_OS_ROOT}}/system/state/logs/claude-mem.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{PM_OS_ROOT}}/system/state/logs/claude-mem.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:{{HOME}}/.local/bin:{{HOME}}/.bun/bin</string>
+        <key>HOME</key>
+        <string>{{HOME}}</string>
+        <key>DO_NOT_TRACK</key>
+        <string>1</string>
+    </dict>
+</dict>
+</plist>

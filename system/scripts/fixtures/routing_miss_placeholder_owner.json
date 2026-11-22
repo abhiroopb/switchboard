@@ -1,0 +1,20 @@
+{
+ "_about": "An invented routing miss: a prompt with no Workstream line whose dated preamble once named the placeholder pm-pt-cos, a Slack DM whose title would scaffold the generic vm-fleet workstream, and the report-tooling workstream that owns the box and has a live primary task. Used by test_system_owners.py, test_new_workstream.py, and test_dispatch.py.",
+ "prompt": "the owner (2000-01-01, CoS): \"Looks like it failed: https://example.slack.com/archives/D0000000000/p1700000000000100\"\n\nRead that Slack message first to see what failed, then route it to the owning workstream and fix it there. Send no Slack messages.",
+ "slack_url": "https://example.slack.com/archives/D0000000000/p1700000000000100",
+ "slack_text": ":robot_face: nightly-report-box daily refresh failed (run 20000101T000000Z, exit 1) on vm nightly-report-box. export_failed: exit 1, see /home/dev/nightly-report-state/run-20000101T000000Z/export.log. Live report unchanged.",
+ "slack_title": "Build VM",
+ "wrong_placeholder": "pm-pt-cos",
+ "wrong_owner": "vm-fleet",
+ "owner": "report-tooling",
+ "primary": {
+  "id": "rt-00000000002b",
+  "status": "active",
+  "workstream": "report-tooling",
+  "tab_title": "🌐 Report Tooling 1",
+  "workspace_ref": "workspace:1",
+  "worktree": "/Users/tester/Development/pm-os/.worktrees/rt-00000000002b",
+  "created_at": "2026-01-01T00:00:00Z",
+  "prompt": "Workstream: report-tooling\n\nFix the nightly-report-box refresh and confirm the report shows a new build time. Make no external posts."
+ }
+}

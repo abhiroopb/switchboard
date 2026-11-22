@@ -1,0 +1,9 @@
+{
+  "items": [
+    {"type": "file", "ctime": 0, "path": "HOME.md", "title": "PM OS Home"},
+    {"type": "file", "ctime": 0, "path": "outputs/reviews/INDEX.md", "title": "Reviews"},
+    {"type": "file", "ctime": 0, "path": "workstreams/README.md", "title": "Workstreams index"},
+    {"type": "file", "ctime": 0, "path": "docs/obsidian-onboarding.md", "title": "Obsidian onboarding"},
+    {"type": "folder", "ctime": 0, "path": "workstreams", "title": "Workstreams (folder)"}
+  ]
+}

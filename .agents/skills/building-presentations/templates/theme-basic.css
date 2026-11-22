@@ -1,0 +1,20 @@
+/* Deck-local overrides. Loaded after the base Reveal theme, so anything here wins.
+ * Keep overrides minimal — prefer switching the base theme in index.html first. */
+
+.reveal {
+  /* Slightly smaller headings than Reveal defaults for dense PM content. */
+}
+
+.reveal h1 { font-size: 2.2em; }
+.reveal h2 { font-size: 1.6em; }
+.reveal h3 { font-size: 1.2em; }
+
+/* Left-align body content on text-heavy slides by adding
+ * <!-- .slide: class="left" --> as the first line of the slide. */
+.reveal .left { text-align: left; }
+
+.reveal small { opacity: 0.7; }
+
+.reveal table {
+  font-size: 0.75em;
+}

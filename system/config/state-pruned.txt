@@ -1,0 +1,18 @@
+# Paths under .state that scheduled jobs delete on purpose. One source of truth.
+#
+#   <owner script>  <path relative to .state>
+#
+# A trailing slash marks a directory (glob allowed); anything else is a filename
+# glob. Every script that prunes under .state reads its own rows here instead of
+# hardcoding the path, and refuses to run when its row is missing.
+# check-state-inventory.py leaves every path listed here out of its .state count,
+# so a routine prune never reads as a shrink.
+# A deleter without a row is a bug: the next prune shows up as a loss.
+rotate-logs.sh            context-snapshots/
+rotate-logs.sh            *.log.1
+rotate-logs.sh            *.log.1.gz
+context-snapshot.sh       context-snapshots/
+prune-comms-bodies.sh     comms-bodies/
+prune-local-retention.py  *-demo/
+# Large Scheduled Jobs envelopes spill to a payload file; files older than two days are pruned.
+automation-dispatch.sh    automation-payloads/

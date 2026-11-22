@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 250" width="960" height="250" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">A day with switchboard</title>
+  <desc id="d">Five steps across a day: start of day builds the plan, you dispatch tasks, workers run in parallel and report back, you review the results, and end of day saves context for tomorrow.</desc>
+  <rect x="0" y="0" width="960" height="250" rx="16" fill="#f8fafc"/>
+  <line x1="80" y1="95" x2="880" y2="95" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+  <g font-size="13" fill="#334155" text-anchor="middle">
+    <circle cx="100" cy="95" r="22" fill="#6366f1"/><text x="100" y="101" fill="#ffffff" font-size="16" font-weight="700">1</text>
+    <text x="100" y="146" font-size="15" font-weight="600" fill="#0f172a">Start of day</text>
+    <text x="100" y="168">what is due,</text><text x="100" y="186">what waits on you,</text><text x="100" y="204">what is running</text>
+
+    <circle cx="290" cy="95" r="22" fill="#6366f1"/><text x="290" y="101" fill="#ffffff" font-size="16" font-weight="700">2</text>
+    <text x="290" y="146" font-size="15" font-weight="600" fill="#0f172a">Dispatch</text>
+    <text x="290" y="168">describe a task;</text><text x="290" y="186">get a one-line</text><text x="290" y="204">acknowledgment</text>
+
+    <circle cx="480" cy="95" r="22" fill="#10b981"/><text x="480" y="101" fill="#ffffff" font-size="16" font-weight="700">3</text>
+    <text x="480" y="146" font-size="15" font-weight="600" fill="#0f172a">Workers run</text>
+    <text x="480" y="168">side by side, each</text><text x="480" y="186">in its own worktree;</text><text x="480" y="204">questions come to you</text>
+
+    <circle cx="670" cy="95" r="22" fill="#10b981"/><text x="670" y="101" fill="#ffffff" font-size="16" font-weight="700">4</text>
+    <text x="670" y="146" font-size="15" font-weight="600" fill="#0f172a">Review</text>
+    <text x="670" y="168">results as review</text><text x="670" y="186">notes; drafts shown</text><text x="670" y="204">in full before sending</text>
+
+    <circle cx="860" cy="95" r="22" fill="#6366f1"/><text x="860" y="101" fill="#ffffff" font-size="16" font-weight="700">5</text>
+    <text x="860" y="146" font-size="15" font-weight="600" fill="#0f172a">End of day</text>
+    <text x="860" y="168">notes saved, tabs</text><text x="860" y="186">closed, tomorrow</text><text x="860" y="204">starts with context</text>
+  </g>
+  <text x="480" y="40" text-anchor="middle" font-size="14" fill="#475569">steps 2 to 4 repeat all day, with many workers at once</text>
+</svg>

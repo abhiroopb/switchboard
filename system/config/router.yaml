@@ -1,0 +1,206 @@
+# Which agent CLI every PM OS launch starts: claude (Claude Code) or amp.
+# Claude Code is the global default. To switch back to Amp, change this one line to `agent: amp`; PM_OS_AGENT=claude|amp in
+# a process's environment overrides it for that process only. Resolver:
+# system/scripts/pm_os_agent.py (read by cmux-helpers.sh pm_os_agent,
+# dispatch.py agent_kind, start-day.sh and the headless daemon jobs); a missing
+# or unrecognised value falls back to claude. Keep this key top-level.
+agent: claude
+
+router:
+  max_instances: 8
+  # Canonical Router agent mode. Always ultra;
+  # cmux-helpers.sh resolve_agent_mode also floors `router` to ultra.
+  mode: ultra
+
+# CoS mode trial: the CoS thread (routines/megadesk) alone launches at `mode` on PT calendar
+# days `start` through `end` inclusive; LaunchPad, Comms Triage, Routers and
+# workers stay ultra. cmux-helpers.sh cos_mode_trial_mode reads this and
+# resolve_agent_mode applies it in place of the ultra floor for megadesk only.
+# The mode is fixed at launch, so the trial starts with the first CoS launch
+# inside the window (start-day on the `start` day) and CoS floors back to ultra on
+# the next launch after `end`. Compare per-call latency in
+# ~/.agents/.amp-plugin-logs/ (plugin event logs) for the trial day against the
+# prior working day before extending. Kill switch: PM_OS_COS_MODE_TRIAL_DISABLED=1.
+cos_mode_trial:
+  mode: high
+  start: 2026-10-30
+  end: 2026-10-30
+
+# dispatch.py. Replaces worker-dispatch.json.
+# One git worktree per task; no Router Amp per task; no admission guard.
+dispatch:
+  # Concurrent-worker cap. 0 = none: memory pressure is reported, not enforced
+  # (swap_alert_gb below, dispatch.py capacity). Set a positive number to queue
+  # the (n+1)th task again.
+  max_workers: 0
+  # Cap used instead of max_workers on Windows, where each Claude worker needs
+  # about 0.7 GB and a busy laptop runs low on memory with more than a few;
+  # raise it on a machine with more memory. 0 means no cap; commit_hold_pct
+  # below still holds launches near the memory limit.
+  max_workers_windows: 3
+  # Queue order under a cap, so a fresh dispatch never jumps rows that queued
+  # earlier. A free slot goes to the queued row first in line, and a fresh
+  # dispatch launches at once only when no eligible queued row is ahead of it (rows held
+  # on a prerequisite, a continuation, the usage limit, or a quiet window are not
+  # eligible). Owner asks rank before pm-os-maintenance rows, oldest first in each; a
+  # maintenance row that has waited the aging minutes ranks with owner asks by its age.
+  # queue_owner_first false = strict FIFO; aging 0 = maintenance never moves up.
+  queue_owner_first: true
+  queue_maintenance_aging_minutes: 30
+  # Dated launch holds (dispatch.py launch_hold). A first-attempt row whose workstream
+  # or id matches queues as "held until <time>" and starts on the first release pass
+  # after `until` (a sweep tick or any report). The hold lifts by the clock alone; an
+  # entry past `until` is inert and may be deleted at leisure. `until` needs a zone, and
+  # one more than launch_hold_max_hours ahead is ignored. Workers already running, and
+  # their relaunches, are never held.
+  launch_holds: []
+  launch_hold_max_hours: 24
+  # Windows: new launches wait (status queued, "waiting on memory") while
+  # memory commit is at or above this % of the limit, because a process
+  # started there stalls; release_queued starts them once commit drops. The
+  # capacity line (digest plus one urgent CoS line) fires at commit_alert_pct
+  # or zombie_alert_count leaked processes, naming the reboot. 0 disables each.
+  # That line is status blocked only while commit_hold_pct actually holds
+  # launches; an alert threshold alone sends it as done.
+  commit_hold_pct: 92
+  # A system-managed pagefile grows the limit on demand (the ceiling is RAM plus
+  # 3 x RAM of pagefile), so a process can still start fast at 94% of the current
+  # limit. commit_hold_pct is measured against that
+  # ceiling (windows_memory.py commit_ceiling_pct). Past 92% of the current limit
+  # but under the ceiling, launches wait only when a process start (median of 3
+  # `cmd /c exit`) takes spawn_hold_ms or more, the stall symptom of a starved
+  # machine. memory_hold_floor_workers: while fewer workers than this are
+  # live, no memory hold applies, so one worker can always start. 0 disables each.
+  memory_hold_floor_workers: 1
+  spawn_hold_ms: 400
+  commit_alert_pct: 85
+  zombie_alert_count: 50000
+  # Each sweep writes live workers, compressor size and swap used to
+  # system/state/worker-dispatch/capacity.json; while swap used exceeds this
+  # many GB (or a cmux RPC timed out during a launch since the last line) one
+  # next-up digest Updates line goes out, at most hourly. The direct urgent CoS
+  # line goes out only when the trigger is new (swap crossed the threshold since
+  # the last alert, or a cmux timeout this tick); a swap trigger that persists
+  # stays in the digest and capacity.json, so CoS never gets the same line
+  # every hour. Launches are never held on it. 0 disables the swap trigger.
+  # 16 sits above the swap a busy macOS desktop holds on a normal day.
+  swap_alert_gb: 16
+  # One-call dispatch ack, so CoS routes and moves on. dispatch.py dispatch writes the ledger
+  # row (status routing), spawns `dispatch.py launch --task-id <rt-id>`
+  # detached and returns at once with `accepted; worker starting`; the
+  # worktree and cmux tab (16 to 30 s) are built in the background. A launch
+  # that fails marks the row failed and sends one failed line to the origin
+  # through the usual callback path; success is silent (the worker's own
+  # report is the next thing CoS hears). `--sync` or PM_OS_DISPATCH_SYNC=1
+  # forces the old inline launch for one call; false here disables it.
+  async_launch: true
+  default_workstream: pm-os-maintenance
+  # Start of day, closing day and chief of staff asks (dispatch.py system_routine)
+  # go here without ranking, so their tab reads "📅 Daily Routines <n>".
+  # A missing folder falls back to default_workstream.
+  system_routine_workstream: daily-routines
+  # Floor for an existing owner. The score alone never binds a task to an existing workstream: the top
+  # candidate must also carry a named signal (match term, slug or display name
+  # in the ask, priority-channel route). "shared topic terms" alone is a weak
+  # match and dispatch.py scaffolds a new workstream instead, naming the weak
+  # candidate in its message so the owner can fold the work in. A "Workstream: <slug>"
+  # line for a slug that does not exist yet creates that workstream.
+  min_match_score: 20
+  reap_grace_seconds: 120
+  # Report delivery: a worker tab stays open until its report lands.
+  # reap_requires_delivered_report: a worker tab closes
+  # only once report_delivered is true, which report-to-cos.sh sets only after
+  # the line is proven in CoS (wmux prompt log or screen; cmux acceptance on
+  # macOS). false restores the older rule (close once a waiter or the loop
+  # holds the report). terminal_report_delivery: direct sends every terminal
+  # worker report to CoS as soon as it finishes, nonurgent and after hours
+  # included; the next-up digest may summarize it but never replaces it. auto
+  # restores the old rule (direct only to a Claude CoS). An explicit or stored
+  # --delivery digest policy (automation, start-of-day fan-out) still batches.
+  # report_undelivered_alert_minutes: one CoS notification when a report is
+  # still waiting this long after the worker finished (0 disables).
+  reap_requires_delivered_report: true
+  terminal_report_delivery: direct
+  report_undelivered_alert_minutes: 10
+  # Rebase-conflict grace window. A real rebase conflict at dispatch.py finish holds the row
+  # active with landing: conflict for this many seconds instead of reporting
+  # "failed: could not land on main" at once; the worker is told once in its
+  # tab, reap leaves the tab open, steer messages the live thread. Landing inside
+  # the window delivers the worker's own done report once; a lapse makes the
+  # sweep deliver the failed report. 0 restores the old immediate failure.
+  conflict_grace_seconds: 600
+  # Queued steers. A steer on a row whose worker has
+  # not started (routing, queued, launched with no ack, or cmux refusing with
+  # "recipient runs no agent that reads messages") is queued on the row and
+  # delivered in order at the worker's ack or heartbeat, never turned into a
+  # supplemental worker, because a second worker on one deliverable duplicates
+  # its writes. A queued steer still undelivered this
+  # many minutes after the worker began launching sends the origin one urgent
+  # callback and stays queued. 0 disables the callback.
+  steer_queue_timeout_minutes: 10
+  # Reap protection is by identity, not by ref: dispatch.py reap
+  # closes a tab only when worker_tab_reason accepts it — cmux description
+  # `PM OS worker <task-id>`, the title the row recorded, `<emoji> <Name> <n>`
+  # for a known workstream, or the legacy `<workstream> · worker-<12 hex>` — so
+  # CoS, Launchpad, the fixed surfaces and owner tabs are never closed. The old
+  # protected_workspaces ref list went stale on every cmux restart (refs are
+  # renumbered) and is gone.
+  # Owner workstream tab ("<emoji> <Name>", unpinned) with no submitted prompt
+  # and no live worker for this many hours: wrap-up prompt through the guarded
+  # close path, then close. 0 disables. Never CoS, Launchpad, Todo, Comms
+  # Triage, Scheduled Jobs, pinned or P0 tabs.
+  idle_owner_close_hours: 4
+  # A row still `routing` or `queued` after this many minutes with no live Amp
+  # thread and no Amp session in its worker tab is stuck: the sweep marks it
+  # blocked with `stuck: <status> for <N>m ...` and sends one line to its origin
+  # naming the task, the age and `router-dispatch.sh --task-id <rt-id>
+  # --force-redispatch`. The sweep never re-dispatches it, and the line means
+  # a stuck row never sits unflagged. Age counts from the latest of created_at, requeued_at,
+  # launching_at and launched_at, so launch retypes do not reset it. 0 disables.
+  stuck_routing_minutes: 10
+  # An `active` row whose worker shows no progress on every signal at once for
+  # this many hours is wedged: task-liveness heartbeat (one per tool result)
+  # this old, cmux lifecycle stamp not Idle and this old (or gone), and the Amp
+  # thread's last message (`amp threads export`) this old. The sweep stamps
+  # `wedged`, writes a `recovery_action` so the CoS Review feed shows the row as
+  # Stalled, and sends one line to its origin naming the thread, the tab and
+  # `router-dispatch.sh --task-id <rt-id> --force-redispatch`. Never
+  # re-dispatched by the sweep. A fresh thread message alone keeps a row live:
+  # plugin hooks never see code_exec, so a code_exec-heavy worker has an old
+  # heartbeat while it works. When the thread cannot be read, the row is judged
+  # on heartbeat and stamp only at twice this age, and the line says so.
+  # A hung tool call can show a spinner forever, so the idle nudge alone never
+  # catches it. 0 disables.
+  wedged_hours: 2
+  # Quiet workstreams. A done, cancelled or deferred report
+  # with origin cos from a workstream listed here is logged (report log,
+  # ledger row marked delivered, CONTEXT close-out line) and never sent to
+  # CoS, neither as a direct line nor in the next-up digest Updates section.
+  # blocked, failed, --urgent and --needs-ruling reports still reach CoS.
+  # report-to-cos.sh reads this list; nothing else does.
+  # An organisation profile can add entries in system/config/router.profile.yaml.
+  quiet_done_workstreams: []
+
+next-up:
+  cadence_minutes: 30
+  working_hours_start: "08:00"
+  working_hours_end: "18:00"
+  # The zone the working hours above are in. Set it to your own.
+  timezone: America/Los_Angeles
+  post_unchanged: false
+  act_now_limit: 3
+  important_limit: 3
+  # Bounded guarded-send window per delivery tick. The digest
+  # waits up to send_wait_seconds for CoS to be idle with an empty box, polling
+  # every send_poll_seconds, then defers with a named reason. 0 = single attempt.
+  send_wait_seconds: 45
+  send_poll_seconds: 5
+  # After this many consecutive busy deferrals, use Amp's explicit queue
+  # action. Drafts, unreadable input, and unknown transport still block.
+  queue_after_busy_deferrals: 3
+  # An outcome-unknown queue submission holds queue escalation off for this
+  # long, then the idle/queue paths resume, so one unknown outcome never keeps
+  # the queue off all day. Draft deferrals no longer
+  # reset the busy streak, and every deferred working-hours digest now spawns
+  # next-up-waiter.sh, which posts the moment CoS goes idle.
+  unknown_hold_minutes: 120

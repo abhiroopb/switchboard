@@ -1,0 +1,7 @@
+{
+  "name": "personal",
+  "description": "Default profile. Google and Slack go through the kit's pmos connector shim with your own OAuth client and Slack app.",
+  "detect": "default",
+  "env": {},
+  "connectors": "profiles/personal/CONNECTORS.md"
+}

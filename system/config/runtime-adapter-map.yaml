@@ -1,0 +1,51 @@
+version: 1
+
+targets:
+  - name: repo-claude
+    path: "<repo-root>/CLAUDE.md"
+    generated_text: |
+      @AGENTS.md
+      @system/behavior-map.md
+
+      # Claude adapter for PM OS
+
+      This file keeps Claude Code aligned with the repo-owned PM OS control plane.
+
+      ## Purpose
+      - Import shared PM OS policy for this repo.
+      - Keep Claude-specific repo notes small and explicit.
+      - Avoid redefining shared workflow logic here.
+
+      ## Claude-specific notes
+      - Use this file for Claude Code adapter behavior that is specific to this repo.
+      - Put shared PM OS behavior in `AGENTS.md`, not here.
+      - Put deterministic behavior in scripts, routines, and state rebuilders, not prompt text.
+      - Before changing instruction surfaces, run `python3 system/scripts/check-instruction-drift.py`.
+
+      ## Local runtime surfaces
+      - `~/.claude/CLAUDE.md` is a personal and runtime adapter surface.
+      - `~/.claude/settings.json`, `~/.claude/settings.local.json`, and Claude hooks are runtime configuration, not the canonical source of PM OS workflow policy.
+      - If shared behavior needs to change, update the repo-owned surface first and then sync adapters.
+
+  - name: home-claude
+    path: "~/.claude/CLAUDE.md"
+    preserve_headings:
+      - Identity
+      - Current Focus
+      - PM OS bot attribution prefix
+    generated_text: |
+      # PM OS — Claude Code Home Adapter
+
+      This file is the local Claude runtime adapter for the repo-owned PM OS control plane.
+
+      ## Runtime Adapter
+      - Shared PM OS behavior lives in `<repo-root>/AGENTS.md`.
+      - Repo Claude adapter lives in `<repo-root>/CLAUDE.md`.
+      - Behavior routing lives in `<repo-root>/system/behavior-map.md`.
+      - Use this file for Claude-only runtime notes and personal cross-project context.
+      - Change repo-owned policy first, then sync this adapter.
+
+      ## Claude-only Scope
+      - Keep local runtime hooks, tool permissions, and personal cross-project preferences here.
+      - Keep shared PM OS workflow logic out of this file.
+      - Before changing shared behavior, run `python3 <repo-root>/system/scripts/check-instruction-drift.py` in the repo.

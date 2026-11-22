@@ -1,0 +1,6 @@
+{
+  "name": "solo",
+  "description": "Single-session mode for a machine with no cmux or wmux: one agent session plans and does the work itself, with the same policy, skills, to-do list and routines.",
+  "detect": "never auto-detected; chosen with apply-profile.py --profile solo",
+  "env": {"PM_OS_MUX": "none", "PM_OS_SINGLE_SESSION": "1"}
+}

@@ -1,0 +1,17 @@
+---
+description: PM OS operating contract. The shared policy lives in AGENTS.md; this rule only tells Cursor where to look and what the other harnesses enforce mechanically.
+alwaysApply: true
+---
+
+Read and follow @AGENTS.md (the PM OS operating contract) and @system/behavior-map.md (which surface owns which behavior). Cursor also loads `AGENTS.md` from the project root on its own; this rule is here so the policy applies even when that native read is disabled or truncated.
+
+Hard rules that Amp and Claude Code enforce with hooks, which you must honor by convention here:
+
+- Never run `git add -A`, `git add --all`, or `git add .`. Stage explicit paths.
+- Never run `git push --force`, `git push -f`, or `git push --no-verify`. Never push at all unless the owner says so in this conversation.
+- Confirm with the owner before `rm -rf` of anything outside `/tmp`, `$TMPDIR`, `node_modules`, `dist`/`build`, or this repository.
+- Any Slack, GitHub, or email text you author on the owner's behalf opens with the bot attribution prefix defined in `AGENTS.md` (Bot Attribution Prefix).
+
+Setting up or updating this install: apply `docs/install-decisions.md` (location, scope, Windows runtime, company tooling, Windows sidebar). Those choices are made; do not ask the owner.
+
+Skills live in `.agents/skills/<name>/SKILL.md`. Cursor has no skill loader: when a task matches a skill description (index in `adapters/SKILLS.md`), open that `SKILL.md` and follow it before starting.

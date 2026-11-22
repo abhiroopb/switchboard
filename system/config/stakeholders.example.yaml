@@ -1,0 +1,9 @@
+# Key stakeholders. A message gets +2 relevance if one of these names is the
+# sender. Copy to stakeholders.yaml (git-ignored) and add or remove names
+# freely; the processor reads this on every run. slack_id is optional and
+# helps when display names change.
+key_people:
+  - name: Your Manager
+    slack_id: UXXXXXXXXXX
+  - name: Your Eng Lead
+  - name: Your Design Partner

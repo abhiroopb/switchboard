@@ -1,0 +1,5 @@
+name: "Scheduled Jobs"
+# Ultra for all threads; the owner may set high explicitly.
+agent_mode: ultra
+priority: medium
+startup_instruction: "Read routines/scheduled-jobs/CONTEXT.md — including the Automation Jobs section: this workspace is ALSO the execution surface for background [AUTOMATION job=... dest=...] envelopes dispatched by daemons; execute those here, write the named result file atomically, and never inject prompts into other workspaces. Start from the due jobs in system/scheduled-jobs.yaml plus current state in system/job-state.json and system/state/sources/scheduled-jobs.json. Run non-confirm jobs that are actually unblocked. Call out blocked jobs with the exact blocker, and stop before any confirm-required job so the owner can decide. Emit a routine workspace update before pausing."

@@ -1,0 +1,38 @@
+# Slack channels watched by the comms pipeline. Copy to priority-channels.yaml
+# (git-ignored) and fill in your own channel IDs. Find an ID with
+# `pmos slack channels` or from the channel's "About" panel.
+#
+# tier: 1 (every 5 min), 2 (every 15 min)
+# casual: never auto-create a workstream from messages here
+# default_workstream: route any matching message here unless a more specific
+#   workstream key matches first
+# thread_monitor: opt-in capture for replies under recurring matching roots;
+#   monitor_only avoids todos unless a reply explicitly tags the owner
+
+github_pr_reviews:
+  author: {{OWNER_USER}}
+  tier: tier_1
+  poll_seconds: 300
+  # GitHub organizations whose PRs comms-triage reviews. Replace with your own.
+  organizations: [acme]
+  # Exact PR URLs in a workstream CONTEXT/config win. Ambiguous matches go to CoS.
+  repo_defaults:
+    acme/example-repo: example-workstream
+  # Per-PR pause: exact PR URLs (string or {url, note}) whose review events are
+  # still recorded but never dispatched as review-loop jobs. Remove to unpause.
+  paused_prs: []
+
+tier_1:
+  # Your team's core operating channels
+  - id: CXXXXXXXXXX
+    name: my-team
+    default_workstream: my-product
+  - id: CXXXXXXXXXX
+    name: my-team-leads
+    default_workstream: my-product
+
+tier_2:
+  # Wider channels you want summarized, not acted on
+  - id: CXXXXXXXXXX
+    name: pm-community
+    casual: true

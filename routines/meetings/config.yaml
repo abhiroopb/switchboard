@@ -1,0 +1,5 @@
+name: "Meetings"
+# Ultra for all threads; the owner may set high explicitly.
+agent_mode: ultra
+priority: medium
+startup_instruction: "Read routines/meetings/CONTEXT.md. Start from system/state/sources/meetings.json. Recover calendar or scheduler issues first if automation is stale, then handle either meeting prep or follow-ups from recent post-ingests. Emit a routine workspace update before pausing."

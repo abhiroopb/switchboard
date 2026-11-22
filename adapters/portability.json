@@ -1,0 +1,4858 @@
+{
+ "counts": {
+  "adapter": 156,
+  "amp-only": 96,
+  "cmux-only": 76,
+  "portable": 884
+ },
+ "files": {
+  ".agents/skills/asd-ste100/LICENSE": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/asd-ste100/README.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/asd-ste100/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/asd-ste100/examples/before-after.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/asd-ste100/references/writing-rules.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/branch-rebase/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-presentations/SKILL.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  ".agents/skills/building-presentations/references/authoring.md": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-presentations/references/design-system.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-presentations/references/publishing.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-presentations/scripts/scaffold-presentation.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-presentations/scripts/validate-presentation.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-presentations/templates/index-basic.html": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-presentations/templates/index.html": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-presentations/templates/slides-basic.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-presentations/templates/slides.md": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-presentations/templates/theme-basic.css": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-presentations/templates/theme-editorial.css": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/deploy-adapters.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/discovery-gate.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/lifecycle.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/prototype-contract.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/research-checklist.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/review-loop.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/scaffold/CHANGELOG.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/scaffold/DECISION.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/scaffold/DEMO.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/scaffold/DISCOVERY.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/scaffold/README.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/scaffold/RESEARCH.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/scaffold/compare.html": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/scaffold/fixtures-README.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/scaffold/fixtures-data.json": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/scaffold/index.html": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/reference/scaffold/tokens.css": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/scripts/prototype.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/building-prototypes/tests/test_prototype.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/checking-owner-lens/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/chief-of-staff/SKILL.md": {
+   "class": "amp-only",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  ".agents/skills/chief-of-staff/references/calendar.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/chief-of-staff/references/gmail.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/chief-of-staff/references/slack-saved.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/chief-of-staff/references/slack-unreads.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/closing-and-archiving/SKILL.md": {
+   "class": "cmux-only",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  ".agents/skills/closing-and-archiving/scripts/close-cmux-workspace.sh": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  ".agents/skills/closing-day/SKILL.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  ".agents/skills/code-review-pass/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/commit-and-pr/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/communication-coach/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/draft-pr/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/drafting-docs/SKILL.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  ".agents/skills/drafting-docs/references/context-box.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/free-disk-space/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/plan-ceo-review/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/plan-ceo-review/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/plan-ceo-review/SOURCE.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/pr-reader/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/pr-review-replies/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/recall/SKILL.md": {
+   "class": "amp-only",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  ".agents/skills/syncing-context/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/triage-links/SKILL.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  ".agents/skills/triage-links/references/approval-policy.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/triage-links/references/source-expansion.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/triage-links/references/tool-routing.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/triage-links/scripts/link_intake.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/triage-links/scripts/route_to_workstream.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/triage-links/scripts/test_link_intake.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/triage-links/scripts/test_write_investigation_bundle.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/triage-links/scripts/write_investigation_bundle.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/using-connectors/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".agents/skills/worktree-helper/SKILL.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".claude/hooks/pm-os-guardrails.py": {
+   "class": "portable",
+   "reason": "Claude Code adapter"
+  },
+  ".claude/settings.json": {
+   "class": "portable",
+   "reason": "Claude Code adapter"
+  },
+  ".codex/config.toml": {
+   "class": "portable",
+   "reason": "Codex adapter"
+  },
+  ".cursor/rules/pm-os.mdc": {
+   "class": "portable",
+   "reason": "Cursor adapter"
+  },
+  ".gitattributes": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".github/workflows/windows-kit.yml": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  ".gitignore": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  ".obsidian/app.json": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".obsidian/appearance.json": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".obsidian/bookmarks.json": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".obsidian/core-plugins.json": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".obsidian/daily-notes.json": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  ".obsidian/templates.json": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "AGENTS.md": {
+   "class": "portable",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "CLAUDE.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "CONTRIBUTING.md": {
+   "class": "portable",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "HOME.md": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "INSTALL.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "KIT_VERSION": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "LICENSE.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "NOTICE.md": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "README.md": {
+   "class": "portable",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "SECURITY.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "THIRD_PARTY_NOTICES.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "adapters/README.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "adapters/SYSTEM.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "adapters/install-adapters.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "daemon/amp-mem-weekly-distill.sh": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "daemon/amp-notify.sh": {
+   "class": "amp-only",
+   "reason": "no harness dependency found"
+  },
+  "daemon/cmux-closed-workspaces.py": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "daemon/context-snapshot.sh": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "daemon/daemon-memory-watchdog.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "daemon/run-capped.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "daemon/run-due-jobs.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "daemon/slack-send.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "docs/backup-and-restore.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "docs/browser-control.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "docs/chief-of-staff-setup.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "docs/connectors.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "docs/customize.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "docs/first-day.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "docs/how-it-works.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "docs/images/architecture.svg": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "docs/images/chief-of-staff.svg": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "docs/images/day.svg": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "docs/install-decisions.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "docs/install-windows.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "docs/obsidian-onboarding.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "docs/profiles.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "docs/runbooks/agents-md-detail.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "install.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "install.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "knowledge/example-prds/example_prd.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "profiles/personal/CONNECTORS.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "profiles/personal/profile.json": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "profiles/solo/agents-section.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "profiles/solo/profile.json": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "routines/README.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "routines/comms-triage/CONTEXT.md": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "routines/comms-triage/config.yaml": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "routines/launchpad/CONTEXT.md": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "routines/launchpad/config.yaml": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "routines/meetings/CONTEXT.md": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "routines/meetings/config.yaml": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "routines/megadesk/CONTEXT.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "routines/megadesk/config.yaml": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "routines/router/CONTEXT.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "routines/router/config.yaml": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "routines/scheduled-jobs/CONTEXT.md": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "routines/scheduled-jobs/config.yaml": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "routines/todo/CONTEXT.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "routines/todo/config.yaml": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/README.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/accessibility-auditor.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/ai-product-specialist.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/api-contract-reviewer.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/code-reviewer.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/competitive-analyst.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/content-ux-writer.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/customer-voice.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/data-analyst.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/data-storyteller.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/debugger.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/design-system-reviewer.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/designer-reviewer.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/engineer-reviewer.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/executive-reviewer.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/experimentation-designer.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/gtm-launch-strategist.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/incident-reviewer.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/interaction-prototyper.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/legal-advisor.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/performance-reviewer.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/pricing-monetization.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/product-designer.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/reality-checker.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/refactor-architect.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/security-privacy-reviewer.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/skeptic.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/stakeholder-strategist.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/test-strategist.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "sub-agents/uxr-analyst.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/README.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "system/amp-mem/schema.sql": {
+   "class": "amp-only",
+   "reason": "amp-mem memory store"
+  },
+  "system/amp-plugins/README.md": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/amp-mem.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/auto-pilot-router.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/chrome-mcp-lease.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/cmux-lifecycle-reconcile.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/comms-triage-trigger.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/cos-finished.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/daily-rollup-trigger.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/goal-loop.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os-bundle.json": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os-commands.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os-guardrails.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os-runtime.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/active-surface.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/amp-auth.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/amp-auth.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/amp-mem.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/auto-pilot-router.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/browser-automation.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/bundle.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/bundle.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/chrome-mcp-lease.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/claude-bridge-heartbeat.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/claude-bridge-rm-trash.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/claude-bridge-timing.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/claude-report-parity.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/cmux-lifecycle-adapter.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/cmux-lifecycle-reconcile.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/debounced-triggers.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/detached-spawn.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/ephemeral-close.py": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/ephemeral-close.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/ephemeral-close.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/foreign-worker-seed.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/goal-loop-events.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/goal-loop-fencing.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/guardrails-amp-auth.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/guardrails-rm-trash.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/install-bundle.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/lib.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/native-ack.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/native-executor.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/open-focus-plugin.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/open-focus.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/organize-execute.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/organize-execute.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/rm-guard.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/rm-guard.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/router-settings.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/sensitive-reads.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/sensitive-reads.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/slack-link-format.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/test-fixtures/rm-heredoc-remote.sh": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/test-fixtures/slack-link-format-cases.json": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/test-mocks.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/test-runner.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/test_ephemeral_close.py": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/pm-os/wmux-pane-identity.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/review-lane.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/task-caffeinate.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/task-liveness.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/watched-docs-refresh.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/watched-slack-refresh.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/workspace-report.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/workstream-lifecycle.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/workstream-signals.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-wrapper.sh": {
+   "class": "amp-only",
+   "reason": "no harness dependency found"
+  },
+  "system/background-tasks.yaml": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/behavior-map.md": {
+   "class": "amp-only",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "system/bin/amp-mem": {
+   "class": "amp-only",
+   "reason": "no harness dependency found"
+  },
+  "system/bin/install-amp-skills.sh": {
+   "class": "portable",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/chief-of-staff-prompt.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "system/claude-marketplace/.claude-plugin/marketplace.json": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/.claude-plugin/plugin.json": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/LICENSE.humanlayer": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/README.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/THIRD_PARTY.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/accessibility-auditor.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/ai-product-specialist.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/api-contract-reviewer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/code-reviewer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/codebase-analyzer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/codebase-locator.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/codebase-pattern-finder.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/competitive-analyst.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/content-ux-writer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/customer-voice.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/data-analyst.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/data-storyteller.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/debugger.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/design-system-reviewer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/designer-reviewer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/engineer-reviewer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/executive-reviewer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/experimentation-designer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/gtm-launch-strategist.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/incident-reviewer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/interaction-prototyper.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/legal-advisor.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/performance-reviewer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/pricing-monetization.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/product-designer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/reality-checker.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/refactor-architect.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/security-privacy-reviewer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/skeptic.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/stakeholder-strategist.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/test-strategist.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/thoughts-analyzer.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/thoughts-locator.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/uxr-analyst.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/agents/web-search-researcher.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/comms-triage.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/create_plan.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/distill-memory.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/end-day.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/implement_plan.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/iterate_plan.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/memory-search.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/open-workstream.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/recall-pack.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/refresh-docs.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/research_codebase.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/start-day.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/status-update.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/commands/todo.md": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/hooks/amp-bridge.ts": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/hooks/claude-in-chrome-guard.py": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/hooks/cmux-heartbeat.py": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/hooks/hooks.json": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/hooks/surface-context.py": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/claude-marketplace/plugins/pm-os/hooks/worker-closed.py": {
+   "class": "adapter",
+   "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
+  },
+  "system/cmux-helpers.sh": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/cmux-sidebars/pm-os.swift": {
+   "class": "cmux-only",
+   "reason": "cmux sidebar"
+  },
+  "system/config/claude-skills-manifest.yaml": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/config/claude-tab-settings.json": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/config/priority-channels.example.yaml": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/config/router.yaml": {
+   "class": "amp-only",
+   "reason": "no harness dependency found"
+  },
+  "system/config/runtime-adapter-map.yaml": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/config/stakeholders.example.yaml": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/config/state-pruned.txt": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/config/surfaces.json": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/config/temporal-contract.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/config/workflow-upgrade-flags.yaml": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/config/workspace-emoji-pool.yaml": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/connectors/README.md": {
+   "class": "portable",
+   "reason": "connector shim: Gmail, Calendar, Drive, Slack and Dropbox over direct APIs"
+  },
+  "system/connectors/company_cli.py": {
+   "class": "portable",
+   "reason": "connector shim: Gmail, Calendar, Drive, Slack and Dropbox over direct APIs"
+  },
+  "system/connectors/pmos": {
+   "class": "portable",
+   "reason": "connector shim: Gmail, Calendar, Drive, Slack and Dropbox over direct APIs"
+  },
+  "system/connectors/pmos-shim.py": {
+   "class": "portable",
+   "reason": "connector shim: Gmail, Calendar, Drive, Slack and Dropbox over direct APIs"
+  },
+  "system/connectors/pmos.cmd": {
+   "class": "portable",
+   "reason": "connector shim: Gmail, Calendar, Drive, Slack and Dropbox over direct APIs"
+  },
+  "system/connectors/test_pmos_shim.py": {
+   "class": "portable",
+   "reason": "connector shim: Gmail, Calendar, Drive, Slack and Dropbox over direct APIs"
+  },
+  "system/kit/README.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/kit/adapter_indexes.py": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/kit/build_tier.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/kit/gitleaks.toml": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/kit/scan_public.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/kit/test_build_tier.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/kit/tiers.yaml": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/launchd/com.pm-os.amp-mem-weekly-distill.plist": {
+   "class": "portable",
+   "reason": "macOS launchd agents for the loop"
+  },
+  "system/launchd/com.pm-os.background-tasks.plist": {
+   "class": "portable",
+   "reason": "macOS launchd agents for the loop"
+  },
+  "system/launchd/com.pm-os.claude-mem.plist": {
+   "class": "portable",
+   "reason": "macOS launchd agents for the loop"
+  },
+  "system/launchd/com.pm-os.cmux-closed-workspaces.plist": {
+   "class": "portable",
+   "reason": "macOS launchd agents for the loop"
+  },
+  "system/launchd/com.pm-os.command-center.plist": {
+   "class": "portable",
+   "reason": "macOS launchd agents for the loop"
+  },
+  "system/launchd/com.pm-os.local-backup.plist": {
+   "class": "portable",
+   "reason": "macOS launchd agents for the loop"
+  },
+  "system/launchd/com.pm-os.log-rotate.plist": {
+   "class": "portable",
+   "reason": "macOS launchd agents for the loop"
+  },
+  "system/native/obsidian-link/Info.plist": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/native/obsidian-link/main.swift": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/prompts/dispatch-core-card.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "system/prompts/dispatch-core.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "system/prompts/external-replies.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "system/scheduled-jobs.yaml": {
+   "class": "amp-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/_archive/import-memory-corpus.py": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/_local_tz.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/_lookback.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/amp-obsidian-editor.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/apply-profile.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/archive-workstream.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/ask-cos.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/ask_cos.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/background_task_scheduler.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/backup-to-drive.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/build-daily-knowledge.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/build-knowledge-graph.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/build-vault-indexes.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/build-workspace-signals.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/check-claude-mem.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/check-digest-staleness.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/check-instruction-drift.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/check-profile-leaks.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/check-python-deps.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/check-scheduled-jobs-stall.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/check-state-inventory.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/check-windows-install.py": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/classify-task-for-recall.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/claude-mem-worker.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/claude_in_chrome_guard.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/claude_session_context.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/clear-cmux-session-state.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cmux-chat.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cmux-close-workspace.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cmux-relaunch-workspace.sh": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/cmux-rename-workspace.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cmux-reopen-last-closed.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cmux_new_contextual_amp_tab.py": {
+   "class": "cmux-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/collector_common.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/command-center-action.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/command-center-digest.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/command-center-loop.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/command-center-render.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/commit-todo-state.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/comms_triage_setting.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/context_sync.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cos-ack.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cos-latency-compare.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cos-phase0.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cos-review-feed-rebuild.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cos-show-draft.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cos_autobind.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cos_review_actions.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/cos_review_ask_ledger.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cos_review_asks.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cos_review_feed.py": {
+   "class": "amp-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/cos_review_reply.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/dispatch.py": {
+   "class": "cmux-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/downloads_handoff.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/draft_pr_check.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/emit-workspace-update.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/end-of-day-close.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/ensure-cos-workspace-style.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/ensure-p0-workspaces.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/ensure-routine-workspaces.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/events_stream.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/fixtures/permission_relay_tall_command.json": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/fixtures/routing_miss_placeholder_owner.json": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/flock_compat.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/generate-claude-agents.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/generate-recall-pack.py": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/github-pr-images.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/github_pr_reviews.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/github_review_ask.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/gmail_send_guard.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/graphify-usage-report.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/image_compare.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/install-all.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/install-amp-plugins.sh": {
+   "class": "amp-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/install-claude-code.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/install-claude-skills.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/install-cmux-sidebar.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/install-launchd.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/install-obsidian-link-handler.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/install-pm-os-bin.sh": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/instruction-word-counts.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/issue_log_numbers.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/keep_awake.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/knowledge_snapshot.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/launch-cos.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/lib/automation-dispatch.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/lib/cmux-inject-guard.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/lib/comms-triage.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/lib/dir-lock.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/lib/json_get.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/lib/machine-role.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/lib/mux.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/lib/mux.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/lib/p0-todos.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/lib/winlink.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/link_titles.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/lint-workstream-metadata.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/load-surface.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/local_backup.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/machine_role.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/main_rewrites.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/mark-scheduled-jobs-run.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/meeting_ingests.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/migrate-todo-calendar-holds.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/mux/cmux": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/mux/cmux-shim.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/mux/note-links.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/mux/pm-os-board.py": {
+   "class": "cmux-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/named_refs.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/new-workstream.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/next-up-digest.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/next-up-waiter.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/no_window.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/notify_common.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/owner_action_capture.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/owner_browser.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/owner_browser_live_check.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/owner_tabs.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/pending-calendar-invites.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/pending-handoff-state.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/permission_case.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/permission_relay.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/pick-workstream-emoji.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/pm-os-headless-agent.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/pm-os-trash.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/pm_os_agent.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/post-next-up-digest.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/private_identifiers.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/private_workstreams.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/prune-comms-bodies.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/prune-local-retention.py": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/prune-rollback-backups.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/publish-megadesk-status.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/publish-running-tasks-status.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/publish-workspace-status.sh": {
+   "class": "amp-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/query-knowledge.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/query-recall-index.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/read-all-workspaces.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/rebuild-megadesk-state.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/refresh-todo-digest.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/register-obsidian-vault.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/render-workstreams-readme.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/reply_check.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/repo_paths.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/report-to-cos.sh": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/report-waiter.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/report_queue.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/report_quiet.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/report_settlement.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/review_surface.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/rotate-cos-thread.sh": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/rotate-logs.sh": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/route-to-workspace.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/router-context-pack.py": {
+   "class": "portable",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/router-dispatch.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/router-self-close.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/run-background-tasks.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/run-debounced-plugin.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/run-profile-tick-hooks.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/running-task-state.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/running_tasks_badge.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/scheduled-job-dispatch.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/scheduled_jobs.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/scoped_test_env.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/set-agent.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/sheet-cell-comment.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/sidebar_order.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/single_instance.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/slack_backoff.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/slack_format.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/slack_toon.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/smoke-claude-dispatch.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/smoke_claude_dispatch.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/sod-workspace-plan.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/source_jsonl_lock.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/split-thread.sh": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/start-end-of-day-teardown.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/surface-registry.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/sync-claude-plugin.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/sync-skill-overrides.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/sync-skills.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/system_owners.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/task_leftovers.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test-agent-mode-policy.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test-busy-worker-plugins.sh": {
+   "class": "amp-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test-clear-cmux-session-state.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test-cmux-inject-guard.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test-cmux-launch-durability.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test-command-center-digest.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test-command-center-passive.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test-install-pm-os-bin.sh": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test-newline-flatten-guard.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test-stale-handle-guard.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test-start-day.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test-workspace-session-state.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_agents_md_size.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_amp_auth_guard.py": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/test_amp_mem_weekly_distill.py": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/test_ask_cos.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_background_open.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_background_task_scheduler.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_build_daily_knowledge.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_check_instruction_drift.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_check_profile_leaks.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_check_state_inventory.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_check_windows_install.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_claude_in_chrome_guard.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_cmux_close_recovery.py": {
+   "class": "cmux-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/test_cmux_heartbeat.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_cmux_new_contextual_amp_tab.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/test_cmux_shim.py": {
+   "class": "cmux-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/test_command_center_action_wmux.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_comms_triage_setting.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_cos_autobind.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_cos_phase0.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_cos_show_draft.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_digest_stale_alarm.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_dispatch.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/test_dispatch_lock_unlink.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_downloads_handoff.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_draft_pr_check.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_filing_promise.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_flock_compat.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_gmail_send_guard.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_image_compare.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_inject_guard_own_paste.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_install_claude_code_settings.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_install_claude_skills.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_issue_log_numbers.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_keep_awake.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_launch_cos.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_lint_workstream_metadata.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_local_backup.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_machine_role.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_mark_scheduled_jobs_run.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_mux_backends.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_new_workstream.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_no_window.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_note_links.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_obsidian_link_handler.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_organize_execute_guard.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_owner_action_capture.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_owner_browser.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_owner_tabs_screen_agent.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_permission_relay.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_pm_os_board.py": {
+   "class": "cmux-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/test_pm_os_trash.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_portable_date.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_portable_stat.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_private_identifiers.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_queue_real_next_step.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_recall_index.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_register_obsidian_vault.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_report_delivery.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_report_queue.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_report_settlement.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_review_surface_links.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_router_context_pack.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_router_dispatch_delivery.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_run_debounced_plugin.py": {
+   "class": "amp-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_running_task_ledger.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/test_scheduled_jobs.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_scoped_test_env.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_sensitive_read_guard.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_shared_state_link_hygiene.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_sidebar_order.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_single_instance.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_slack_format.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_sod_workspace_plan.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_sync_claude_plugin.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_sync_skills.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_system_owners.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_task_leftovers.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_thread_pointer.py": {
+   "class": "amp-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/test_three_way_kit.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_todo_archive.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_todo_locking.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_todo_short_ids.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_todo_surface_gate.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_windows_capacity.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_windows_portability.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_windows_process_rate.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_winlink_relink.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_worker_closed.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/turn_wait.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/usage_limits.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/verify-asks.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/verify-cmux-focus-contract.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/verify-kit-install.sh": {
+   "class": "portable",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/windows_leak_trace.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/windows_memory.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/windows_process_rate.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/windows_worker_bench.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/workflow_upgrade_flags.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/workspace-session-state.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/workstream_metadata.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/workstream_thread_bindings.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/skill-overrides/README.md": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/skill-overrides/todo/SETUP.md": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/skill-overrides/todo/SKILL.md": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/skill-overrides/todo/references/schema.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/skill-overrides/todo/scripts/todo_cli.py": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/skills-development-pattern.md": {
+   "class": "amp-only",
+   "reason": "no harness dependency found"
+  },
+  "system/start-day.sh": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
+  "system/state/README.md": {
+   "class": "cmux-only",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "system/vendor/skills/ab-testing/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ab-testing/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ab-testing/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ab-testing/evals/evals.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ab-testing/references/sample-size-guide.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ab-testing/references/test-templates.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/competitive-brief/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/competitive-brief/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/competitive-brief/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/copy-editing/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/copy-editing/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/copy-editing/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/copy-editing/evals/evals.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/copy-editing/references/checklist.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/copy-editing/references/content-refresh.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/copy-editing/references/plain-english-alternatives.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/customer-research/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/customer-research/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/customer-research/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/customer-research/evals/evals.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/customer-research/references/interviews-and-surveys.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/customer-research/references/source-guides.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/design-critique/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/design-critique/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/design-critique/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/design-critique/examples/common-design-problems.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/design-critique/examples/critique-walkthrough.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/design-critique/examples/pattern-selection-walkthrough.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/design-critique/references/design-patterns-catalog.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/design-critique/references/heuristics-and-laws.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/design-critique/references/interaction-design-principles.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/design-critique/references/visual-design-principles.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/design-critique/templates/design-critique-template.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/design-critique/templates/heuristic-evaluation-template.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-architecture-containment-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-architecture-containment-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-architecture-containment.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-architecture-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-architecture-delta-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-architecture-delta-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-architecture-delta.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-architecture-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-architecture.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-campus-animated.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-campus-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-campus-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-campus.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-coffee-shop-animated.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-coffee-shop-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-coffee-shop-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-coffee-shop.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-warehouse-animated.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-warehouse-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-warehouse-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan-warehouse.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-axonometric-plan.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-bar-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-bar-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-bar.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-beeswarm-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-beeswarm-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-beeswarm.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-box-plot-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-box-plot-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-box-plot.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-bubble-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-bubble-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-bubble.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-bump-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-bump-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-bump.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-data-flow-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-data-flow-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-data-flow.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-datalake-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-datalake-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-datalake.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-db-schema-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-db-schema-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-db-schema.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-dependency-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-dependency-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-dependency.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-deployment-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-deployment-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-deployment.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-dp-integration-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-dp-integration-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-dp-integration.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-dp-security-matrix-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-dp-security-matrix-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-dp-security-matrix.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-er-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-er-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-er.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-ai-stack-animated.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-ai-stack-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-ai-stack-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-ai-stack.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-keyboard-animated.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-keyboard-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-keyboard-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-keyboard.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-phone-animated.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-phone-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-phone-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-phone.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-unboxing-animated.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-unboxing-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-unboxing-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded-unboxing.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-exploded.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-fishbone-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-fishbone-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-fishbone.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-flowchart-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-flowchart-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-flowchart.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-gantt-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-gantt-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-gantt.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-heatmap-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-heatmap-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-heatmap.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-high-level-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-high-level-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-high-level-vertical-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-high-level-vertical-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-high-level-vertical.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-high-level.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-import-drawio.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-import-excalidraw.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-import-mermaid.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-it-state-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-it-state-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-it-state.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-journey-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-journey-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-journey.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-kanban-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-kanban-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-kanban.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-layers-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-layers-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-layers.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-line-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-line-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-line.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-loop-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-loop-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-loop-terminal.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-loop.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-marimekko-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-marimekko-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-marimekko.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-medallion-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-medallion-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-medallion.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-nested-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-nested-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-nested.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-org-chart-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-org-chart-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-org-chart.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-paved-road-animated.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-polar-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-polar-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-polar.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-policy-trace-animated.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-process-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-process-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-process.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-pyramid-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-pyramid-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-pyramid.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-quadrant-consultant.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-quadrant-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-quadrant-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-quadrant.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-queue-animated.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-radar-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-radar-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-radar.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-ridgeline-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-ridgeline-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-ridgeline.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-sankey-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-sankey-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-sankey.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-scatter-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-scatter-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-scatter.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-sequence-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-sequence-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-sequence-oauth-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-sequence-oauth-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-sequence-oauth.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-sequence.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-service-blueprint-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-service-blueprint-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-service-blueprint.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-slopegraph-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-slopegraph-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-slopegraph.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-state-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-state-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-state-lifecycle-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-state-lifecycle-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-state-lifecycle.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-state.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-story-map-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-story-map-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-story-map.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-streamgraph-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-streamgraph-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-streamgraph.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-swimlane-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-swimlane-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-swimlane.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-timeline-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-timeline-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-timeline.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-tree-block-decomposition-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-tree-block-decomposition-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-tree-block-decomposition.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-tree-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-tree-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-tree.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-treemap-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-treemap-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-treemap.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-uml-class-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-uml-class-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-uml-class.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-venn-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-venn-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-venn.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-wardley-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-wardley-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-wardley.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-waterfall-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-waterfall-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/example-waterfall.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/icons.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/index.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/template-dark.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/template-full.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/template-motion.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/template-terminal.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/assets/template.html": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/animation.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/doctor.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/export-registry.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/export.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/import-drawio.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/import-excalidraw.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/import-mermaid.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/layout-budget.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/onboarding.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/output-spec.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/primitive-annotation.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/primitive-icons.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/primitive-sketchy.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/primitive-terminal.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/primitives-core.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/profiles.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/semantic-patterns.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/style-guide.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-architecture-delta.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-architecture.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-axonometric-plan.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-bar.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-data-flow.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-db-schema.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-dependency.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-deployment.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-dp-integration.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-dp-security-matrix.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-er.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-exploded.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-fishbone.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-flowchart.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-gantt.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-heatmap.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-high-level.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-it-state.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-journey.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-kanban.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-layers.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-line.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-loop.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-medallion.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-nested.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-org-chart.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-polar.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-process.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-pyramid.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-quadrant.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-radar.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-sankey.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-scatter.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-sequence.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-service-blueprint.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-state.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-story-map.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-swimlane.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-timeline.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-tree.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-treemap.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-uml-class.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-venn.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-wardley.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/references/type-waterfall.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/scripts/drawio_extract.py": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/scripts/excalidraw_extract.py": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/scripts/export_png.py": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/scripts/export_svg.py": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/scripts/mermaid_extract.py": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/diagram-design/scripts/self_check.py": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/emails/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/emails/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/emails/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/emails/evals/evals.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/emails/references/copy-guidelines.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/emails/references/email-types.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/emails/references/sequence-templates.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/explore-data/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/explore-data/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/explore-data/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/humanizer/.claude-plugin/marketplace.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/humanizer/.claude-plugin/plugin.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/humanizer/AGENTS.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/humanizer/LICENSE": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/humanizer/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/humanizer/README.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/humanizer/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/humanizer/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/launch/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/launch/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/launch/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/launch/evals/evals.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/launch/references/shipped-changes.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/launch/references/site-launch-qa.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/marketing-psychology/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/marketing-psychology/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/marketing-psychology/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/marketing-psychology/evals/evals.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/metrics-review/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/metrics-review/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/metrics-review/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/obsidian-bases/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/obsidian-bases/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/obsidian-bases/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/obsidian-bases/references/FUNCTIONS_REFERENCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/obsidian-cli/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/obsidian-cli/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/obsidian-cli/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/obsidian-markdown/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/obsidian-markdown/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/obsidian-markdown/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/obsidian-markdown/references/CALLOUTS.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/obsidian-markdown/references/EMBEDS.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/obsidian-markdown/references/PROPERTIES.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/onboarding-cro/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/onboarding-cro/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/onboarding-cro/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/onboarding-cro/evals/evals.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/onboarding-cro/references/activation-models.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/onboarding-cro/references/experiments.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/onboarding-cro/references/minimum-path-to-value.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/opportunity-solution-tree/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/opportunity-solution-tree/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/opportunity-solution-tree/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/outcome-roadmap/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/outcome-roadmap/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/outcome-roadmap/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/pre-mortem/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/pre-mortem/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/pre-mortem/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/pricing/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/pricing/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/pricing/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/pricing/evals/evals.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/pricing/references/pricing-models.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/pricing/references/pricing-page-teardown.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/pricing/references/research-methods.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/pricing/references/tier-structure.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/receiving-code-review/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/receiving-code-review/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/receiving-code-review/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/sql-queries/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/sql-queries/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/sql-queries/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/stakeholder-update/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/stakeholder-update/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/stakeholder-update/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/strategy-red-team/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/strategy-red-team/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/strategy-red-team/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/synthesize-research/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/synthesize-research/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/synthesize-research/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/systematic-debugging/CREATION-LOG.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/systematic-debugging/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/systematic-debugging/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/systematic-debugging/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/systematic-debugging/condition-based-waiting-example.ts": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/systematic-debugging/condition-based-waiting.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/systematic-debugging/defense-in-depth.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/systematic-debugging/find-polluter.sh": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/systematic-debugging/root-cause-tracing.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/systematic-debugging/test-academic.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/systematic-debugging/test-pressure-1.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/systematic-debugging/test-pressure-2.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/systematic-debugging/test-pressure-3.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/README.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/assets/app.css": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/assets/base.css": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/assets/base.js": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/assets/charts.js": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/assets/scenes/stage.css": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/assets/scenes/stage.js": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/evals/evals.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/library/app.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/library/directions.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/library/heroes.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/library/motions.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/library/palettes.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/library/photos.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/library/sections.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/library/sites.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/library/type.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/references/app-screens.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/references/colour.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/references/copy.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/references/critique.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/references/imagery.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/references/layout.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/references/motion.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/references/research.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/references/scenes.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/references/tells.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/references/type.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/scripts/assets.mjs": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/scripts/draw.mjs": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/scripts/inspect.mjs": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/scripts/lib/app-draw.mjs": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/scripts/lib/cdp.mjs": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/scripts/lib/inspection-files.mjs": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/scripts/lib/probe.mjs": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/scripts/lib/rules.mjs": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/scripts/lint.mjs": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/taste-skill/scripts/scenes.mjs": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/app-interface.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/catalog-summary.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/charts.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/colors.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/data-provenance.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/google-font-licenses.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/google-fonts.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/icons.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/landing.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/motion.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/phosphor-icons-upstream.json": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/products.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/react-performance.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/angular.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/astro.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/avalonia.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/flutter.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/html-tailwind.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/javafx.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/jetpack-compose.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/laravel.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/nextjs.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/nuxt-ui.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/nuxtjs.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/react-native.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/react.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/shadcn.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/svelte.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/swiftui.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/threejs.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/uno.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/uwp.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/vue.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/winui.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/stacks/wpf.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/styles.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/typography.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/ui-reasoning.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/data/ux-guidelines.csv": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/references/pro-rules.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/references/quick-reference.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/scripts/core.py": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/scripts/design_system.py": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/scripts/reasoning_contract.py": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/scripts/search.py": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/ui-ux-pro-max/scripts/validate_data.py": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/verification-before-completion/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/verification-before-completion/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/verification-before-completion/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/write-query/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/write-query/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/write-query/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/write-spec/LICENSE.upstream": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/write-spec/SKILL.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/vendor/skills/write-spec/SOURCE.md": {
+   "class": "portable",
+   "reason": "pinned third-party skills, copied into the agent's skill folder at install"
+  },
+  "system/windows/README.md": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/amp-obsidian-editor.ps1": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/apply-hook-profile.py": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/cmux.cmd": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/install.ps1": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/keep-awake.ps1": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/log-power-requests.ps1": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/open-routines.ps1": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/pm-os-env.sh": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/register-obsidian-notes.ps1": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/register-scheduled-tasks.ps1": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/seed-session.ps1": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/wsl-env.sh": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/workstream-resume-prompt.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "templates/README.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/architecture-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/daily-note-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/decision-doc-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/decision-record-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/interview-guide-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/launch-checklist-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/meeting-notes-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/okr-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/people/README.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/people/_template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/prd-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/prototype-changelog-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/prototype-decision-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/prototype-demo-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/prototype-discovery-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/prototype-research-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/release-plan-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/research-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/retrospective-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/review-note-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/roadmap-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/status-update-template.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "templates/user-lens.yaml.example": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "workstreams/README.md": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  }
+ }
+}

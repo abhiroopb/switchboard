@@ -1,0 +1,80 @@
+name: Windows kit (wmux)
+
+# Checks the Windows path of the kit without a live wmux:
+#   windows-latest: parse every system/windows/*.ps1 and run the installers in -DryRun.
+#   ubuntu-latest: run the cmux-over-wmux shim tests the way a WSL2 pane would.
+# A real wmux session is still a manual step; see system/windows/README.md.
+
+on:
+  push:
+    paths:
+      - "system/windows/**"
+      - "system/scripts/mux/**"
+      - "system/scripts/lib/mux.*"
+      - "system/scripts/test_cmux_shim.py"
+      - ".github/workflows/windows-kit.yml"
+  pull_request:
+    paths:
+      - "system/windows/**"
+      - "system/scripts/mux/**"
+      - "system/scripts/lib/mux.*"
+      - "system/scripts/test_cmux_shim.py"
+      - ".github/workflows/windows-kit.yml"
+  workflow_dispatch:
+
+jobs:
+  powershell:
+    name: PowerShell parse and dry runs
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse every .ps1
+        shell: pwsh
+        run: |
+          $failed = $false
+          Get-ChildItem system/windows -Filter *.ps1 | ForEach-Object {
+            $tokens = $null; $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $failed = $true
+              Write-Host "::error file=$($_.FullName)::$($errors | ForEach-Object { $_.Message } | Out-String)"
+            } else {
+              Write-Host "ok: $($_.Name)"
+            }
+          }
+          if ($failed) { exit 1 }
+      - name: install.ps1 -DryRun
+        shell: pwsh
+        run: pwsh -ExecutionPolicy Bypass -File system/windows/install.ps1 -DryRun -SkipTasks -SkipSeed
+      - name: register-scheduled-tasks.ps1 -DryRun
+        shell: pwsh
+        run: pwsh -ExecutionPolicy Bypass -File system/windows/register-scheduled-tasks.ps1 -DryRun -PmOsRoot ~/Development/pm-os
+      - name: seed-session.ps1 -DryRun against a fixture session.json
+        shell: pwsh
+        run: |
+          $fixture = Join-Path $env:RUNNER_TEMP "session.json"
+          @'
+          {"version":1,"windows":[{"id":"w1","workspaces":[
+            {"id":"a","title":"📥 Comms Triage"},
+            {"id":"b","title":"🧭 CoS"},
+            {"id":"c","title":"🚀 Launchpad"},
+            {"id":"d","title":"✅ Todo"},
+            {"id":"e","title":"🧰 PM OS Maintenance"}]}]}
+          '@ | Set-Content -Encoding UTF8 $fixture
+          pwsh -ExecutionPolicy Bypass -File system/windows/seed-session.ps1 -DryRun -Force -SessionPath $fixture
+
+  shim:
+    name: cmux shim tests (WSL-equivalent)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Shim unit tests
+        working-directory: system/scripts
+        run: python3 -m unittest -v test_cmux_shim
+      - name: Shell syntax
+        run: |
+          bash -n system/scripts/lib/mux.sh
+          bash -n system/windows/wsl-env.sh

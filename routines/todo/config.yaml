@@ -1,0 +1,5 @@
+name: "Todo"
+# Ultra for all threads; the owner may set high explicitly.
+agent_mode: ultra
+priority: medium
+startup_instruction: "Read routines/todo/CONTEXT.md. Start by running `python3 ~/.agents/skills/todo/scripts/todo_cli.py render-markdown --limit 5 --auto-reconcile` so the tab opens with today's top 5 actionable tasks and current backlog health. If the actionable list is empty, say that clearly and summarize the watchlist and scheduled counts from the render output. After surfacing the top 5, wait for the next todo command unless there is an obvious stale or routing issue that should be called out immediately. Emit a routine workspace update before pausing."

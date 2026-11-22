@@ -1,0 +1,5 @@
+recall_enabled: true
+recurrence_enabled: true
+rule_proposals_enabled: true
+import_enabled: true
+explorer_enabled: true

@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{TITLE}}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reset.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/theme/black.css" id="theme">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/inter@5/index.css">
+    <link rel="stylesheet" href="theme.css">
+    <style>
+      /* Fixed footer chrome, outside the Reveal scale transform.
+         Geometry/typography follow the editorial footer standard:
+         28px insets, 22px logo, 13.5px/500 brand label at 70% opacity,
+         13px/0.18em uppercase section label, 13px mono tabular counter. */
+      #chrome { position: fixed; inset: 0; pointer-events: none; z-index: 30;
+                font-family: 'Inter Variable', 'Inter', -apple-system, system-ui, sans-serif; }
+      #chrome .brand {
+        position: absolute; left: 28px; bottom: 28px;
+        display: flex; align-items: center; gap: 10px;
+        color: #f0f0f0; font-size: 13.5px; font-weight: 500;
+        letter-spacing: -0.01em; opacity: 0.7;
+      }
+      /* Optional sensitivity pill next to the brand label (see the internal
+         marker note below the {{BRAND}} span). */
+      #chrome .brand .internal-tag {
+        font-size: 10px; font-weight: 500; text-transform: uppercase;
+        letter-spacing: 0.08em; color: #8f959e;
+        border: 1px solid rgba(255,255,255,0.14); border-radius: 999px;
+        padding: 2px 8px; margin-left: 2px;
+      }
+      /* Footer Help links: the same three links as the
+         closing Help slide, on every slide and every PDF page. The only
+         clickable part of the chrome, so they re-enable pointer events. */
+      #chrome .help {
+        display: flex; align-items: center; gap: 10px; margin-left: 14px;
+        padding-left: 14px; border-left: 1px solid rgba(255,255,255,0.14);
+        pointer-events: auto;
+      }
+      #chrome .help a { color: #8f959e; text-decoration: none; font-weight: 400; white-space: nowrap; }
+      #chrome .help a:hover, #chrome .help a:focus-visible { color: #f0f0f0; text-decoration: underline; text-underline-offset: 3px; }
+      #chrome .help .sep { color: #3a3a3a; }
+      #chrome .meta {
+        position: absolute; right: 28px; bottom: 28px;
+        display: flex; align-items: center; gap: 16px;
+      }
+      #chrome .section-label {
+        font-size: 13px; font-weight: 400;
+        letter-spacing: 0.18em; text-transform: uppercase;
+        color: #5e5e5e;
+      }
+      #chrome .counter {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 13px; color: #909090;
+        font-variant-numeric: tabular-nums;
+      }
+      #chrome .counter .total { color: #3a3a3a; }
+      #chrome .dashes {
+        position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+        display: flex; gap: 6px; align-items: center;
+      }
+      #chrome .dash { width: 6px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.15); transition: all .3s; }
+      #chrome .dash.on { background: #66c2b7; width: 20px; }
+      /* data-state="hide-chrome": statement/divider slides suppress counter + dashes
+         (brand mark stays). Reveal applies the state class to <body>. */
+      #chrome .meta, #chrome .dashes { transition: opacity .4s; }
+      body.hide-chrome #chrome .meta, body.hide-chrome #chrome .dashes { opacity: 0; }
+      /* Print/PDF: counter and dashes go (they are per-page noise), the brand
+         row with the Help links stays. position:fixed repeats on every
+         printed page, which is what gives every PDF page the footer links. */
+      @media print { #chrome .meta, #chrome .dashes { display: none; } }
+    </style>
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section data-markdown="slides.md"
+                 data-separator="^\r?\n---\r?\n$"
+                 data-separator-vertical="^\r?\n--\r?\n$"
+                 data-separator-notes="^Note:"
+                 data-charset="utf-8"></section>
+      </div>
+    </div>
+
+    <div id="chrome">
+      <div class="brand">
+        <svg width="22" height="22" viewBox="0 0 24 24" role="img" aria-label="Brand mark">
+          <circle cx="12" cy="12" r="11.5" fill="#16181c" stroke="#2c3038" stroke-width="1"/>
+          <circle cx="12" cy="12" r="4.5" fill="#66c2b7"/>
+        </svg>
+        <span>{{BRAND}}</span>
+        <!-- Sensitivity marker: uncomment for decks carrying internal working
+             dates/metrics so every slide is visibly marked. Leave commented
+             for decks safe to show externally.
+        <span class="internal-tag">Internal</span>
+        -->
+        <!-- Help links: exactly these three, same as the
+             closing Help slide. Personalize the three URLs and labels, keep all three. -->
+        <nav class="help" aria-label="Help">
+          <a href="https://example.slack.com/team/">DM the owner</a><span class="sep" aria-hidden="true">·</span>
+          <a href="https://example.slack.com/archives/CXXXXXXXXXX">#team-channel</a><span class="sep" aria-hidden="true">·</span>
+          <a href="https://example.com/team-resources/">Team resource hub</a>
+        </nav>
+      </div>
+      <div class="dashes" id="chrome-dashes" aria-hidden="true"></div>
+      <div class="meta" aria-hidden="true">
+        <span class="section-label" id="chrome-section"></span>
+        <span class="counter"><span id="chrome-num"></span><span class="total"> / <span id="chrome-total"></span></span></span>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/markdown.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/highlight.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/notes.js"></script>
+    <script>
+      Reveal.initialize({
+        hash: true,
+        controls: false,
+        progress: false,
+        // Linear navigation: → steps through every slide (vertical drill-downs
+        // included) and fragments in order; ↓ is never required to progress.
+        navigationMode: 'linear',
+        width: 1600,
+        height: 900,
+        margin: 0.04,
+        transition: 'fade',
+        backgroundTransition: 'fade',
+        autoAnimateDuration: 0.7,
+        autoAnimateEasing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        pdfSeparateFragments: false,
+        plugins: [RevealMarkdown, RevealHighlight, RevealNotes]
+      });
+
+      // Crisp text at fractional scales. Reveal fits the 1600×900 deck to the
+      // window with transform: scale(), which rasterizes text at full size and
+      // resamples it — visibly blurry at e.g. 0.74×. Chromium's CSS zoom
+      // re-lays-out and re-rasterizes at the target size instead, so swap the
+      // mechanism where supported. Reveal's own transform is restored for
+      // overview mode and print/PDF export, which depend on it. Safe with
+      // auto-animate: rect measurements and getScale() shift together.
+      (function () {
+        var slides = document.querySelector('.reveal .slides');
+        if (!('zoom' in slides.style) || /print-pdf/gi.test(window.location.search)) return;
+        var overview = false;
+        function crisp() {
+          if (overview) return;
+          slides.style.zoom = Reveal.getScale();
+          slides.style.transform = 'none';
+          slides.style.inset = '0';
+          slides.style.margin = 'auto';
+        }
+        function restore() {
+          slides.style.zoom = '';
+          slides.style.inset = '';
+          slides.style.margin = '';
+          slides.style.transform = '';
+        }
+        Reveal.on('ready', crisp);
+        Reveal.on('resize', crisp);
+        Reveal.on('overviewshown', function () { overview = true; restore(); Reveal.layout(); });
+        Reveal.on('overviewhidden', function () { overview = false; Reveal.layout(); crisp(); });
+        // Reveal re-applies its scale transform on internal layouts that fire
+        // no public event (e.g. Reveal.sync() after async markdown load), so
+        // watch the style attribute and re-swap whenever a transform lands.
+        new MutationObserver(function () {
+          if (overview) return;
+          var t = slides.style.transform;
+          if (t && t !== 'none') crisp();
+        }).observe(slides, { attributes: true, attributeFilter: ['style'] });
+      })();
+
+      function updateChrome() {
+        var cur = Reveal.getCurrentSlide();
+        if (!cur) return;
+        var sec = cur.dataset.section;
+        if (!sec && cur.parentElement && cur.parentElement.tagName === 'SECTION') {
+          var sib = cur.parentElement.querySelector('section[data-section]');
+          if (sib) sec = sib.dataset.section;
+        }
+        document.getElementById('chrome-section').textContent = sec || '';
+        // Uncounted (backup) slides sit outside the count: freeze the counter at
+        // "— / total" instead of overrunning it (Reveal excludes them from totals).
+        var uncounted = cur.getAttribute('data-visibility') === 'uncounted';
+        document.getElementById('chrome-num').textContent = uncounted
+          ? '—'
+          : String(Reveal.getSlidePastCount() + 1).padStart(2, '0');
+        document.getElementById('chrome-total').textContent = Reveal.getTotalSlides();
+
+        // Whole-deck progress dashes (editorial style): one dash per counted
+        // top-level slide, active dash widened in the accent. Reveal's built-in
+        // progress bar stays off (progress: false) — the dashes are the meter.
+        var dashes = document.getElementById('chrome-dashes');
+        var slides = Reveal.getSlides().filter(function (s) {
+          return s.getAttribute('data-visibility') !== 'uncounted';
+        });
+        var past = uncounted ? -1 : Reveal.getSlidePastCount();
+        dashes.innerHTML = slides.map(function (_, i) {
+          return '<span class="dash' + (i === past ? ' on' : '') + '"></span>';
+        }).join('');
+      }
+      Reveal.on('ready', updateChrome);
+      Reveal.on('slidechanged', updateChrome);
+
+      // Navigation contract: mouse clicks never advance the deck.
+      // Forward is → (keyboard) only; clicks are reserved for links and
+      // text selection. Do not add a click-to-advance handler.
+
+      // Per-slide source lines: sections are the containing block for
+      // position:fixed, so a fixed .slide-sources rides the section's centered
+      // content height and collides with content on short slides. Re-parent
+      // each line onto the 1600x900 .slides canvas (runs on ready, after the
+      // markdown plugin has built the sections) and toggle per slide; the
+      // absolute positioning in theme.css then pins it to the deck frame.
+      function syncSlideSources() {
+        var cur = Reveal.getCurrentSlide();
+        var canvas = document.querySelector('.reveal .slides');
+        document.querySelectorAll('.reveal section .slide-sources').forEach(function (el) {
+          el._owner = el.closest('section');
+          canvas.appendChild(el);
+        });
+        document.querySelectorAll('.reveal .slides > .slide-sources').forEach(function (el) {
+          el.classList.toggle('visible', el._owner === cur);
+        });
+      }
+      Reveal.on('ready', syncSlideSources);
+      Reveal.on('slidechanged', syncSlideSources);
+
+      // Per-fragment background photos: any .fragment[data-bg] gets a dimmed
+      // full-bleed photo layer (.bg-photo, styled in theme.css) inside its
+      // slide's background element. Layers stack in fragment order and are
+      // synced statelessly to fragment visibility, so stepping backward — or
+      // jumping straight to a fragment state via URL — shows the right photo.
+      function syncFragmentBackgrounds() {
+        document.querySelectorAll('.slides .fragment[data-bg]').forEach(function (frag) {
+          if (!frag._bgLayer) {
+            var bg = Reveal.getSlideBackground(frag.closest('section'));
+            if (!bg) return;
+            var content = bg.querySelector('.slide-background-content') || bg;
+            var layer = document.createElement('div');
+            layer.className = 'bg-photo';
+            layer.style.backgroundImage = "url('" + frag.getAttribute('data-bg') + "')";
+            content.appendChild(layer);
+            frag._bgLayer = layer;
+          }
+          frag._bgLayer.classList.toggle('on', frag.classList.contains('visible'));
+        });
+      }
+      Reveal.on('ready', syncFragmentBackgrounds);
+      Reveal.on('slidechanged', syncFragmentBackgrounds);
+      Reveal.on('fragmentshown', syncFragmentBackgrounds);
+      Reveal.on('fragmenthidden', syncFragmentBackgrounds);
+
+      // Surface walk (Pattern 22): sync rail/detail state from .sw-step
+      // fragment visibility. Fragment-free state shows the intro trio; each
+      // step collapses the cards into a left rail and shows one detail panel.
+      // Stateless recompute, so backward navigation and direct fragment URLs
+      // always render the correct step. No-op when no .sw-stage exists.
+      function syncSurfaceWalk() {
+        document.querySelectorAll('.slides .sw-stage').forEach(function (stage) {
+          var section = stage.closest('section');
+          var visible = stage.querySelectorAll('.sw-step.visible').length;
+          section.classList.toggle('sw-walk', visible > 0);
+          var active = visible - 1;
+          stage.querySelectorAll('.sw-card').forEach(function (card) {
+            card.classList.toggle('on', +card.dataset.i === active);
+          });
+          stage.querySelectorAll('.sw-detail').forEach(function (detail) {
+            detail.classList.toggle('on', +detail.dataset.i === active);
+          });
+        });
+      }
+      Reveal.on('ready', syncSurfaceWalk);
+      Reveal.on('slidechanged', syncSurfaceWalk);
+      Reveal.on('fragmentshown', syncSurfaceWalk);
+      Reveal.on('fragmenthidden', syncSurfaceWalk);
+
+      // Timeline walk (Pattern 4b): .tl-step fragment visibility drives which
+      // .tl-item is highlighted (.on), which rows are passed (.done), and
+      // which left detail card shows. Row 0 is active before any fragment.
+      // Stateless recompute, so backward navigation and direct fragment URLs
+      // always render the correct state. No-op when no .tl-walk exists.
+      function syncTimelineWalk() {
+        document.querySelectorAll('.slides .tl-walk').forEach(function (stage) {
+          var active = stage.querySelectorAll('.tl-step.visible').length;
+          var timeline = stage.querySelector('.timeline');
+          // The highlight is a single .tl-hl band that glides between rows via
+          // transform/height (compositor-smooth), instead of each row fading
+          // its own background — see the .tl-hl comment in the theme CSS.
+          // Injected here so slides.md markup stays declarative. Styles are
+          // set before first paint of the element, so creation never animates.
+          var hl = timeline.querySelector('.tl-hl');
+          if (!hl) {
+            hl = document.createElement('div');
+            hl.className = 'tl-hl';
+            timeline.insertBefore(hl, timeline.firstChild);
+          }
+          var activeItem = null;
+          stage.querySelectorAll('.tl-item').forEach(function (item) {
+            var on = +item.dataset.i === active;
+            item.classList.toggle('on', on);
+            item.classList.toggle('done', +item.dataset.i < active);
+            if (on) activeItem = item;
+          });
+          if (activeItem) {
+            hl.style.transform = 'translateY(' + activeItem.offsetTop + 'px)';
+            hl.style.height = activeItem.offsetHeight + 'px';
+            hl.style.opacity = '1';
+          } else {
+            hl.style.opacity = '0';
+          }
+          stage.querySelectorAll('.tl-detail').forEach(function (detail) {
+            detail.classList.toggle('on', +detail.dataset.i === active);
+          });
+        });
+      }
+      Reveal.on('ready', syncTimelineWalk);
+      Reveal.on('slidechanged', syncTimelineWalk);
+      Reveal.on('fragmentshown', syncTimelineWalk);
+      Reveal.on('fragmenthidden', syncTimelineWalk);
+      Reveal.on('resize', syncTimelineWalk); // row offsets shift with layout
+
+      // Live count-up for .stats-live slides. Markup keeps the final numbers
+      // (source of truth for PDF and no-JS); this only animates toward them.
+      // Skipped under automation (decktape/QA) so exports capture final values.
+      (function () {
+        if (navigator.webdriver) return;
+        var DURATION = 900;
+        function animate(el) {
+          var final_ = el.dataset.final || el.textContent;
+          el.dataset.final = final_;
+          var m = final_.match(/^([^0-9]*)([0-9][0-9,\.]*)(.*)$/);
+          if (!m) return;
+          var prefix = m[1], numStr = m[2], suffix = m[3];
+          var decimals = (numStr.split('.')[1] || '').length;
+          var target = parseFloat(numStr.replace(/,/g, ''));
+          var grouped = numStr.indexOf(',') !== -1;
+          var start = performance.now();
+          function fmt(v) {
+            var s = v.toFixed(decimals);
+            if (grouped) s = Number(s).toLocaleString('en-US', { minimumFractionDigits: decimals });
+            return prefix + s + suffix;
+          }
+          function tick(now) {
+            var t = Math.min((now - start) / DURATION, 1);
+            var eased = 1 - Math.pow(1 - t, 3);
+            el.textContent = t < 1 ? fmt(target * eased) : final_;
+            if (t < 1) requestAnimationFrame(tick);
+          }
+          requestAnimationFrame(tick);
+        }
+        Reveal.on('slidechanged', function (e) {
+          if (!e.currentSlide.classList.contains('stats-live')) return;
+          e.currentSlide.querySelectorAll('.stat-num').forEach(animate);
+        });
+      })();
+    </script>
+  </body>
+</html>

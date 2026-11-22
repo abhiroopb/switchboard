@@ -1,0 +1,107 @@
+# PM OS runtime state and private material. The kit tracks code, prompts,
+# skills and templates; everything a day of use produces stays local.
+
+# Shared state, person notes and secrets never go to GitHub
+# (install.py seeds people/README.md and people/_template.md from templates/people/)
+/.state
+/people
+# Owner context, per-machine settings and the nightly backup (docs/profiles.md,
+# docs/backup-and-restore.md). Never tracked and never in the kit; install and cleanup
+# scripts must not delete it. /local also covers a worktree's link to main's folder,
+# which /local/ alone would miss because a link is not a directory to git.
+/local
+/local/
+/.firecrawl
+/system/archive
+/system/logs
+/system/plans
+.env
+.openai-key
+.secrets-*
+.DS_Store
+daemon/*.log
+*.swp
+*.swo
+*~
+routines/.bg-tasks/
+notes/sensitive/
+notes/chrome-tabs/
+projects/**/meetings/*1on1*.md
+projects/**/meetings/*1-1*.md
+projects/**/meetings/*one-on-one*.md
+projects/**/meetings/*handoff*.md
+projects/**/meetings/*hand-off*.md
+
+# Personal config rendered from the *.example.yaml templates
+system/config/priority-channels.yaml
+system/config/stakeholders.yaml
+
+# Per-machine harness adapter state (the shared adapters in .claude/, .codex/,
+# .cursor/ and adapters/ are tracked)
+.claude/settings.local.json
+.claude/skills/
+.codex/auth.json
+
+# Amp worktrees and scratch
+.amp/
+!.amp/
+.amp/*
+!.amp/plugins/
+.amp/in/
+
+# Generated PM OS runtime state
+system/background-task-state.json
+system/background-task-attempts.json
+system/job-state.json
+system/today-plan.json
+system/plans/*.json
+system/logs/*.log
+system/logs/**
+system/recall/*.sqlite3
+system/state/**
+!system/state/README.md
+# The to-do list, its backups and its archive stay ignored: the push policy in
+# AGENTS.md names them sensitive and dispatch.py auto-push refuses while any is
+# tracked. They live only on this machine.
+
+# Obsidian vault: track shared config, ignore per-machine layout and caches
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/workspaces.json
+.obsidian/cache/
+.obsidian/plugins/
+.obsidian/graph.json
+.obsidian/hotkeys.json
+.trash/
+
+# Structural knowledge graph (build-knowledge-graph.py output, rebuilt locally)
+graphify-out/
+
+# Generated Python/cache artifacts
+**/__pycache__/
+*.pyc
+**/.skill-data/
+workstreams/*/.signals/
+workstreams/*/generated/
+workstreams/**/.amp/
+# A workstream's verbatim asks (new-workstream.py writes them here, never to tracked files)
+workstreams/**/private/
+
+# Private workstream (system/config/private-workstreams.txt): real content stays in the folder
+# on the main checkout. Only CONTEXT.md and config.yaml are tracked, live or archived.
+
+# Generated digests and transient outputs
+outputs/automation-inbox/
+outputs/comms-triage/
+outputs/.pending-comms.*
+outputs/daily-rollup/
+outputs/meeting-notes/
+outputs/todo-refresh/
+outputs/inbox-media/
+
+# Organisation profile state written by system/scripts/apply-profile.py (per machine)
+.pm-os-kit/profile.json
+.pm-os-kit/profile-backup/
+
+# todo.json is private (AGENTS.md push policy); system/state/** above already ignores it, kept as a backstop
+system/state/todo.json

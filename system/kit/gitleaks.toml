@@ -1,0 +1,11 @@
+# gitleaks config for the public build: the default rules plus two known invented values.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Invented values in tests and a pagination parameter, reviewed"
+regexTarget = "line"
+regexes = [
+  '''pageToken=token, includeSpamTrash''',
+  '''MY_API_TOKEN=short''',
+]

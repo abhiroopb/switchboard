@@ -1,0 +1,7 @@
+# Copy to local/user-lens.yaml (gitignored, never in the kit) and customize.
+decision_principles: []
+tradeoff_preferences: []
+communication_tone: []
+grounding_standard: []
+verification_standard: []
+hard_stops: []

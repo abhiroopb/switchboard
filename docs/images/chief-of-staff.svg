@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" role="img" aria-labelledby="t d">
+  <title id="t">Illustration of the Chief of Staff thread</title>
+  <desc id="d">An illustration with invented example data: the user asks for start of day, then dispatches a task, a worker asks a question with a default, and two workers report results.</desc>
+  <rect x="0" y="0" width="900" height="470" rx="14" fill="#0f172a"/>
+  <rect x="0" y="0" width="900" height="38" rx="14" fill="#1e293b"/>
+  <rect x="0" y="24" width="900" height="14" fill="#1e293b"/>
+  <circle cx="24" cy="19" r="6" fill="#f87171"/><circle cx="44" cy="19" r="6" fill="#fbbf24"/><circle cx="64" cy="19" r="6" fill="#34d399"/>
+  <text x="450" y="24" text-anchor="middle" font-size="13" fill="#94a3b8">Chief of Staff · illustration, invented data</text>
+  <g font-size="14">
+    <text x="28" y="72" fill="#a5b4fc">&gt; start of day</text>
+    <text x="28" y="98" fill="#e2e8f0">Today: 3 due, 1 waiting on you, 2 tasks still running.</text>
+    <text x="28" y="120" fill="#cbd5e1">  - Q3 planning doc draft is due today (planning).</text>
+    <text x="28" y="142" fill="#cbd5e1">  - Reply to Sam about the launch date is waiting on you.</text>
+    <text x="28" y="176" fill="#a5b4fc">&gt; Draft the Q3 planning doc from my notes in workstreams/planning</text>
+    <text x="28" y="202" fill="#e2e8f0">Dispatched to Planning (worker 1). It reports here when done.</text>
+    <text x="28" y="236" fill="#fcd34d">[WORKER QUESTION] Planning asks: keep the doc to one page?</text>
+    <text x="28" y="258" fill="#fcd34d">  (a) one page  (b) full draft with appendix   default: b, continuing on it</text>
+    <text x="28" y="292" fill="#a5b4fc">&gt; a</text>
+    <text x="28" y="318" fill="#e2e8f0">Sent to Planning as a steer.</text>
+    <text x="28" y="352" fill="#6ee7b7">[REPORT] Code Review · done: the retry PR has one real bug, at</text>
+    <text x="28" y="374" fill="#6ee7b7">  sync/retry.py:88. Review note: workstreams/code-review/2026-01-15-retry.md</text>
+    <text x="28" y="408" fill="#6ee7b7">[REPORT] Planning · done: one-page Q3 draft ready for review.</text>
+    <text x="28" y="430" fill="#6ee7b7">  Review note: workstreams/planning/2026-01-15-q3-plan.md</text>
+  </g>
+</svg>

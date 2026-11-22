@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.pm-os.command-center</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>{{PM_OS_ROOT}}/system/scripts/command-center-loop.sh</string>
+        <string>--once</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>{{PM_OS_ROOT}}</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Fire every 10 min. The script only INJECTS the chat digest ~every
+         30 min (MIN_INJECT_GAP_S floor); the extra ticks exist so a digest
+         deferred because the user was typing / mid-turn retries ~10 min later
+         instead of waiting a full 30. -->
+    <key>StartInterval</key>
+    <integer>600</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{PM_OS_ROOT}}/system/state/logs/command-center.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{PM_OS_ROOT}}/system/state/logs/command-center.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/Applications/cmux.app/Contents/Resources/bin</string>
+        <key>HOME</key>
+        <string>{{HOME}}</string>
+    </dict>
+</dict>
+</plist>

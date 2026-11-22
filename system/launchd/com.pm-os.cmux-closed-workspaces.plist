@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.pm-os.cmux-closed-workspaces</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>{{PM_OS_ROOT}}/daemon/cmux-closed-workspaces.py</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>{{PM_OS_ROOT}}/system/logs/cmux-closed-workspaces.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{PM_OS_ROOT}}/system/logs/cmux-closed-workspaces.log</string>
+</dict>
+</plist>

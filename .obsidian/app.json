@@ -1,0 +1,24 @@
+{
+  "useMarkdownLinks": true,
+  "newLinkFormat": "relative",
+  "showUnsupportedFiles": true,
+  "attachmentFolderPath": "./",
+  "alwaysUpdateLinks": false,
+  "promptDelete": true,
+  "readableLineLength": true,
+  "strictLineBreaks": false,
+  "userIgnoreFilters": [
+    ".git/",
+    ".amp/",
+    ".claude/",
+    ".state/",
+    "system/state/",
+    "system/logs/",
+    "system/recall/",
+    "/\\/\\.\\.?comms-/",
+    "/\\/\\.pending-comms\\./",
+    "outputs/daily-rollup/",
+    "/workstreams\\/[^/]+\\/\\.signals\\//",
+    "graphify-out/"
+  ]
+}

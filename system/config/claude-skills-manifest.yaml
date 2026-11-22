@@ -1,0 +1,376 @@
+# Skills copied into ~/.claude/skills/<name>.
+#
+# Why this file exists: Claude Code loads skills only from ~/.claude/skills,
+# project .claude/skills, --add-dir roots, and plugins. It never reads
+# ~/.agents/skills. Amp reads ~/.agents/skills first, then project skill
+# folders, then ~/.claude/skills, and the first `name` wins. So one copy in
+# ~/.claude/skills serves both agents only while ~/.agents/skills holds no
+# second copy of the same skill: sync-skills.py moves old repo copies there to
+# the trash and keeps only an external managed library and todo.
+# Skills are copied, never symlinked.
+#
+# ~/.claude/skills is output only, like a build folder. Edit the source, never
+# the copy. system/scripts/sync-skills.py copies changed skills on every
+# command-center tick and right after a branch lands on main, always from the
+# main checkout. Claude sees an edit in a running session; Amp in its next new
+# thread. An edited installed copy is saved to local/skill-edits/ and replaced
+# by the source, so it never sticks and is never lost.
+#
+# Commands (run from the main pm-os checkout):
+#   python3 system/scripts/sync-skills.py                      # the full sync, as the tick runs it
+#   python3 system/scripts/install-claude-skills.py --check    # list drift, exit 1 when any
+#   python3 system/scripts/install-claude-skills.py --prune    # remove managed copies not listed here (cap 5)
+#   python3 system/scripts/install-claude-skills.py vendor <name>  # refresh a third-party copy
+#
+# Entry fields:
+#   name      directory name under the destination (and under the source root).
+#             It must equal the SKILL.md frontmatter `name`, because Claude reads
+#             the folder name and Amp the frontmatter; --check fails otherwise.
+#   source    pm-os   -> <repo>/.agents/skills/<name>
+#             agents  -> ~/.agents/skills/<name>   (external managed skill library)
+#             vendor  -> <repo>/system/vendor/skills/<name> (pinned third-party copy)
+#             local   -> <repo>/local/skills/<name> (private, gitignored, out of the kit)
+#   vendor entries also carry repo, ref (commit sha), path (subdirectory that
+#   holds SKILL.md), license, reviewed (date of the safety review), and optional
+#   drop (paths to delete) and edits ({files, find, replace}) applied after the
+#   copy so the vendored tree is reproducible from this file alone.
+#   pattern   glob instead of name; expands to every skill dir under the source
+#             root that matches (an explicit name entry wins over a pattern).
+#   listing   on (default) | name-only | user-invocable-only | off. Written to
+#             skillOverrides in ~/.claude/settings.json so a large family costs
+#             Claude one line per skill instead of its full description.
+#   absent_ok_on  sys.platform values (for example [win32]) where this entry may
+#             have no source. It stays dormant there and a plain run still passes.
+#             Everywhere else, and for entries without it, a missing source fails.
+#             firecrawl self-installs on demand, so its entries carry it.
+#   machine_gate  on a pattern entry: a key that must be on for this machine, in the
+#             environment or in local/machines/<MACHINE>.env. Off by default, so a
+#             machine that was never switched on installs nothing from this pattern,
+#             even when a sync client has copied the source folder to it.
+#   A dormant pattern (missing or empty root, closed gate) never counts as a delete:
+#   --prune keeps the copies that came from it.
+#
+# Listing budget: Claude shows full descriptions up to
+# 200000 tokens x 4 x skillListingBudgetFraction characters (default 0.01 =
+# 8000 chars) and truncates the rest to name-only. The core set below needs
+# about 24k chars, the vendor set 15k, the two name-only families 4.5k, so
+# claude_settings raises the fraction to 0.06 (48k chars, about 12k tokens of
+# system prompt per session). Recompute when adding full entries:
+#   sum(min(len(description), 1536) + len(name) + 6) over listing: on entries.
+#
+# Third-party review: each vendor entry below passed a read of its SKILL.md,
+# scripts, and hooks for network calls, telemetry, credential access, and
+# AGENTS.md writes before it was pinned.
+
+destination: ~/.claude/skills
+
+sources:
+  pm-os: .agents/skills
+  agents: ~/.agents/skills
+  vendor: system/vendor/skills
+  local: local/skills
+
+# Keys merged into ~/.claude/settings.json by the installer (see Listing budget).
+claude_settings:
+  skillListingBudgetFraction: 0.06
+
+# Shared text for the Anthropic knowledge-work skills, which point at a
+# CONNECTORS.md two levels up that is not vendored.
+x-kwp-connectors: &kwp-connectors
+  files: SKILL.md
+  find: "> If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../../CONNECTORS.md)."
+  replace: "> Connected tools in PM OS: the `pmos` connectors (Slack, Gmail, Google Drive, Calendar). Read `~/Development/pm-os/knowledge/` before drafting."
+x-kwp-args: &kwp-args
+  files: SKILL.md
+  find: "$ARGUMENTS"
+  replace: "<input>"
+
+skills:
+  # ── PM OS core set from the external skill library under ~/.agents/skills ──
+  # todo carries the tracked override in system/skill-overrides/todo, which
+  # sync-skills.py applies before every copy. Add a name here when it joins
+  # CORE_SKILLS in system/bin/install-amp-skills.sh and PM OS depends on it.
+  - {name: todo, source: agents}
+
+  # ── PM OS owned skills ──────────────────────────────────────────────
+  # Canonical copies live in this repo under .agents/skills. One pattern installs
+  # every folder there that holds a SKILL.md, so a new skill needs no edit here.
+  # Named entries below keep a per-machine rule: an entry's only_on also stops the
+  # pattern from bringing that skill back elsewhere, and absent_ok_on lists the
+  # skills a machine may lack. A named entry always wins over a pattern match
+  # for the same name.
+  - {pattern: "*", source: pm-os}
+
+
+  # ── Large families: directory skill full, members name-only ─────────
+  # The family's directory skill keeps its description so Claude knows the
+  # family exists; members list by name only and load on demand.
+  - {name: firecrawl, source: agents, absent_ok_on: [win32]}
+  - {pattern: "firecrawl-*", source: agents, listing: name-only, absent_ok_on: [win32]}
+
+  # ── Writing quality ────────────────────────────────────────────────
+  - name: humanizer
+    source: vendor
+    repo: https://github.com/blader/humanizer.git
+    ref: 0ef9fe5bc3572734fd3ae6c448fe00a30cd5dcf0
+    path: .
+    license: MIT
+    reviewed: 2026-11-01
+    drop: [agents, CHANGELOG.md, scripts]
+
+  # ── Design and frontend taste ──────────────────────────────────────
+  - name: taste-skill
+    source: vendor
+    repo: https://github.com/Leonxlnx/taste-skill.git
+    ref: 12af471f627f866411b4bd785b19646d3672784c
+    path: skills/taste-skill
+    license: MIT
+    reviewed: 2026-11-01
+    edits:
+      - {files: SKILL.md, find: "name: design-taste-frontend", replace: "name: taste-skill"}
+
+  - name: ui-ux-pro-max
+    source: vendor
+    repo: https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
+    ref: 3a13158ff1f32156cbe144108de48eda2ecaed9a
+    path: .claude/skills/ui-ux-pro-max
+    license: MIT
+    reviewed: 2026-11-01
+    drop: [scripts/tests]
+    edits:
+      - files: SKILL.md
+        find: "${CLAUDE_PLUGIN_ROOT}/.claude/skills/ui-ux-pro-max/scripts/"
+        replace: "~/.claude/skills/ui-ux-pro-max/scripts/"
+
+  - name: design-critique
+    source: vendor
+    repo: https://github.com/cuellarfr/design-skills.git
+    ref: 7e25e66e87f64f9d3dea22198f9e29937e7c48f5
+    path: skills/design-critique
+    license: MIT
+    reviewed: 2026-11-01
+
+  - name: diagram-design
+    source: vendor
+    repo: https://github.com/cathrynlavery/diagram-design.git
+    ref: 0cf73c3fcc56667ad91a9a04c439ac6ccfabc9d1
+    path: skills/diagram-design
+    license: MIT
+    reviewed: 2026-11-01
+
+  # ── Engineering discipline (superpowers, hook-free subset) ─────────
+  - name: systematic-debugging
+    source: vendor
+    repo: https://github.com/obra/superpowers.git
+    ref: 2ce8aa15d05bd57213e6f746f953aafb7ded7a8b
+    path: skills/systematic-debugging
+    license: MIT
+    reviewed: 2026-11-01
+    edits:
+      - {files: "**/*.md", find: "superpowers:", replace: ""}
+
+  - name: verification-before-completion
+    source: vendor
+    repo: https://github.com/obra/superpowers.git
+    ref: 2ce8aa15d05bd57213e6f746f953aafb7ded7a8b
+    path: skills/verification-before-completion
+    license: MIT
+    reviewed: 2026-11-01
+
+  - name: receiving-code-review
+    source: vendor
+    repo: https://github.com/obra/superpowers.git
+    ref: 2ce8aa15d05bd57213e6f746f953aafb7ded7a8b
+    path: skills/receiving-code-review
+    license: MIT
+    reviewed: 2026-11-01
+
+  # ── Marketing (coreyhaines31, subset) ──
+  - name: emails
+    source: vendor
+    repo: https://github.com/coreyhaines31/marketingskills.git
+    ref: 88c79f6528a9347420e57ceb1fff9a60de651768
+    path: skills/emails
+    license: MIT
+    reviewed: 2026-11-01
+  - name: copy-editing
+    source: vendor
+    repo: https://github.com/coreyhaines31/marketingskills.git
+    ref: 88c79f6528a9347420e57ceb1fff9a60de651768
+    path: skills/copy-editing
+    license: MIT
+    reviewed: 2026-11-01
+  - name: marketing-psychology
+    source: vendor
+    repo: https://github.com/coreyhaines31/marketingskills.git
+    ref: 88c79f6528a9347420e57ceb1fff9a60de651768
+    path: skills/marketing-psychology
+    license: MIT
+    reviewed: 2026-11-01
+  - name: pricing
+    source: vendor
+    repo: https://github.com/coreyhaines31/marketingskills.git
+    ref: 88c79f6528a9347420e57ceb1fff9a60de651768
+    path: skills/pricing
+    license: MIT
+    reviewed: 2026-11-01
+  # Renamed from upstream `onboarding`: an external skill library can
+  # ship its own new-hire `onboarding` skill under the same name, and Claude keeps
+  # only one skill per name.
+  - name: onboarding-cro
+    source: vendor
+    repo: https://github.com/coreyhaines31/marketingskills.git
+    ref: 88c79f6528a9347420e57ceb1fff9a60de651768
+    path: skills/onboarding
+    license: MIT
+    reviewed: 2026-11-01
+    edits:
+      - {files: SKILL.md, find: "name: onboarding\n", replace: "name: onboarding-cro\n"}
+  - name: ab-testing
+    source: vendor
+    repo: https://github.com/coreyhaines31/marketingskills.git
+    ref: 88c79f6528a9347420e57ceb1fff9a60de651768
+    path: skills/ab-testing
+    license: MIT
+    reviewed: 2026-11-01
+  - name: customer-research
+    source: vendor
+    repo: https://github.com/coreyhaines31/marketingskills.git
+    ref: 88c79f6528a9347420e57ceb1fff9a60de651768
+    path: skills/customer-research
+    license: MIT
+    reviewed: 2026-11-01
+  - name: launch
+    source: vendor
+    repo: https://github.com/coreyhaines31/marketingskills.git
+    ref: 88c79f6528a9347420e57ceb1fff9a60de651768
+    path: skills/launch
+    license: MIT
+    reviewed: 2026-11-01
+
+  # ── Obsidian vault (kepano) ────────────────────────────────────────
+  - name: obsidian-markdown
+    source: vendor
+    repo: https://github.com/kepano/obsidian-skills.git
+    ref: 3ccff5338ea700537839b21900aa5358a0402c98
+    path: skills/obsidian-markdown
+    license: MIT
+    reviewed: 2026-11-01
+  - name: obsidian-bases
+    source: vendor
+    repo: https://github.com/kepano/obsidian-skills.git
+    ref: 3ccff5338ea700537839b21900aa5358a0402c98
+    path: skills/obsidian-bases
+    license: MIT
+    reviewed: 2026-11-01
+  - name: obsidian-cli
+    source: vendor
+    repo: https://github.com/kepano/obsidian-skills.git
+    ref: 3ccff5338ea700537839b21900aa5358a0402c98
+    path: skills/obsidian-cli
+    license: MIT
+    reviewed: 2026-11-01
+
+  # ── Product management (phuryn/pm-skills, discovery subset) ───────
+  - name: strategy-red-team
+    source: vendor
+    repo: https://github.com/phuryn/pm-skills.git
+    ref: 2a12295a7717569baa7be181b4cfebe3ca38a6bb
+    path: pm-execution/skills/strategy-red-team
+    license: MIT
+    reviewed: 2026-11-01
+    edits:
+      - {files: SKILL.md, find: "$ARGUMENTS", replace: "the provided plan"}
+  - name: pre-mortem
+    source: vendor
+    repo: https://github.com/phuryn/pm-skills.git
+    ref: 2a12295a7717569baa7be181b4cfebe3ca38a6bb
+    path: pm-execution/skills/pre-mortem
+    license: MIT
+    reviewed: 2026-11-01
+    edits:
+      - {files: SKILL.md, find: "$ARGUMENTS", replace: "the provided launch plan"}
+  - name: outcome-roadmap
+    source: vendor
+    repo: https://github.com/phuryn/pm-skills.git
+    ref: 2a12295a7717569baa7be181b4cfebe3ca38a6bb
+    path: pm-execution/skills/outcome-roadmap
+    license: MIT
+    reviewed: 2026-11-01
+    edits:
+      - {files: SKILL.md, find: "$ARGUMENTS", replace: "the team"}
+  - name: opportunity-solution-tree
+    source: vendor
+    repo: https://github.com/phuryn/pm-skills.git
+    ref: 2a12295a7717569baa7be181b4cfebe3ca38a6bb
+    path: pm-product-discovery/skills/opportunity-solution-tree
+    license: MIT
+    reviewed: 2026-11-01
+    edits:
+      - {files: SKILL.md, find: "$ARGUMENTS", replace: "the provided product area"}
+
+  # ── Product management and data (anthropics/knowledge-work-plugins) ──
+  # Plugin wrappers (.mcp.json, commands) are not vendored; only SKILL.md.
+  - name: write-spec
+    source: vendor
+    repo: https://github.com/anthropics/knowledge-work-plugins.git
+    ref: 2574e29377c7173d0cecffef29a6ecbd7f8ccb5d
+    path: product-management/skills/write-spec
+    license: Apache-2.0
+    reviewed: 2026-11-01
+    edits: [*kwp-connectors, *kwp-args]
+  - name: competitive-brief
+    source: vendor
+    repo: https://github.com/anthropics/knowledge-work-plugins.git
+    ref: 2574e29377c7173d0cecffef29a6ecbd7f8ccb5d
+    path: product-management/skills/competitive-brief
+    license: Apache-2.0
+    reviewed: 2026-11-01
+    edits: [*kwp-connectors, *kwp-args]
+  - name: stakeholder-update
+    source: vendor
+    repo: https://github.com/anthropics/knowledge-work-plugins.git
+    ref: 2574e29377c7173d0cecffef29a6ecbd7f8ccb5d
+    path: product-management/skills/stakeholder-update
+    license: Apache-2.0
+    reviewed: 2026-11-01
+    edits: [*kwp-connectors, *kwp-args]
+  - name: metrics-review
+    source: vendor
+    repo: https://github.com/anthropics/knowledge-work-plugins.git
+    ref: 2574e29377c7173d0cecffef29a6ecbd7f8ccb5d
+    path: product-management/skills/metrics-review
+    license: Apache-2.0
+    reviewed: 2026-11-01
+    edits: [*kwp-connectors, *kwp-args]
+  - name: synthesize-research
+    source: vendor
+    repo: https://github.com/anthropics/knowledge-work-plugins.git
+    ref: 2574e29377c7173d0cecffef29a6ecbd7f8ccb5d
+    path: product-management/skills/synthesize-research
+    license: Apache-2.0
+    reviewed: 2026-11-01
+    edits: [*kwp-connectors, *kwp-args]
+  - name: write-query
+    source: vendor
+    repo: https://github.com/anthropics/knowledge-work-plugins.git
+    ref: 2574e29377c7173d0cecffef29a6ecbd7f8ccb5d
+    path: data/skills/write-query
+    license: Apache-2.0
+    reviewed: 2026-11-01
+    edits: [*kwp-connectors]
+  - name: sql-queries
+    source: vendor
+    repo: https://github.com/anthropics/knowledge-work-plugins.git
+    ref: 2574e29377c7173d0cecffef29a6ecbd7f8ccb5d
+    path: data/skills/sql-queries
+    license: Apache-2.0
+    reviewed: 2026-11-01
+  - name: explore-data
+    source: vendor
+    repo: https://github.com/anthropics/knowledge-work-plugins.git
+    ref: 2574e29377c7173d0cecffef29a6ecbd7f8ccb5d
+    path: data/skills/explore-data
+    license: Apache-2.0
+    reviewed: 2026-11-01
+    edits: [*kwp-connectors]

@@ -1,0 +1,19 @@
+# PM OS keeps LF in the working tree on every OS. Bash, Python, and the
+# Markdown vault break or churn with CRLF, and Git for Windows defaults to
+# core.autocrlf=true (about 1,100 "LF will be replaced by CRLF" warnings on the
+# first install commit). cmd.exe batch files are the one CRLF exception.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.mp3 binary
+*.mp4 binary

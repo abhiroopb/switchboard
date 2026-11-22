@@ -1,0 +1,61 @@
+# Build targets for system/kit/build_tier.py; the runbook is system/kit/README.md.
+#
+# Your install is the one source of truth and stays on your machine. A target is a filtered copy of
+# it, built by the engine and never edited by hand. Keep only generic rules here: anything that names
+# a company term, a person, a machine or a private path goes in the target's owner-local rules file
+# under local/kit/, which never leaves the machine. Globs use fnmatch (`*` crosses `/`); a glob ending
+# in `/` names a folder.
+
+tiers:
+  public:
+    name: my-share
+    description: A shareable copy of this install, with nothing personal in it.
+    repo: github.com/<your-account>/<your-repo>
+    rules: local/kit/public.rules
+    rules_required: true
+    exclude:
+      - local/
+      - people/
+      - workstreams/
+      - outputs/
+      - notes/
+      - projects/
+      - personal/
+      - .obsidian/
+      - .amp/
+      - .state/
+      - system/state/
+      - graphify-out/
+      - .pm-os-kit/
+      - "*.pyc"
+      - "*/__pycache__/*"
+    keep:
+      - system/state/README.md
+    overlay: []
+    deny_lists: [local/kit-deny-list.txt, local/kit/personal-deny.txt]
+    gates: [deny, identifiers, public, secrets]
+    # Kinds the public detectors expect in these paths. The detectors' own tests hold one invented
+    # example of every kind.
+    public_allow:
+      email: ["system/vendor/*", "system/kit/test_build_tier.py"]
+      home-path: ["system/vendor/*", "system/kit/test_build_tier.py"]
+      phone: ["system/vendor/*", "system/kit/test_build_tier.py"]
+      ip: ["system/scripts/test_*", "system/kit/test_build_tier.py"]
+      chat-id: ["system/kit/test_build_tier.py"]
+      doc-id: ["system/kit/test_build_tier.py"]
+      owner-ruling: ["system/kit/test_build_tier.py"]
+      scanner-suppression: ["system/kit/scan_public.py", "system/kit/test_build_tier.py"]
+    # Third-party text is never rewritten.
+    rewrite_skip: ["system/vendor/"]
+    identifiers_required: true
+    secrets_required: true
+    gitleaks_config: system/kit/gitleaks.toml
+    # After the gates: CRLF for Windows command files, the version stamp, and the install manifest.
+    crlf: ["*.cmd", "*.bat"]
+    version_file: KIT_VERSION
+    adapter_indexes: true   # adapters/PORTABILITY.md, portability.json and SKILLS.md list what ships
+    manifest: true
+    # Every commit carries this identity, never yours.
+    author: {name: my-share, email: my-share@users.noreply.github.com}
+    remote_name: origin
+    visibility: PRIVATE   # change to PUBLIC only when you mean it; push refuses on a mismatch

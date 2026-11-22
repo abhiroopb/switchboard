@@ -1,0 +1,47 @@
+startup_instruction: |
+  Read this file. Check today's day of week. Run all jobs whose schedule
+  matches today (daily = every day, weekly-monday = Monday, weekly-thursday
+  = Thursday, weekly-friday = Friday, weekly-sunday = Sunday). Execute them
+  sequentially. Do not ask for confirmation unless confirm: true.
+  Load the skill a job names before running it.
+
+jobs:
+  # Owner: routines/scheduled-jobs/ runs these via its CONTEXT.md.
+  #
+  # Jobs with a deterministic launchd or start-day owner are NOT duplicated
+  # here. This routine keeps only interactive or judgment work.
+  #
+  # Personalize here: add weekly status posts, kudos sweeps, or report reviews
+  # for your own team. Keep `confirm: true` on anything that writes externally.
+
+  - name: weekly-status-summary
+    command: |
+      Generate a consolidated weekly Slack summary from this week's
+      workstream CONTEXT.md updates and post to the appropriate Slack channel.
+      Show the draft before posting.
+    schedule: weekly-friday
+    confirm: true
+
+  - name: todo-weekly-checkpoint
+    command: |
+      Load the todo skill. Run the weekly todo checkpoint.
+      1. Run `python3 system/skill-overrides/todo/scripts/todo_cli.py archive-done --days 7 --batch-size 100`.
+      2. Run `python3 ~/.agents/skills/todo/scripts/todo_cli.py checkpoint --days 7 --priority P2,P3`.
+      3. Summarize the stale actionable items and propose which should become waiting, scheduled, someday, or closed.
+      4. Ask before making ambiguous status changes. Completed items move to the tracked monthly archive instead of being deleted.
+    schedule: weekly-friday
+    confirm: true
+
+  - name: kb-distill-followup
+    command: |
+      Distillation itself is owned by launchd (com.pm-os.amp-mem-weekly-distill,
+      Sun 09:00, headless). Do NOT re-run it. This job handles the interactive
+      follow-up only:
+      1. Check `.state/amp-mem-weekly-distill.log` for today's run. If it failed or
+         was skipped with >30 pending observations, run the distillation now via
+         the kb-distill skill.
+      2. Surface any AGENTS.md rule candidates the headless run listed in its log
+         as approve/skip proposals (the headless run is forbidden from editing
+         AGENTS.md itself).
+    schedule: weekly-sunday
+    confirm: false

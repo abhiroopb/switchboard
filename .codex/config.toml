@@ -1,0 +1,12 @@
+# PM OS project config for OpenAI Codex CLI.
+#
+# Codex reads AGENTS.md at the project root natively, but truncates the combined
+# instruction text at project_doc_max_bytes (default 32 KiB). The PM OS AGENTS.md
+# is larger than that, so raise the cap. Codex only loads a project
+# .codex/config.toml for trusted projects; `adapters/install-adapters.sh --apply`
+# also writes the same key into ~/.codex/config.toml so the cap applies
+# regardless of trust state.
+#
+# Skills: Codex loads SKILL.md folders from .agents/skills/ in the repo and from
+# ~/.agents/skills/ (where system/bin/install-amp-skills.sh puts them).
+project_doc_max_bytes = 65536

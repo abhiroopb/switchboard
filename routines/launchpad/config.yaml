@@ -1,0 +1,6 @@
+name: "Launchpad"
+emoji: "🚀"
+# Core surface: always ultra.
+agent_mode: ultra
+priority: high
+startup_instruction: "Set DISPATCH_ORIGIN=launchpad. Read and apply system/prompts/dispatch-core.md, then read routines/launchpad/CONTEXT.md. Hydrate from system/state/command-center-latest.md and system/state/running-tasks.json. Reply only `Ready.` and wait for the owner's prompt."

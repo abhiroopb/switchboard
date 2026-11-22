@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "default_origin": "cos",
+  "surfaces": {
+    "cos": {
+      "title": "\ud83e\udded CoS",
+      "source_type": "routine",
+      "source_key": "megadesk",
+      "dispatch_origin": true,
+      "reporting_hub": true,
+      "callback_target": true,
+      "next_up_target": true,
+      "command_center_badge": true,
+      "workspace_reports": false
+    },
+    "launchpad": {
+      "title": "\ud83d\ude80 Launchpad",
+      "source_type": "routine",
+      "source_key": "launchpad",
+      "dispatch_origin": true,
+      "reporting_hub": false,
+      "callback_target": true,
+      "next_up_target": false,
+      "command_center_badge": false,
+      "workspace_reports": false
+    }
+  }
+}

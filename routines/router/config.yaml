@@ -1,0 +1,9 @@
+name: Router
+emoji: 🔀
+# Canonical Router mode lives in system/config/router.yaml (router.mode).
+# Kept in sync here for generic `cmux-helpers.sh launch routine:router` paths.
+# Always ultra.
+agent_mode: ultra
+auto_open: false
+status: retired  # The Router agent is retired; CONTEXT.md is a retirement note. Kept in place because router-dispatch.sh and tests still reference the path.
+description: Classifies every request and seeds its owning workstream; never performs delivery itself.

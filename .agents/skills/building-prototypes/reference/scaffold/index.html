@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}} · prototype {{version}}</title>
+<style>
+  /* Self-contained starter. The block below is the kit's design baseline
+     (reference/scaffold/tokens.css, inlined by `prototype.py init`). Swap the
+     :root values for your product's tokens; keep the banner, the feedback
+     section, the session log, and the reduced-motion rule. */
+{{tokens}}
+  /* page: the prototype banner stays on every version */
+  .proto-banner { background: var(--text); color: #fff; font-size: var(--text-xs); line-height: var(--leading-xs); }
+  .proto-banner .wrap { display: flex; gap: var(--space-3); align-items: center; min-height: 36px; flex-wrap: wrap; }
+  .proto-banner strong { font-weight: 600; }
+  .proto-banner .proto-version { background: rgb(255 255 255 / .16); padding: 2px var(--space-2); border-radius: var(--radius-full); font-weight: 500; }
+  .proto-banner .spacer { flex: 1; }
+  .proto-banner a { color: #fff; }
+
+  /* page: app chrome */
+  header.app { background: var(--surface); border-bottom: 1px solid var(--line); }
+  header.app .wrap { display: flex; align-items: center; gap: var(--space-4); min-height: 64px; }
+  header.app h1 { font-size: var(--text-xl); line-height: var(--leading-xl); }
+  header.app nav { margin-left: auto; display: flex; gap: var(--space-2); }
+
+  /* page: summary cards and table */
+  main { padding: var(--space-6) 0 var(--space-10); }
+  .grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .kpi { font-size: var(--text-3xl); line-height: var(--leading-3xl); font-weight: 600; letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; }
+  .delta { font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: 500; margin-left: var(--space-2); padding: 2px var(--space-2); border-radius: var(--radius-full); }
+  .delta.up { color: var(--ok-ink); background: var(--ok-soft); } .delta.down { color: var(--warn-ink); background: var(--warn-soft); }
+  section[aria-label="Items"] { margin-top: var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+  th, td { padding: var(--space-3) var(--space-4); }
+  tr:last-child td { border-bottom: 0; }
+  .empty { padding: var(--space-6); text-align: center; color: var(--muted); }
+
+  @media (max-width: 720px) {
+    .wrap { padding: 0 var(--space-4); }
+    .grid { grid-template-columns: 1fr; }
+    header.app nav { margin-left: 0; width: 100%; }
+    header.app .wrap { flex-wrap: wrap; padding-top: var(--space-3); padding-bottom: var(--space-3); }
+    th:nth-child(3), td:nth-child(3) { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="proto-banner" data-prototype-banner data-prototype-version="{{version}}" role="note" aria-label="Prototype notice">
+  <div class="wrap">
+    <strong>Prototype</strong>
+    <span class="proto-version">{{version}}</span>
+    <span>Sample data. Not a real product.</span>
+    <span class="spacer"></span>
+    <a href="#feedback">Give feedback</a>
+  </div>
+</div>
+
+<header class="app">
+  <div class="wrap">
+    <h1>{{title}}</h1>
+    <nav aria-label="Primary">
+      <button class="btn" type="button" data-log="filter:attention" id="filterAttention" aria-pressed="false">Needs attention</button>
+      <button class="btn primary" type="button" data-log="primary-action">Primary action</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <section class="grid" aria-label="Summary" id="summary"></section>
+  <section aria-label="Items">
+    <table id="rows">
+      <thead><tr><th scope="col">Name</th><th scope="col">Status</th><th scope="col">Value</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+</main>
+
+<section id="feedback" aria-labelledby="feedback-title">
+  <div class="wrap">
+    <h2 id="feedback-title">Feedback</h2>
+    <p>This is a prototype with sample data. Tell the owner what worked and what did not.</p>
+    <ul>
+{{feedback_links}}
+    </ul>
+    <details class="session">
+      <summary>Session log (what you clicked, stored only in this browser)</summary>
+      <pre id="sessionLog" aria-live="polite"></pre>
+      <div class="row">
+        <button class="btn" type="button" id="downloadLog">Download log</button>
+        <button class="btn" type="button" id="clearLog">Clear</button>
+      </div>
+    </details>
+  </div>
+</section>
+
+<script>
+  // Instrumentation: records what a tester does so the owner can see which
+  // hypotheses the session touched. Local only; nothing leaves the browser.
+  const proto = (() => {
+    const key = "proto-log:{{slug}}:{{version}}";
+    const read = () => JSON.parse(localStorage.getItem(key) || "[]");
+    const write = (events) => localStorage.setItem(key, JSON.stringify(events));
+    const render = () => {
+      const el = document.getElementById("sessionLog");
+      if (el) el.textContent = read().map(e => `${e.t}  ${e.event}`).join("\n") || "(no events yet)";
+    };
+    const log = (event, data) => {
+      const events = read();
+      events.push({ t: new Date().toISOString().slice(11, 19), event, data: data || null });
+      write(events); render();
+    };
+    const download = () => {
+      const blob = new Blob([JSON.stringify({ key, events: read() }, null, 2)], { type: "application/json" });
+      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: key.replace(/[:]/g, "-") + ".json" });
+      a.click(); URL.revokeObjectURL(a.href);
+    };
+    const clear = () => { write([]); render(); };
+    return { log, render, download, clear };
+  })();
+
+  document.addEventListener("click", (e) => {
+    const target = e.target.closest("[data-log]");
+    if (target) proto.log(target.dataset.log);
+  });
+  document.getElementById("downloadLog").addEventListener("click", proto.download);
+  document.getElementById("clearLog").addEventListener("click", proto.clear);
+
+  // Fixture data: a relative path so `prototype.py export` can flatten it.
+  const FIXTURE = "../../fixtures/data.json";
+  let state = { rows: [], filter: null };
+
+  function renderSummary(items) {
+    const el = document.getElementById("summary");
+    el.innerHTML = items.map(i => {
+      const dir = i.delta >= 0 ? "up" : "down";
+      const sign = i.delta >= 0 ? "+" : "";
+      return `<article class="card"><h2>${i.label}</h2><div><span class="kpi">${i.value}${i.unit === "%" ? "%" : ""}</span><span class="delta ${dir}">${sign}${Math.round(i.delta * 100)}%</span></div></article>`;
+    }).join("");
+  }
+
+  function renderRows() {
+    const body = document.querySelector("#rows tbody");
+    const rows = state.filter ? state.rows.filter(r => r.status === state.filter) : state.rows;
+    if (!rows.length) { body.innerHTML = `<tr><td colspan="3" class="empty">Nothing to show for this filter.</td></tr>`; return; }
+    body.innerHTML = rows.map(r => `<tr><td>${r.name}</td><td><span class="pill ${r.status}">${r.status}</span></td><td>${r.value}</td></tr>`).join("");
+  }
+
+  document.getElementById("filterAttention").addEventListener("click", (e) => {
+    state.filter = state.filter ? null : "attention";
+    e.currentTarget.setAttribute("aria-pressed", String(!!state.filter));
+    renderRows();
+  });
+
+  fetch(FIXTURE).then(r => r.json()).then(data => {
+    state.rows = data.rows || [];
+    renderSummary(data.summary || []);
+    renderRows();
+    proto.log("loaded");
+  }).catch(() => {
+    document.getElementById("summary").innerHTML = `<div class="card empty">Could not load fixtures/data.json. Serve the folder with <code>prototype.py serve</code>.</div>`;
+  });
+  proto.render();
+</script>
+</body>
+</html>
