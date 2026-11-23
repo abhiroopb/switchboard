@@ -1,5 +1,5 @@
 {
- "count": 1215,
+ "count": 1219,
  "files": {
   ".agents/skills/asd-ste100/LICENSE": {
    "sha256": "d3c674e8592076c9021a59b55177adbcba6fd7e1710082becb922522b22ec672",
@@ -486,7 +486,7 @@
    "source": "repo"
   },
   "docs/install-windows.md": {
-   "sha256": "2136ad7087b6cfa3e6176a3f1d6e10c13fd00c7b26c6936da5573a1fd2019f6c",
+   "sha256": "fa9c26943e1f85183094a4f1a7e96007c0a3e22c66d6f0923d0a043558199960",
    "source": "repo"
   },
   "docs/obsidian-onboarding.md": {
@@ -2531,6 +2531,10 @@
   },
   "system/scripts/test_winlink_relink.py": {
    "sha256": "70389778bb379681ecf16a857fe1e6c163809c6a577e566e98af911baec3d45c",
+   "source": "repo"
+  },
+  "system/scripts/test_wmux_look.py": {
+   "sha256": "417056d3db409095bbfca7ba5e9d0d424a6ebdc2d3bf5871ba8465b5a3f69bd0",
    "source": "repo"
   },
   "system/scripts/test_worker_closed.py": {
@@ -4706,7 +4710,7 @@
    "source": "repo"
   },
   "system/windows/README.md": {
-   "sha256": "7593056d0d2dd38461a74252826b8237ca610d5e9640f079ee9810dd123debc7",
+   "sha256": "af5cca83ea46c5743a16d325390d30899c7ea1aa81c471e38cc7bd94a4f5be0c",
    "source": "repo"
   },
   "system/windows/amp-obsidian-editor.ps1": {
@@ -4719,6 +4723,10 @@
   },
   "system/windows/cmux.cmd": {
    "sha256": "6f132dcd4268c78f56e924e5cd2e1f5bd3df3a86a27f3426b33964c77038eae7",
+   "source": "repo"
+  },
+  "system/windows/install-wmux.ps1": {
+   "sha256": "44059c2d811e4ab75801787489a614e8abc7c4045c56b88295ffca9d8106c4da",
    "source": "repo"
   },
   "system/windows/install.ps1": {
@@ -4751,6 +4759,14 @@
   },
   "system/windows/seed-session.ps1": {
    "sha256": "44d0db183b9cda4b0ac62771dd9e24254b35e7869a19cdc08a28a979cc416098",
+   "source": "repo"
+  },
+  "system/windows/wmux-look.json": {
+   "sha256": "be25ca81c2a3d41150b0afcf668ae69d249af86b7feaa6462a30a90f5ed49d3e",
+   "source": "repo"
+  },
+  "system/windows/wmux_look.py": {
+   "sha256": "06f2a119d838a11cea1bd937fd2ffc7e0afedc219bb60bf05cb6b3a9f2ddf0ef",
    "source": "repo"
   },
   "system/windows/wsl-env.sh": {

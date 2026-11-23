@@ -29,12 +29,11 @@ The repo may live in any folder or drive, Dropbox or another synced folder inclu
    ```
    py -m pip install pyyaml
    ```
-2. **Install wmux 2.49.0** (full loop only; skip for policy and skills):
+2. **Install wmux with the switchboard look** (full loop only; skip for policy and skills). It runs from the kit folder, so do it right after you clone the kit in step 4, with wmux closed:
    ```
-   scoop bucket add wmux https://github.com/amirlehmam/wmux
-   scoop install wmux/wmux
+   powershell -ExecutionPolicy Bypass -File system\windows\install-wmux.ps1
    ```
-   If `scoop` is missing, install it first with `irm get.scoop.sh | iex`. Open wmux once and close it, so `%APPDATA%\wmux\sessions\session.json` exists.
+   It installs wmux from its official source when it is missing: wmux's own Scoop bucket when `scoop` is present, otherwise the installer from the wmux GitHub release, checked against the SHA-256 GitHub publishes for it and run per user. Switchboard never ships wmux itself (MIT, by its author). Then it gives wmux the switchboard look from `system\windows\wmux-look.json`: dark theme, Monokai terminal in Consolas 19, the file explorer under the workspace list, one pane per new workspace, and the browser panel open on the right. Your own wmux settings stay unless you pass `-Force`, which backs them up first; `-DryRun` shows what would change. Open wmux once and close it, so `%APPDATA%\wmux\sessions\session.json` exists, then run it again with `-SkipInstall` to set the 270 px sidebar. Detail: `system\windows\README.md`, "The switchboard look".
 3. **Choose where PM OS lives.** Suggested: `%USERPROFILE%\Development\pm-os`. Any other folder or drive works, a synced one such as `%USERPROFILE%\OneDrive\pm-os` included; run PM OS from one device at a time there, because git locks and the background jobs clash across devices. The installer keeps worktrees in `%LOCALAPPDATA%\pm-os\worktrees` and fast-changing state in `%USERPROFILE%\.pm-os`, outside the folder, and for Dropbox marks `.git`, `.amp`, `.state`, and `system\state` as Dropbox-ignored. Put the folder in a variable once in this PowerShell window; every later step uses it:
    ```
    $PmOs = "$HOME\Development\pm-os"          # or "$HOME\OneDrive\pm-os"

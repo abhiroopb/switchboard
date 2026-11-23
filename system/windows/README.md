@@ -29,6 +29,8 @@ The decision record is `docs/install-decisions.md`.
 | `apply-hook-profile.py` | Removes Claude Code hooks that do nothing on this machine (the heartbeat under wmux hooks, hookify with no rules). `--check`, `--undo`. A plugin reinstall undoes it, so `install-claude-code.sh` reapplies it. |
 | `../scripts/windows_process_rate.py` | Process rate (`rate`), exact count for one command (`count`), who started what this boot (`census`). |
 | `../scripts/windows_leak_trace.py` | Run-time object reference tracing and dump analysis for the process leak. Dormant while no leak shows; a driver update can fix or bring it back. |
+| `install-wmux.ps1` | Installs wmux from its official source (Scoop bucket, else the GitHub release installer checked against its published SHA-256), then runs `wmux_look.py apply`. `-DryRun`, `-Force`, `-SkipInstall`, `-SkipLook`, `-Instance`. |
+| `wmux_look.py`, `wmux-look.json` | The switchboard look for wmux (theme, font, layout) and the script that merges it into `settings.json` without overwriting your own values. See "The switchboard look". |
 | `seed-session.ps1` | Writes pins, accent colors, order, and the Git Bash `shell` into wmux `session.json`, merges the sidebar prefs and `defaultShell=bash.exe` into `settings.json`, and with `-Restart` quits and relaunches wmux around the write. |
 | `pm-os-env.sh` | Sourced from `~/.bashrc` (Git Bash or WSL): reads `~/.pm-os/env`, picks the runtime and the wmux backend, exports `CMUX_BIN`, `WMUX_BIN`, `PM_OS_PYTHON` (Windows has `python` and `py`, not `python3`), `AMP_EDITOR`, the vault root, and starts the board only when `PM_OS_BOARD_AUTOSTART=1`. |
 | `wsl-env.sh` | Two-line wrapper that sources `pm-os-env.sh` for older `~/.bashrc` lines. |
@@ -47,9 +49,9 @@ The decision record is `docs/install-decisions.md`.
 
 1. Install the prerequisites from an elevated or normal PowerShell:
    `winget install --id Git.Git -e` (Git for Windows, which provides `bash.exe`),
-   `winget install --id Python.Python.3.12 -e` (the `py` launcher), and wmux 2.49.0 with
-   `scoop bucket add wmux https://github.com/amirlehmam/wmux` then `scoop install wmux/wmux`
-   (or the zip from https://wmux.org). Install the Amp CLI and Obsidian as usual.
+   `winget install --id Python.Python.3.12 -e` (the `py` launcher), and wmux with
+   `powershell -ExecutionPolicy Bypass -File system\windows\install-wmux.ps1` from the kit clone
+   (see "The switchboard look"). Install the Amp CLI and Obsidian as usual.
    Open wmux once so `%APPDATA%\wmux\sessions\session.json` exists.
 2. Clone the kit somewhere other than the destination, for example
    `git clone git@github.com:acme/pm-os-kit.git $HOME\Development\pm-os-kit`.
@@ -86,6 +88,33 @@ The decision record is `docs/install-decisions.md`.
 For the WSL option, add `-Runtime wsl -Distro <name>` to `install.ps1` and `-Runtime wsl`
 to `seed-session.ps1`, clone the repo inside the distro, and run the launch and verify
 steps in a WSL pane.
+
+## The switchboard look
+
+`wmux-look.json` holds the look switchboard gives wmux, and `wmux_look.py apply` puts it in place. It was read from a working setup on wmux 2.61 and checked on a fresh wmux 2.64.3. Only appearance and layout are in it: no folders, workspace names, history, accounts, shell or agent settings.
+
+| Setting | Value | wmux default |
+|---|---|---|
+| App theme and style | dark, `trace`, terminal background 88% opaque, inactive panes dimmed 20% | same |
+| Terminal font | `Consolas, Menlo, Monaco, monospace`, size 19 | size 13 |
+| Terminal colours and cursor | Monokai, blinking cursor (the shape stays wmux's default) | same |
+| File explorer | Under the workspace list in the left sidebar (`explorerPosition: sidebar`), 53% of its height, open by default | right of the terminals, 45% |
+| New workspace | One pane, no diff tab opened on its own | three panes in a grid, diff tab on |
+| Sidebar rows | Left rail on the active row, status and notification lines shown, normal text size | same |
+| Browser panel | Open on startup, on the right | same |
+| Sidebar width | 270 px, set in `sessions\session.json` | 240 px |
+
+wmux keeps these values in `%APPDATA%\wmux\settings.json` and reads that file at startup, so the script merges the keys there and keeps every other key. Values that match wmux's defaults are written too, so a later change of default does not change the look.
+
+Rules the script keeps:
+
+- **Your values stay.** A key you already set to something else is a conflict. The script lists it, writes nothing and exits 3. `--force` replaces it.
+- **Backup first.** Any file it changes is copied to `<file>.switchboard-bak-<UTC time>` before the write.
+- **wmux closed.** wmux rewrites both files while it runs, so the script refuses (exit 4) while that wmux is open.
+- **Sidebar width needs a session.** A fresh install has no `session.json`. Start wmux once, quit it, and run `install-wmux.ps1 -SkipInstall` again. A width you dragged counts as your value.
+- **Check.** `py system\windows\wmux_look.py check` reports any drift and changes nothing.
+- **Try it on the side.** `-Instance <name>` (or `WMUX_INSTANCE`) writes to `%APPDATA%\wmux-<name>`, wmux's own side-by-side instance folder, and leaves your wmux alone.
+- **macOS.** wmux is Windows only. On macOS the script says so and exits 0. cmux keeps its own look, and switchboard does not change cmux settings.
 
 ## cmux vs wmux sidebar parity
 

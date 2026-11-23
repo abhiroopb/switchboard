@@ -1,0 +1,44 @@
+{
+  "about": "The switchboard look for wmux: dark chrome, Monokai terminal in Consolas 19, sidebar 270 px with the file explorer under the workspace list, one pane per new workspace, browser panel open on the right. Appearance and layout only. Applied by system/windows/wmux_look.py; checked against wmux 2.64.3.",
+  "wmux_version": "2.64.3",
+  "settings": {
+    "wmux-appearance-prefs": {
+      "uiTheme": "dark",
+      "uiMode": "trace",
+      "customBackgroundEnabled": false,
+      "terminalBgOpacity": 88,
+      "windowTransparency": false,
+      "windowMaterial": "clear",
+      "inactivePaneDim": 20,
+      "hubEnabled": true
+    },
+    "wmux-terminal-prefs": {
+      "fontFamily": "Consolas, Menlo, Monaco, monospace",
+      "fontSize": 19,
+      "theme": "Monokai",
+      "cursorBlink": true
+    },
+    "wmux-workspace-prefs": {
+      "explorerPosition": "sidebar",
+      "explorerSidebarRatio": 0.53,
+      "explorerOpenByDefault": true,
+      "newWorkspacePanes": 1,
+      "newWorkspaceLayout": "grid",
+      "autoOpenDiffTab": false
+    },
+    "wmux-sidebar-prefs": {
+      "activeTabIndicator": "leftRail",
+      "hideAllDetails": false,
+      "showNotificationMessage": true,
+      "backgroundOpacity": 100,
+      "textScale": 100,
+      "wrapTitles": false
+    },
+    "wmux-browser-prefs": {
+      "openOnStartup": true
+    }
+  },
+  "session": {
+    "sidebarWidth": 270
+  }
+}
