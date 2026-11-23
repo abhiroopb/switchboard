@@ -1,5 +1,5 @@
 {
- "count": 1219,
+ "count": 1220,
  "files": {
   ".agents/skills/asd-ste100/LICENSE": {
    "sha256": "d3c674e8592076c9021a59b55177adbcba6fd7e1710082becb922522b22ec672",
@@ -374,7 +374,7 @@
    "source": "repo"
   },
   "README.md": {
-   "sha256": "86b064f4b2a692c1729b51426739c7c88da4f6d5e336e46cae9cb8c37f4f60ae",
+   "sha256": "6e04a9ce91f6ffd1473522ee4a762853c3426077599a4ad3547ab3be1461961b",
    "source": "repo"
   },
   "SECURITY.md": {
@@ -479,6 +479,10 @@
   },
   "docs/images/day.svg": {
    "sha256": "d74419bfad9a585390ca5c05d73dfea514dbda07d9025281b052065bf5a23e99",
+   "source": "repo"
+  },
+  "docs/images/wmux-switchboard.png": {
+   "sha256": "4bdd956018fdd50d2dd619d1a0b07f62ed6629d0a7ead7f90833003b5ec64e74",
    "source": "repo"
   },
   "docs/install-decisions.md": {

@@ -4,6 +4,8 @@
 
 switchboard is a personal operating system for working with many coding agents at once. You talk to one agent, the Chief of Staff. It plans your day, turns each ask into a task, and hands every task to its own worker agent in its own terminal tab and its own git worktree. Workers do the work in parallel, and each one reports back with a one-line result. When a worker finishes, its branch lands on your local `main`. Your to-do list, your notes and your project context stay as plain files on your machine.
 
+![switchboard running in wmux: the Chief of Staff tab in the centre routes two asks to workers, the sidebar lists the worker tabs with their status above a file tree of the repo, and the browser panel on the right shows a finished draft for review. All content is invented.](docs/images/wmux-switchboard.png)
+
 It started as a personal setup for running a working day with agents, so the examples lean toward PM work: drafting docs, reviewing pull requests, preparing meetings, triaging messages. Nothing in it is PM-specific. Engineers, designers, researchers and founders use the same loop for anything they can describe to an agent.
 
 ![How switchboard works: you talk to the Chief of Staff, which dispatches tasks to parallel workers in their own worktrees and tabs, and each worker reports back](docs/images/architecture.svg)
