@@ -2,7 +2,7 @@
 
 ## Where the list lives
 
-The list is `system/state/todo.json` under the repo root. The repo root is `PM_OS_ROOT` when that variable is set, otherwise `~/Development/pm-os`. Pass `--path <file>` to point the CLI at another file, for example in a test.
+The list is `system/state/todo.json` under the repo root. The repo root is `SWITCHBOARD_ROOT` when that variable is set, otherwise `~/Development/switchboard`. Pass `--path <file>` to point the CLI at another file, for example in a test.
 
 Next to the list the CLI keeps:
 
@@ -31,15 +31,15 @@ python3 ~/.agents/skills/todo/scripts/todo_cli.py summary
 
 | Setting | What it does |
 |---|---|
-| `PM_OS_TODO_CALENDAR_ID` | Use this calendar for holds instead of finding or creating `To-dos (PM OS)`. |
-| `PM_OS_TODO_CALENDAR_STATE` | Where the calendar id is recorded. |
-| `PM_OS_TODO_RESOLUTION_FLAGS` | The file of likely-complete flags a background job writes. |
-| `PM_OS_CONNECTORS_DIR` | Folder with the connector token file `google-token.json`. |
-| `PM_OS_OWNER_SLACK_IDS` | Comma list of the owner's Slack user ids, used to tell the owner's replies apart. |
-| `PM_OS_OWNER_HANDLES` | Comma list of the owner's Slack handles, display names, or email addresses. |
-| `PM_OS_TODO_SURFACE_SKIP=1` | Skip the verification step before views. |
-| `PM_OS_TODO_SURFACE_VERIFY_LIMIT` | How many items a view verifies at most (default 25). |
-| `PM_OS_TODO_OFFLINE=1` | Make no network calls at all. `PM_OS_TEST_SANDBOX=1` does the same. |
+| `SWITCHBOARD_TODO_CALENDAR_ID` | Use this calendar for holds instead of finding or creating `To-dos (switchboard)`. |
+| `SWITCHBOARD_TODO_CALENDAR_STATE` | Where the calendar id is recorded. |
+| `SWITCHBOARD_TODO_RESOLUTION_FLAGS` | The file of likely-complete flags a background job writes. |
+| `SWITCHBOARD_CONNECTORS_DIR` | Folder with the connector token file `google-token.json`. |
+| `SWITCHBOARD_OWNER_SLACK_IDS` | Comma list of the owner's Slack user ids, used to tell the owner's replies apart. |
+| `SWITCHBOARD_OWNER_HANDLES` | Comma list of the owner's Slack handles, display names, or email addresses. |
+| `SWITCHBOARD_TODO_SURFACE_SKIP=1` | Skip the verification step before views. |
+| `SWITCHBOARD_TODO_SURFACE_VERIFY_LIMIT` | How many items a view verifies at most (default 25). |
+| `SWITCHBOARD_TODO_OFFLINE=1` | Make no network calls at all. `SWITCHBOARD_TEST_SANDBOX=1` does the same. |
 
 ## Calendar access
 

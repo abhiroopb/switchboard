@@ -2,7 +2,7 @@
 """Generate Claude Code subagent files from the reviewer personas in sub-agents/.
 
 Each `sub-agents/<slug>.md` (skipping README.md and `_*` files) becomes
-`system/claude-marketplace/plugins/pm-os/agents/<slug>.md` with Claude Code
+`system/claude-marketplace/plugins/switchboard/agents/<slug>.md` with Claude Code
 subagent frontmatter (`name`, `description`, `tools`) followed by the persona
 body unchanged. Generated files carry an HTML comment marker right after the
 frontmatter; a file in the agents directory without that marker is
@@ -29,7 +29,7 @@ from pathlib import Path
 
 
 SOURCE_DIR = Path("sub-agents")
-AGENTS_DIR = Path("system/claude-marketplace/plugins/pm-os/agents")
+AGENTS_DIR = Path("system/claude-marketplace/plugins/switchboard/agents")
 
 READ_ONLY_TOOLS = "Read, Grep, Glob"
 SHELL_TOOLS = "Read, Grep, Glob, Bash"

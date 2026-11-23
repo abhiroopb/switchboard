@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # amp-mem Weekly Distillation — runs the kb-distill workflow via headless Amp
-# Scheduled Sundays 09:00 local via launchd (com.pm-os.amp-mem-weekly-distill.plist)
+# Scheduled Sundays 09:00 local via launchd (com.switchboard.amp-mem-weekly-distill.plist)
 #
 # Flow:
 #   1. Skip unless enough pending observations have accumulated (threshold below)
@@ -9,7 +9,7 @@
 #   4. Verify the run actually recorded (distill-status pending reset); log outcome
 #
 # Skips (exit 0, one log line) on a machine whose memory backend is not amp-mem:
-# PM_OS_MEMORY in the environment or in local/machines/<MACHINE>.env set to
+# SWITCHBOARD_MEMORY in the environment or in local/machines/<MACHINE>.env set to
 # builtin or claude-mem (Claude Code machines). Unset keeps the Amp default.
 # A distill-status failure is logged with its error text and exits 1, so
 # set -e never kills the script on it with nothing in the log.
@@ -22,8 +22,8 @@ export LANG="en_US.UTF-8"
 export LC_ALL="en_US.UTF-8"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PM_OS_DIR="$(dirname "$SCRIPT_DIR")"
-STATE_DIR="$PM_OS_DIR/.state"
+SWITCHBOARD_DIR="$(dirname "$SCRIPT_DIR")"
+STATE_DIR="$SWITCHBOARD_DIR/.state"
 LOG_FILE="$STATE_DIR/amp-mem-weekly-distill.log"
 LOCK_DIR="$STATE_DIR/amp-mem-weekly-distill.lock"
 AMP_MEM="${AMP_MEM_BIN:-$HOME/bin/amp-mem}"
@@ -60,13 +60,13 @@ log "=== Weekly distill tick ==="
 # Same lookup as system/scripts/lib/comms-triage.sh: the environment wins, then
 # local/machines/<MACHINE>.env (host name up to its first dot, upper case).
 memory_backend() {
-  local value="${PM_OS_MEMORY:-}" name file
+  local value="${SWITCHBOARD_MEMORY:-}" name file
   if [ -z "$value" ]; then
-    name="${PM_OS_MACHINE:-${HOSTNAME:-$(hostname)}}"
+    name="${SWITCHBOARD_MACHINE:-${HOSTNAME:-$(hostname)}}"
     name="$(printf '%s' "${name%%.*}" | tr '[:lower:]' '[:upper:]')"
-    file="${PM_OS_LOCAL_DIR:-$PM_OS_DIR/local}/machines/$name.env"
+    file="${SWITCHBOARD_LOCAL_DIR:-$SWITCHBOARD_DIR/local}/machines/$name.env"
     if [ -f "$file" ]; then
-      value="$(sed -n 's/^[^A-Za-z#]*PM_OS_MEMORY[[:space:]]*=\(.*\)$/\1/p' "$file" | tail -n 1)"
+      value="$(sed -n 's/^[^A-Za-z#]*SWITCHBOARD_MEMORY[[:space:]]*=\(.*\)$/\1/p' "$file" | tail -n 1)"
     fi
   fi
   printf '%s' "$value" | tr -d "\"' \t\r" | tr '[:upper:]' '[:lower:]'
@@ -75,7 +75,7 @@ BACKEND="$(memory_backend)"
 case "${BACKEND:-amp-mem}" in
   amp-mem|amp) ;;
   *)
-    log "Skipped: memory backend on this machine is '$BACKEND' (PM_OS_MEMORY), not amp-mem. Done."
+    log "Skipped: memory backend on this machine is '$BACKEND' (SWITCHBOARD_MEMORY), not amp-mem. Done."
     [ "${1:-}" = "--dry-run" ] && echo "dry-run ok: skipped, memory backend is $BACKEND (not amp-mem)"
     exit 0
     ;;
@@ -93,7 +93,7 @@ STATUS_RC=0
 STATUS_OUT=$("$AMP_MEM" distill-status 2>&1) || STATUS_RC=$?
 if [ "$STATUS_RC" -ne 0 ]; then
   log "ERROR: amp-mem distill-status failed (exit $STATUS_RC): $(printf '%s' "$STATUS_OUT" | tr '\r\n' '  ' | cut -c1-500)"
-  log "Fix the amp-mem database or set PM_OS_MEMORY in local/machines/<MACHINE>.env if this machine does not use amp-mem. Aborting."
+  log "Fix the amp-mem database or set SWITCHBOARD_MEMORY in local/machines/<MACHINE>.env if this machine does not use amp-mem. Aborting."
   echo "amp-mem-weekly-distill: distill-status failed (exit $STATUS_RC); see $LOG_FILE" >&2
   exit 1
 fi

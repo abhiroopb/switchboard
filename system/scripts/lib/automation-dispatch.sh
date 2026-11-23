@@ -138,7 +138,7 @@ ad_declared_payload_dir() {
 # declared: the caller then sends inline, and nothing is pruned.
 ad_payload_dir() {
   if [[ -n "${AD_PAYLOAD_DIR:-}" ]]; then echo "$AD_PAYLOAD_DIR"; return 0; fi
-  if [[ "${PM_OS_TEST_SANDBOX:-0}" == "1" ]]; then echo "${TMPDIR:-/tmp}/ad-payloads-sandbox-$$"; return 0; fi
+  if [[ "${SWITCHBOARD_TEST_SANDBOX:-0}" == "1" ]]; then echo "${TMPDIR:-/tmp}/ad-payloads-sandbox-$$"; return 0; fi
   local declared
   declared="$(ad_declared_payload_dir)" || return 1
   echo "$(cd "$_ad_lib_dir/../../.." 2>/dev/null && pwd)/.state/$declared"

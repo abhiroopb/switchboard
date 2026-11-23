@@ -26,7 +26,7 @@ import ask_cos  # noqa: E402
 
 def write_row(**extra) -> None:
     LEDGER.write_text(json.dumps({"version": 2, "tasks": [
-        {"id": "rt-q1", "status": "active", "workstream": "pm-os-maintenance", "origin": "cos", **extra}]}), encoding="utf-8")
+        {"id": "rt-q1", "status": "active", "workstream": "switchboard-maintenance", "origin": "cos", **extra}]}), encoding="utf-8")
 
 
 def row() -> dict:
@@ -47,7 +47,7 @@ class AskCosTests(unittest.TestCase):
         # the ledger module on every call and reads RUNNING_TASKS_FILE then, so point it at this file's temp row;
         # keep the question's to-do capture (a detached process) off the real list.
         patcher = patch.dict(os.environ, {"RUNNING_TASKS_FILE": str(LEDGER), "OWNER_ACTION_CAPTURE_DISABLED": "1",
-                                          "PM_OS_TEST_SANDBOX": "1"})
+                                          "SWITCHBOARD_TEST_SANDBOX": "1"})
         patcher.start()
         self.addCleanup(patcher.stop)
         dry = patch.dict(os.environ)   # another suite sets ASK_COS_DRY_RUN=1 at import; these tests patch send_once instead

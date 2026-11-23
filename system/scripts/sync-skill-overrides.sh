@@ -2,7 +2,7 @@
 # Sync tracked skill overrides <-> the runtime skill tree (~/.agents/skills).
 #
 # Remote-baseline skills are overwritten on reinstall; every local edit to one
-# of their files must live in system/skill-overrides/ (tracked in pm-os) and be
+# of their files must live in system/skill-overrides/ (tracked in switchboard) and be
 # re-applied idempotently. See system/skill-overrides/README.md.
 #
 # Usage:
@@ -11,8 +11,8 @@
 #   sync-skill-overrides.sh --capture  # capture: runtime -> tracked
 set -euo pipefail
 
-PM_OS="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-OVERRIDES="$PM_OS/system/skill-overrides"
+SWITCHBOARD="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+OVERRIDES="$SWITCHBOARD/system/skill-overrides"
 RUNTIME="$HOME/.agents/skills"
 
 MODE="install"
@@ -31,7 +31,7 @@ FILES=(
   "todo/references/schema.md"
 )
 # Note: chief-of-staff, running-uxr-ops, and drafting-docs are no longer
-# overrides. They are repo-owned whole-skill copies in pm-os .agents/skills/,
+# overrides. They are repo-owned whole-skill copies in switchboard .agents/skills/,
 # copied into ~/.claude/skills by sync-skills.py, which also runs this
 # script's install direction before every copy.
 
@@ -85,8 +85,8 @@ done
 # (upstream keeps adding routes). An upstream launchd job replaces the file on a
 # schedule, so the install direction re-applies the amendments
 # every time it runs (start-day.sh, install-amp-skills.sh, hourly task).
-if [[ "$MODE" == "install" && -f "$PM_OS/system/scripts/apply-auto-pilot-routes.sh" ]]; then
-  if bash "$PM_OS/system/scripts/apply-auto-pilot-routes.sh" >/dev/null; then
+if [[ "$MODE" == "install" && -f "$SWITCHBOARD/system/scripts/apply-auto-pilot-routes.sh" ]]; then
+  if bash "$SWITCHBOARD/system/scripts/apply-auto-pilot-routes.sh" >/dev/null; then
     echo "  $(printf "%-40s" "auto-pilot/references/routing-tables.md") ✓ amendments applied"
   else
     echo "  $(printf "%-40s" "auto-pilot/references/routing-tables.md") ✗ amendments failed" >&2; drift=1

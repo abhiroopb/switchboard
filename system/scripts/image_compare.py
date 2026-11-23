@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One comparison page for every set of images PM OS shows the owner.
+"""One comparison page for every set of images switchboard shows the owner.
 
 Images go on one page so the owner can compare them easily, every time images are
 shared (external-replies Rule 14). Every surface that shares images with
@@ -37,31 +37,31 @@ copy), runs `open` once per page version (state in main's
 hash so a worktree page and its landed copy open once, 10 minutes; `--force`
 reopens), and prints
 {opened, path, line}. Kill switch IMAGE_COMPARE_OPEN_DISABLED=1; the opener
-command is `$PM_OS_OPEN_CMD` (default: a cmux browser tab on macOS, see below;
+command is `$SWITCHBOARD_OPEN_CMD` (default: a cmux browser tab on macOS, see below;
 `xdg-open` on Linux with a display; the default app through os.startfile with
 SW_SHOWNOACTIVATE on Windows; with none of these it prints the path and opens
 nothing).
 
 Open without stealing focus. On macOS with cmux running, the page (or image, or http(s) URL) lands
 in an unselected cmux browser tab (`cmux new-surface --type browser --focus
-false`) in the CoS workspace ($PM_OS_OPEN_WORKSPACE overrides; else the
+false`) in the CoS workspace ($SWITCHBOARD_OPEN_WORKSPACE overrides; else the
 focused workspace). No app is activated and the focused pane keeps focus. A
 later version of the same page reuses that tab. cmux's webview reads only the
 page's own folder, so the tab shows a copy with local images inlined (main's
 `.state/compare-view/`). Chrome raises itself whenever another app hands it a
 page, `open -g` or not, so without cmux a Chrome-family default browser is skipped and the link stays
-in the message (PM_OS_OPEN_CHROME=1 opens it anyway). Other browsers get
+in the message (SWITCHBOARD_OPEN_CHROME=1 opens it anyway). Other browsers get
 `open -g` plus a 2-second focus guard that hands the front back to the app
-the owner was using (`_guard_focus`; PM_OS_FOCUS_GUARD_DISABLED=1 turns it off). A
+the owner was using (`_guard_focus`; SWITCHBOARD_FOCUS_GUARD_DISABLED=1 turns it off). A
 page whose default browser is not running is not opened (a launching browser
-comes to the front; PM_OS_OPEN_COLD_BROWSER=1 opens it anyway). Windows asks
+comes to the front; SWITCHBOARD_OPEN_COLD_BROWSER=1 opens it anyway). Windows asks
 the shell not to activate the window; Linux `xdg-open` has no such flag. Off
 macOS a Chromium-family default browser (Chrome, Edge, Brave) is skipped the
 same way, except under Wayland, which keeps focus where it was
-(`_offmac_chromium`); PM_OS_OPEN_VIA=wmux opts into the wmux browser panel.
-PM_OS_OPEN_VIA=browser skips cmux. Every attempt appends one line with the
+(`_offmac_chromium`); SWITCHBOARD_OPEN_VIA=wmux opts into the wmux browser panel.
+SWITCHBOARD_OPEN_VIA=browser skips cmux. Every attempt appends one line with the
 front app before and after to main's `.state/page-open.jsonl`. The
-pm-os-guardrails `open-focus` rule rejects an agent's `open <page>`, `open -g
+switchboard-guardrails `open-focus` rule rejects an agent's `open <page>`, `open -g
 <page>`, and `qlmanage -p`; test_background_open.py fails on a bare `open` of
 a page in automation code.
 
@@ -190,7 +190,7 @@ def page_from_spec(spec: dict) -> Page:
 def repo_root(cwd: Path | None = None) -> Path:
     """The checkout the page is written into: `git rev-parse --show-toplevel`
     in the cwd (a task worktree for a worker), else the vault override."""
-    override = os.environ.get("PM_OS_COMPARE_ROOT", "").strip()
+    override = os.environ.get("SWITCHBOARD_COMPARE_ROOT", "").strip()
     if override:
         return Path(override).expanduser().resolve()
     probe = subprocess.run(["git", "-C", str(cwd or Path.cwd()), "rev-parse", "--show-toplevel"],
@@ -201,7 +201,7 @@ def repo_root(cwd: Path | None = None) -> Path:
 
 
 def main_root(top: Path) -> Path:
-    override = os.environ.get("PM_OS_VAULT_ROOT", "").strip()
+    override = os.environ.get("SWITCHBOARD_VAULT_ROOT", "").strip()
     if override:
         return Path(override).expanduser().resolve()
     return repo_paths.main_checkout(top).resolve()
@@ -542,11 +542,11 @@ def _browser_cold(path: Path) -> str | None:
     (not running), else None. `open -g` keeps a running browser behind the owner's
     app, but a browser that has to launch may still put its first window in
     front, so the
-    automatic open waits: the link stays in the message. PM_OS_OPEN_COLD_BROWSER=1
+    automatic open waits: the link stays in the message. SWITCHBOARD_OPEN_COLD_BROWSER=1
     opens anyway."""
     if sys.platform != "darwin" or path.suffix.lower() not in (".html", ".htm"):
         return None
-    if os.environ.get("PM_OS_OPEN_COLD_BROWSER") == "1":
+    if os.environ.get("SWITCHBOARD_OPEN_COLD_BROWSER") == "1":
         return None
     bundle = _macos_html_handler()
     if not bundle:
@@ -630,7 +630,7 @@ def _startfile_background(path: Path | str) -> None:
 # The rule that holds on macOS without cmux holds here too: a Chromium-family
 # browser (Chrome, Edge, Brave, Vivaldi, Opera, Chromium) brings its window
 # forward when handed a page, so it gets no page and the link stays in the
-# message (PM_OS_OPEN_CHROME=1 opens it anyway). A default browser that cannot
+# message (SWITCHBOARD_OPEN_CHROME=1 opens it anyway). A default browser that cannot
 # be read counts the same way, so an unknown browser never takes the page.
 # Windows with another default browser gets os.startfile with
 # SW_SHOWNOACTIVATE; a browser that is already running may still raise its
@@ -638,7 +638,7 @@ def _startfile_background(path: Path | str) -> None:
 # Wayland keeps xdg-open, because the compositor refuses focus to a window the
 # user did not activate; WSL is not exempt, because its xdg-open hands the page
 # to the Windows browser. Linux under X11 skips a Chromium-family browser.
-# PM_OS_OPEN_VIA=wmux puts the page in the wmux browser panel (`wmux browser
+# SWITCHBOARD_OPEN_VIA=wmux puts the page in the wmux browser panel (`wmux browser
 # open <url>`); it is opt-in until a Windows run shows that it leaves focus where
 # it was.
 
@@ -692,7 +692,7 @@ def _offmac_chromium(remote: bool, path: Path) -> str | None:
     would take it (and raise itself), "unknown" when the default browser cannot
     be read, or the WSL hand-off; else None. Images open in their viewer, not a
     browser, so only pages and URLs are checked. Linux under Wayland is exempt."""
-    if sys.platform == "darwin" or os.environ.get("PM_OS_OPEN_CHROME") == "1":
+    if sys.platform == "darwin" or os.environ.get("SWITCHBOARD_OPEN_CHROME") == "1":
         return None
     if not remote and path.suffix.lower() not in (".html", ".htm"):
         return None
@@ -712,7 +712,7 @@ def _offmac_chromium(remote: bool, path: Path) -> str | None:
 
 
 def _open_in_wmux(url: str) -> tuple[bool, str]:
-    """`wmux browser open <url>` (PM_OS_OPEN_VIA=wmux only). Returns (ok, error)."""
+    """`wmux browser open <url>` (SWITCHBOARD_OPEN_VIA=wmux only). Returns (ok, error)."""
     try:
         from lib import mux  # type: ignore[import-not-found]
         argv, extra = mux.wmux_cli()
@@ -750,8 +750,8 @@ _ATTR = re.compile(r'\b(src|data-srcs)="([^"]*)"', re.I)
 
 def _cmux_bin() -> str | None:
     """The cmux CLI when this Mac runs cmux and its socket answers, else None.
-    PM_OS_OPEN_VIA=browser skips cmux (the old `open -g` path)."""
-    if sys.platform != "darwin" or os.environ.get("PM_OS_OPEN_VIA") == "browser":
+    SWITCHBOARD_OPEN_VIA=browser skips cmux (the old `open -g` path)."""
+    if sys.platform != "darwin" or os.environ.get("SWITCHBOARD_OPEN_VIA") == "browser":
         return None
     exe = shutil.which("cmux") or ("/Applications/cmux.app/Contents/Resources/bin/cmux"
                                    if Path("/Applications/cmux.app/Contents/Resources/bin/cmux").exists() else None)
@@ -766,10 +766,10 @@ def _cmux_bin() -> str | None:
 
 
 def _cmux_target_workspace(exe: str, main: Path) -> str | None:
-    """Where the tab goes: $PM_OS_OPEN_WORKSPACE, else the CoS workspace (where
+    """Where the tab goes: $SWITCHBOARD_OPEN_WORKSPACE, else the CoS workspace (where
     the report lands), else the workspace the owner has focused. Never a worker tab:
     the dispatcher reaps those, and the page would close with it."""
-    pinned = os.environ.get("PM_OS_OPEN_WORKSPACE", "").strip()
+    pinned = os.environ.get("SWITCHBOARD_OPEN_WORKSPACE", "").strip()
     if pinned:
         return pinned
     script = main / "system" / "scripts" / "owner_tabs.py"
@@ -918,13 +918,13 @@ def open_page(target: str, *, force: bool = False, cwd: Path | None = None, task
     if not force and seen.get("version") == version and now - float(seen.get("at") or 0) < OPEN_DEDUPE_SECONDS:
         return {**out, "reason": "already opened", "line": f"Already open: {shown}"}
 
-    opener = os.environ.get("PM_OS_OPEN_CMD", "").strip()
+    opener = os.environ.get("SWITCHBOARD_OPEN_CMD", "").strip()
     is_page = remote or path.suffix.lower() in (".html", ".htm")
     before = _frontmost_bundle() if sys.platform == "darwin" else None
     record: dict = {"version": version, "at": now}
     via = ""
     exe = None if opener else _cmux_bin()
-    if not opener and not exe and sys.platform != "darwin" and os.environ.get("PM_OS_OPEN_VIA") == "wmux":
+    if not opener and not exe and sys.platform != "darwin" and os.environ.get("SWITCHBOARD_OPEN_VIA") == "wmux":
         ok, err = _open_in_wmux(raw if remote else file_url(path))
         _log_open(main, {"path": shown, "via": "wmux", "opened": ok, **({"reason": err} if err else {})})
         if not ok:
@@ -947,7 +947,7 @@ def open_page(target: str, *, force: bool = False, cwd: Path | None = None, task
         if cmd is None:
             return {**out, "reason": "no opener on this machine", "line": f"Page: {shown}"}
         handler = _macos_html_handler() if (not opener and sys.platform == "darwin" and is_page) else None
-        raiser = handler if handler and handler.lower() in CHROME_FAMILY and os.environ.get("PM_OS_OPEN_CHROME") != "1" else None
+        raiser = handler if handler and handler.lower() in CHROME_FAMILY and os.environ.get("SWITCHBOARD_OPEN_CHROME") != "1" else None
         if not opener and not raiser:
             raiser = _offmac_chromium(remote, path)
         if raiser:
@@ -958,7 +958,7 @@ def open_page(target: str, *, force: bool = False, cwd: Path | None = None, task
         cold = None if opener else _browser_cold(path)
         if cold:
             return {**out, "reason": f"browser not running ({cold}); not launched so focus stays put", "line": f"Page: {shown}"}
-        guard = bool(handler) and os.environ.get("PM_OS_FOCUS_GUARD_DISABLED") != "1"
+        guard = bool(handler) and os.environ.get("SWITCHBOARD_FOCUS_GUARD_DISABLED") != "1"
         try:
             if not cmd:  # Windows: hand the page to its default app (no exit status to read)
                 _startfile_background(raw if remote else path)

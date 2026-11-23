@@ -89,11 +89,11 @@ class ForkBudgetTests(unittest.TestCase):
 
     def count(self, script: str) -> int:
         env = {k: v for k, v in os.environ.items() if not k.startswith(("WMUX", "CMUX"))}
-        env.update(MSYSTEM="UCRT64", PM_OS_ROOT=str(REPO))
+        env.update(MSYSTEM="UCRT64", SWITCHBOARD_ROOT=str(REPO))
         return rate.count_tree([git_bash(), "-c", "PATH=/ucrt64/bin:/usr/bin:$PATH; " + script], env=env)["processes"]
 
     def test_sourcing_the_env_stays_near_zero_forks(self):
-        count = self.count(f"source '{self.posix(REPO / 'system/windows/pm-os-env.sh')}' 2>/dev/null; true")
+        count = self.count(f"source '{self.posix(REPO / 'system/windows/switchboard-env.sh')}' 2>/dev/null; true")
         # 52 before this work. bash itself takes 2.
         self.assertLessEqual(count, 6)
 
@@ -104,11 +104,11 @@ class ForkBudgetTests(unittest.TestCase):
             (git_root / "ucrt64" / "bin").mkdir(parents=True)
             (git_root / "ucrt64" / "bin" / "git.exe").write_bytes(b"MZ")
             env_file = Path(tmp) / "env"
-            env_file.write_text(f"PM_OS_TOOL_PATH={str(git_root / 'cmd').replace(chr(92), '/')}\n", encoding="utf-8")
+            env_file.write_text(f"SWITCHBOARD_TOOL_PATH={str(git_root / 'cmd').replace(chr(92), '/')}\n", encoding="utf-8")
             env = {k: v for k, v in os.environ.items() if not k.startswith(("WMUX", "CMUX"))}
-            env.update(MSYSTEM="UCRT64", PM_OS_ENV_FILE=self.posix(env_file), PM_OS_ROOT=str(REPO))
-            env.pop("PM_OS_TOOL_PATH", None)
-            script = (f"PATH=/usr/bin:$PATH; source '{self.posix(REPO / 'system/windows/pm-os-env.sh')}' 2>/dev/null; "
+            env.update(MSYSTEM="UCRT64", SWITCHBOARD_ENV_FILE=self.posix(env_file), SWITCHBOARD_ROOT=str(REPO))
+            env.pop("SWITCHBOARD_TOOL_PATH", None)
+            script = (f"PATH=/usr/bin:$PATH; source '{self.posix(REPO / 'system/windows/switchboard-env.sh')}' 2>/dev/null; "
                       'printf "%s" "$PATH"')
             out = subprocess.run([git_bash(), "-c", script], env=env, capture_output=True, text=True,
                                  stdin=subprocess.DEVNULL, check=False).stdout
@@ -119,17 +119,17 @@ class ForkBudgetTests(unittest.TestCase):
 
 class EnvScriptTests(unittest.TestCase):
     def test_no_command_substitution_on_the_tool_path(self):
-        text = (REPO / "system/windows/pm-os-env.sh").read_text(encoding="utf-8")
-        self.assertNotIn('$(_pm_os_to_posix', text)
-        self.assertNotIn('"$PM_OS_PYTHON" --version', text)
+        text = (REPO / "system/windows/switchboard-env.sh").read_text(encoding="utf-8")
+        self.assertNotIn('$(_switchboard_to_posix', text)
+        self.assertNotIn('"$SWITCHBOARD_PYTHON" --version', text)
 
 
 class ShimDirectTests(unittest.TestCase):
     def setUp(self):
         self.shim = load("cmux_shim_for_test", REPO / "system/scripts/mux/cmux-shim.py")
         self.saved = dict(os.environ)
-        for key in ("PM_OS_TEST_SANDBOX", "PM_OS_TEST_WMUX_BIN", "WMUX_BIN", "WMUX_REMOTE", "WMUX_REMOTE_TOKEN",
-                    "PM_OS_WMUX_DIRECT"):
+        for key in ("SWITCHBOARD_TEST_SANDBOX", "SWITCHBOARD_TEST_WMUX_BIN", "WMUX_BIN", "WMUX_REMOTE", "WMUX_REMOTE_TOKEN",
+                    "SWITCHBOARD_WMUX_DIRECT"):
             os.environ.pop(key, None)
         self.wmux = self.shim.Wmux.__new__(self.shim.Wmux)
 
@@ -158,8 +158,8 @@ class ShimDirectTests(unittest.TestCase):
     @unittest.skipUnless(WINDOWS, "the direct path is Windows only")
     def test_tests_and_stand_ins_never_reach_the_live_pipe(self):
         request = self.wmux._direct_request
-        for key, value in (("PM_OS_TEST_SANDBOX", "1"), ("PM_OS_TEST_WMUX_BIN", "fake.py"), ("WMUX_BIN", "fake-wmux.py"),
-                           ("WMUX_REMOTE", "host:1"), ("PM_OS_WMUX_DIRECT", "0")):
+        for key, value in (("SWITCHBOARD_TEST_SANDBOX", "1"), ("SWITCHBOARD_TEST_WMUX_BIN", "fake.py"), ("WMUX_BIN", "fake-wmux.py"),
+                           ("WMUX_REMOTE", "host:1"), ("SWITCHBOARD_WMUX_DIRECT", "0")):
             os.environ[key] = value
             self.assertIsNone(request(["list-workspaces"]), key)
             del os.environ[key]
@@ -222,9 +222,9 @@ class ShimPipeFailureTests(unittest.TestCase):
         shim = load("cmux_shim_for_pipe_test", REPO / "system/scripts/mux/cmux-shim.py")
         saved = dict(os.environ)
         try:
-            for key in ("PM_OS_TEST_SANDBOX", "PM_OS_TEST_WMUX_BIN", "WMUX_BIN", "WMUX_REMOTE", "WMUX_REMOTE_TOKEN"):
+            for key in ("SWITCHBOARD_TEST_SANDBOX", "SWITCHBOARD_TEST_WMUX_BIN", "WMUX_BIN", "WMUX_REMOTE", "WMUX_REMOTE_TOKEN"):
                 os.environ.pop(key, None)
-            os.environ["WMUX_PIPE"] = r"\\\\.\\pipe\\pm-os-test-no-such-pipe"
+            os.environ["WMUX_PIPE"] = r"\\\\.\\pipe\\switchboard-test-no-such-pipe"
             wmux = shim.Wmux.__new__(shim.Wmux)
             wmux.trace = False
             self.assertIsNone(wmux._direct(["list-workspaces"], 2))
@@ -241,10 +241,10 @@ class HookProfileTests(unittest.TestCase):
         self.plugin = self.tmp / "plugin"
         (self.base / "plugins").mkdir(parents=True)
         (self.plugin / "hooks").mkdir(parents=True)
-        self.source = json.loads((REPO / "system/claude-marketplace/plugins/pm-os/hooks/hooks.json").read_text(encoding="utf-8"))
+        self.source = json.loads((REPO / "system/claude-marketplace/plugins/switchboard/hooks/hooks.json").read_text(encoding="utf-8"))
         (self.plugin / "hooks/hooks.json").write_text(json.dumps(self.source), encoding="utf-8")
         (self.base / "plugins/installed_plugins.json").write_text(json.dumps(
-            {"plugins": {self.profile.PM_OS_PLUGIN: [{"installPath": str(self.plugin)}]}}), encoding="utf-8")
+            {"plugins": {self.profile.SWITCHBOARD_PLUGIN: [{"installPath": str(self.plugin)}]}}), encoding="utf-8")
         self.write_settings(True)
         self.repo = self.tmp / "repo"
         (self.repo / ".claude").mkdir(parents=True)
@@ -298,7 +298,7 @@ class MacUnchangedTests(unittest.TestCase):
         return (REPO / rel).read_text(encoding="utf-8")
 
     def test_launchd_tick_still_runs_every_ten_minutes(self):
-        self.assertRegex(self.read("system/launchd/com.pm-os.command-center.plist"), r"<integer>600</integer>")
+        self.assertRegex(self.read("system/launchd/com.switchboard.command-center.plist"), r"<integer>600</integer>")
 
     def test_every_windows_branch_in_shared_shell_is_gated(self):
         loop = self.read("system/scripts/command-center-loop.sh")
@@ -308,8 +308,8 @@ class MacUnchangedTests(unittest.TestCase):
         publish = self.read("system/scripts/publish-running-tasks-status.sh")
         self.assertIn('[[ -n "${MSYSTEM:-}" ]] && python3', publish)
         mux = self.read("system/scripts/lib/mux.sh")
-        self.assertIn('PM_OS_MUX="$(mux_detect)"', mux)
-        self.assertIn('[[ "${PM_OS_MUX:-}" != "wmux" || -z "${MSYSTEM:-}" ]]', mux)
+        self.assertIn('SWITCHBOARD_MUX="$(mux_detect)"', mux)
+        self.assertIn('[[ "${SWITCHBOARD_MUX:-}" != "wmux" || -z "${MSYSTEM:-}" ]]', mux)
 
     def test_liveness_throttle_is_windows_only(self):
         text = self.read("system/amp-plugins/task-liveness.ts")

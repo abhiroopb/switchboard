@@ -5,11 +5,11 @@ Claude in Chrome stays in the main Brave profile and is the signed-in path. The 
 talks to Claude Code over native messaging, so none of owner_browser.py's controls (the
 lease, the signedInNeed log, the cookie-script refusal) sit in its path. This file puts
 the cheap ones back as a Claude Code PreToolUse hook on `mcp__claude-in-chrome__*`
-(wired in system/claude-marketplace/plugins/pm-os/hooks/hooks.json):
+(wired in system/claude-marketplace/plugins/switchboard/hooks/hooks.json):
 
   - logs every call (tool, decision, host names only, the stated need) to
     <main>/.state/claude-in-chrome.jsonl; never a full URL, page text, or tab title
-  - refuses scheduled jobs and PM_OS_TEST_SANDBOX runs
+  - refuses scheduled jobs and SWITCHBOARD_TEST_SANDBOX runs
   - refuses a worker whose brief carried no `Browser: signed-in <reason>` line
   - refuses bank, email, payment, password-manager, private-topic, and Claude
     account hosts unless the brief carries `Browser: owner-named <host> ...: <owner's
@@ -24,7 +24,7 @@ suffix, so a custom domain a bank uses for sign-in needs adding to
 local/claude-in-chrome-sensitive-domains.txt (one host per line, # comments).
 
 Launch side: dispatch.py launch_command_for adds `--chrome` to a Claude worker only when
-PM_OS_CLAUDE_IN_CHROME=on for the machine and the brief carries the signed-in line, so
+SWITCHBOARD_CLAUDE_IN_CHROME=on for the machine and the brief carries the signed-in line, so
 every other worker starts without the extension (the docs warn about context cost and
 Windows named-pipe conflicts between sessions).
 
@@ -47,10 +47,10 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
 TOOL_PREFIX = "mcp__claude-in-chrome__"
-KEY = "PM_OS_CLAUDE_IN_CHROME"
-NEED_ENV = "PM_OS_CHROME_NEED"
-NAMED_ENV = "PM_OS_CHROME_OWNER_NAMED"
-WORDS_ENV = "PM_OS_CHROME_OWNER_WORDS"
+KEY = "SWITCHBOARD_CLAUDE_IN_CHROME"
+NEED_ENV = "SWITCHBOARD_CHROME_NEED"
+NAMED_ENV = "SWITCHBOARD_CHROME_OWNER_NAMED"
+WORDS_ENV = "SWITCHBOARD_CHROME_OWNER_WORDS"
 NATIVE_HOST = "com.anthropic.claude_code_browser_extension"
 BRAVE_HOSTS_KEY = r"Software\BraveSoftware\Brave-Browser\NativeMessagingHosts"
 LOCAL_DOMAINS_FILE = "claude-in-chrome-sensitive-domains.txt"
@@ -152,8 +152,8 @@ def set_switch(value: str, env: Mapping[str, str] | None = None) -> Path:
 def native_host(env: Mapping[str, str] | None = None) -> dict[str, Any]:
     """Whether `claude --chrome` has registered its bridge for Brave, and what the manifest allows."""
     env = os.environ if env is None else env
-    if env.get("PM_OS_CHROME_NATIVE_HOST_MANIFEST"):  # tests
-        manifest_path = env["PM_OS_CHROME_NATIVE_HOST_MANIFEST"]
+    if env.get("SWITCHBOARD_CHROME_NATIVE_HOST_MANIFEST"):  # tests
+        manifest_path = env["SWITCHBOARD_CHROME_NATIVE_HOST_MANIFEST"]
     elif os.name != "nt":
         return {"registered": False, "reason": "not Windows"}
     else:
@@ -320,9 +320,9 @@ def targets(tool_input: Any) -> tuple[list[str], list[str]]:
 
 
 def is_scheduled(env: Mapping[str, str], cwd: str) -> bool:
-    if env.get("PM_OS_SCHEDULED_JOB") == "1" or env.get("CLAUDE_CODE_SESSION_ATTENDED") == "0":
+    if env.get("SWITCHBOARD_SCHEDULED_JOB") == "1" or env.get("CLAUDE_CODE_SESSION_ATTENDED") == "0":
         return True
-    if env.get("PM_OS_WORKSTREAM_SLUG") == "scheduled-jobs":
+    if env.get("SWITCHBOARD_WORKSTREAM_SLUG") == "scheduled-jobs":
         return True
     return "routines/scheduled-jobs" in cwd.replace("\\", "/")
 
@@ -331,13 +331,13 @@ def decide(event: Mapping[str, Any], env: Mapping[str, str]) -> tuple[str, str, 
     """("allow" | "ask" | "deny", reason, log fields)."""
     tool = str(event.get("tool_name") or "")
     tool_input = event.get("tool_input") or {}
-    worker = bool(env.get("PM_OS_WORKER_TASK_ID"))
+    worker = bool(env.get("SWITCHBOARD_WORKER_TASK_ID"))
     need = env.get(NEED_ENV, "")
     fields: dict[str, Any] = {"tool": tool[len(TOOL_PREFIX):], "worker": worker,
-                              "task": env.get("PM_OS_WORKER_TASK_ID", ""), "workstream": env.get("PM_OS_WORKSTREAM_SLUG", ""),
+                              "task": env.get("SWITCHBOARD_WORKER_TASK_ID", ""), "workstream": env.get("SWITCHBOARD_WORKSTREAM_SLUG", ""),
                               "session": str(event.get("session_id") or "")}
-    if env.get("PM_OS_TEST_SANDBOX") == "1":
-        return "deny", "PM_OS_TEST_SANDBOX is set, so no test reaches the owner's Brave.", fields
+    if env.get("SWITCHBOARD_TEST_SANDBOX") == "1":
+        return "deny", "SWITCHBOARD_TEST_SANDBOX is set, so no test reaches the owner's Brave.", fields
     if is_scheduled(env, str(event.get("cwd") or "")):
         return "deny", ("scheduled jobs never use the owner's Brave, because nobody may be watching. "
                         "Use mcp__chrome-devtools-headless__* instead."), fields

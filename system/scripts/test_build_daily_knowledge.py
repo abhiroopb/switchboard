@@ -25,8 +25,8 @@ class StatusTests(unittest.TestCase):
     def test_windows(self):
         self.assertEqual(self.status("calendar", 1), "current")
         self.assertEqual(self.status("calendar", 5), "historical")
-        self.assertEqual(self.status("pm_os_output", 5), "current")
-        self.assertEqual(self.status("pm_os_output", 20), "historical")
+        self.assertEqual(self.status("switchboard_output", 5), "current")
+        self.assertEqual(self.status("switchboard_output", 20), "historical")
         self.assertEqual(self.status("calendar", -2), "upcoming")
         self.assertEqual(self.status("todo", 1, "completed"), "completed")
 

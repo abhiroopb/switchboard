@@ -11,14 +11,14 @@
 //  - headless mode (amp -x): no need, the headless prompt is explicit
 //  - machine-written first turn (start-day seed, dispatch worker launch,
 //    automation, CoS handoff): it carries its own instructions, and its
-//    boilerplate ("every PM OS thread", "the pm-os Obsidian vault") would
-//    match the `pm-os` registry entry in every seeded tab
+//    boilerplate ("every switchboard thread", "the switchboard Obsidian vault") would
+//    match the `switchboard` registry entry in every seeded tab
 //  - user message already references a core skill bypass (takes precedence
 //    over the agent registry, because the named skill is already the route)
 //  - already injected this thread (deduped via per-thread state)
 //
 //  - its targets are missing: the auto-pilot skill and
-//    system/config/pm-os-agent-registry.json are optional and not in the kit
+//    system/config/switchboard-agent-registry.json are optional and not in the kit
 //    (an organization profile may install them). The reminder needs the skill,
 //    a registry route needs the registry, and with neither the hook adds
 //    nothing, so no session gets an instruction it cannot follow.
@@ -30,24 +30,24 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { isHeadless, isMachinePrompt, isPluginEnabled, logEvent, readState, writeState } from './pm-os/lib'
+import { isHeadless, isMachinePrompt, isPluginEnabled, logEvent, readState, writeState } from './switchboard/lib'
 
 const PLUGIN = 'auto-pilot-router'
 
-function pmOsRoot(): string {
-  return process.env.PM_OS_ROOT || process.env.PM_OS_REPO || join(homedir(), 'Development', 'pm-os')
+function switchboardRoot(): string {
+  return process.env.SWITCHBOARD_ROOT || process.env.SWITCHBOARD_REPO || join(homedir(), 'Development', 'switchboard')
 }
 
 function homeDir(): string {
   return process.env.HOME || process.env.USERPROFILE || homedir()
 }
 
-export function agentRegistryPath(root: string = pmOsRoot()): string {
-  return join(root, 'system', 'config', 'pm-os-agent-registry.json')
+export function agentRegistryPath(root: string = switchboardRoot()): string {
+  return join(root, 'system', 'config', 'switchboard-agent-registry.json')
 }
 
 /** Every place Amp or Claude Code loads the auto-pilot skill from. */
-export function autoPilotSkillPaths(home: string = homeDir(), root: string = pmOsRoot()): string[] {
+export function autoPilotSkillPaths(home: string = homeDir(), root: string = switchboardRoot()): string[] {
   return [
     join(home, '.agents', 'skills', 'auto-pilot', 'SKILL.md'),
     join(home, '.claude', 'skills', 'auto-pilot', 'SKILL.md'),
@@ -60,7 +60,7 @@ export function autoPilotSkillInstalled(home?: string, root?: string): boolean {
   return autoPilotSkillPaths(home, root).some(p => existsSync(p))
 }
 
-export const REMINDER_WITH_REGISTRY = '\n\n[auto-pilot-router] Load the auto-pilot skill before loading any other skill. For PM OS domain context, read `system/config/pm-os-agent-registry.json` fresh, use the closest matching entry, and apply its live shared contract and write-back policy.'
+export const REMINDER_WITH_REGISTRY = '\n\n[auto-pilot-router] Load the auto-pilot skill before loading any other skill. For switchboard domain context, read `system/config/switchboard-agent-registry.json` fresh, use the closest matching entry, and apply its live shared contract and write-back policy.'
 export const REMINDER = '\n\n[auto-pilot-router] Load the auto-pilot skill before loading any other skill.'
 
 const CORE_SKILL_BYPASS = [
@@ -95,7 +95,7 @@ function includesPhrase(message: string, phrase: string): boolean {
 }
 
 export function registryAgentForMessage(message: string, registry: AgentRegistry): RegistryAgent | undefined {
-  if (registry.format !== 'pm-os-agent-registry' || registry.version !== 1 || !Array.isArray(registry.agents)) {
+  if (registry.format !== 'switchboard-agent-registry' || registry.version !== 1 || !Array.isArray(registry.agents)) {
     throw new Error('unsupported registry shape')
   }
   return registry.agents.find(agent =>
@@ -191,7 +191,7 @@ export default function (amp: PluginAPI) {
       await logEvent(PLUGIN, { action: 'registry_route', thread_id: threadId, agent_id: route.agent.id })
       return {
         message: {
-          content: `\n\n[auto-pilot-router] Route this turn through PM OS agent registry entry \`${route.agent.id}\` in \`system/config/pm-os-agent-registry.json\`. Read it fresh and apply the live shared contract, mission, sources, workflows, rules, and write-back policy before acting. Load the referenced skill instructions before using them.`,
+          content: `\n\n[auto-pilot-router] Route this turn through switchboard agent registry entry \`${route.agent.id}\` in \`system/config/switchboard-agent-registry.json\`. Read it fresh and apply the live shared contract, mission, sources, workflows, rules, and write-back policy before acting. Load the referenced skill instructions before using them.`,
           display: true as const,
         },
       }

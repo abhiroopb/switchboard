@@ -577,7 +577,7 @@ def job_prompt(row: dict, job: dict) -> str:
         "head branch/SHA, full review threads and required checks before writes. Fix valid findings, test, "
         "push fix commits to the existing PR branch, and reply on each addressed thread. "
         "Standing authorization covers only the owner's own PR fix commits and replies. Never merge, mark ready, "
-        "force push, bypass hooks, or expose PM OS internals in PR text or commits. "
+        "force push, bypass hooks, or expose switchboard internals in PR text or commits. "
         "Do not deploy or change shared data. Preserve other workers and dirty files. "
         "If the repo/branch is busy, identity changed, or a decision is needed, report blocked rather than guessing. "
         "Before repeating any push or reply, reconcile live evidence to avoid duplicate writes. "
@@ -719,7 +719,7 @@ def send_cos_report(task_id: str, workstream: str, status: str, evidence: str, t
     if urgent:
         cmd.append("--urgent")
     cmd += ["--create-if-missing", "--evidence", evidence, text]
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
     env["REPORT_TO_COS_NO_HOOKS"] = "1"
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=180, check=False)

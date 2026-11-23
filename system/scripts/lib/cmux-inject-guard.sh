@@ -61,7 +61,7 @@ _CIG_LOADED=1
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/mux.sh" && mux_init
 CIG_CMUX="${CMUX:-${CMUX_BIN:-$(command -v cmux 2>/dev/null || echo /Applications/cmux.app/Contents/Resources/bin/cmux)}}"
 # Test sandbox: only an explicit stub, never the real cmux found on PATH.
-[[ "${PM_OS_TEST_SANDBOX:-0}" == "1" && -z "${CMUX:-}${CMUX_BIN:-}" ]] && CIG_CMUX="/nonexistent/pm-os-test-sandbox/cmux"
+[[ "${SWITCHBOARD_TEST_SANDBOX:-0}" == "1" && -z "${CMUX:-}${CMUX_BIN:-}" ]] && CIG_CMUX="/nonexistent/switchboard-test-sandbox/cmux"
 CIG_READ_LINES="${CIG_READ_LINES:-40}"
 
 # TRUE if the agent is mid-turn / actively working. Reads a screen dump on stdin.
@@ -83,7 +83,7 @@ CIG_READ_LINES="${CIG_READ_LINES:-40}"
 # word such as "working" or "streaming" can remain in conversation scrollback
 # while Amp is idle and must not block guarded delivery indefinitely.
 #
-# Claude Code (PM_OS_AGENT=claude, verified on Claude Code
+# Claude Code (SWITCHBOARD_AGENT=claude, verified on Claude Code
 # 2.1.x in cmux 0.65) has no ╭…╮ box. Its composer is a `❯` line fenced by two
 # horizontal rules (`────`), with the status footer below the bottom rule.
 # While a turn runs the footer carries "esc to interrupt" and a spinner line
@@ -328,7 +328,7 @@ cig_claude_submit() {
 # A clean submit, or a send cmux refused, removes it.
 CIG_PASTE_DIR="${CIG_PASTE_DIR:-}"
 if [[ -z "$CIG_PASTE_DIR" ]]; then
-  if [[ "${PM_OS_TEST_SANDBOX:-0}" == "1" ]]; then
+  if [[ "${SWITCHBOARD_TEST_SANDBOX:-0}" == "1" ]]; then
     CIG_PASTE_DIR="${TMPDIR:-/tmp}/cig-pastes-sandbox-$$"
   else
     CIG_PASTE_DIR="$(builtin cd "$(dirname "${BASH_SOURCE[0]}")/../../.." 2>/dev/null && pwd)/.state/cig-pastes"

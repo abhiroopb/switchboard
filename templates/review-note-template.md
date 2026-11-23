@@ -12,7 +12,7 @@ review_surface: obsidian
 # {{title}}
 
 outputs/reviews/{{date}}-<slug>.md
-[Open in Obsidian](obsidian://open?vault=pm-os&file=outputs/reviews/{{date}}-<slug>)
+[Open in Obsidian](obsidian://open?vault=switchboard&file=outputs/reviews/{{date}}-<slug>)
 
 ## Summary
 

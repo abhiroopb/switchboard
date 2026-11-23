@@ -5,12 +5,12 @@ Load when processing the calendar section of the start-of-day triage.
 ## 3a. Fetch Today's Events
 
 ```bash
-pmos calendar events \
+switchboard calendar events \
   --json '{"time_period":{"time_range":{"time_min":"<TODAY>T00:00:00<UTC offset>","time_max":"<TOMORROW>T00:00:00<UTC offset>"}},"include_attendees_info":true}' \
-  --timezone "$PM_OS_TZ"
+  --timezone "$SWITCHBOARD_TZ"
 ```
 
-Replace `<TODAY>`, `<TOMORROW>` and `<UTC offset>` with real values for your time zone (`PM_OS_TZ` in `~/.pm-os/env`).
+Replace `<TODAY>`, `<TOMORROW>` and `<UTC offset>` with real values for your time zone (`SWITCHBOARD_TZ` in `~/.switchboard/env`).
 
 ## 3b. Check for Conflicts
 

@@ -10,13 +10,13 @@ dispatch.py feeds these titles into owner matching
 new name from them.
 
 Supported links: Google Docs, Sheets, Slides, and Drive files
-(`pmos drive info`), Slack permalinks (the
+(`switchboard drive info`), Slack permalinks (the
 thread's parent message, gated by slack_backoff), Linear issues, Jira issues,
 and GitHub PRs and issues (`gh ... view --json title`).
 
 Every lookup has a short timeout and runs in parallel, so a dead link costs
-seconds, never a stalled dispatch. PM_OS_LINK_TITLES_OFFLINE=1 (or
-PM_OS_NEW_WORKSTREAM_OFFLINE=1) turns every lookup off.
+seconds, never a stalled dispatch. SWITCHBOARD_LINK_TITLES_OFFLINE=1 (or
+SWITCHBOARD_NEW_WORKSTREAM_OFFLINE=1) turns every lookup off.
 
 CLI: python3 system/scripts/link_titles.py "<ask text>"   -> JSON list
 """
@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import Any
 
 
-OFFLINE_ENVS = ("PM_OS_LINK_TITLES_OFFLINE", "PM_OS_NEW_WORKSTREAM_OFFLINE")
+OFFLINE_ENVS = ("SWITCHBOARD_LINK_TITLES_OFFLINE", "SWITCHBOARD_NEW_WORKSTREAM_OFFLINE")
 LOOKUP_TIMEOUT_S = 6
 MAX_LINKS = 3
 SLACK_BUCKET_MAX_WAIT_S = 5.0
@@ -150,7 +150,7 @@ def _run_json(cmd: list[str], timeout: float, parse: Any = json.loads) -> dict |
 
 
 def drive_title(url: str, timeout: float = LOOKUP_TIMEOUT_S) -> str:
-    data = _run_json(["pmos", "drive", "info", "--file-id-or-url", url], timeout)
+    data = _run_json(["switchboard", "drive", "info", "--file-id-or-url", url], timeout)
     file = (data or {}).get("file") or data or {}
     return str(file.get("name") or file.get("title") or "").strip()
 
@@ -159,7 +159,7 @@ def linear_title(url: str, timeout: float = LOOKUP_TIMEOUT_S) -> str:
     match = LINEAR_URL_RE.search(url)
     if not match:
         return ""
-    data = _run_json(["pmos", "linear", "issue", "--id", match.group(1)], timeout)
+    data = _run_json(["switchboard", "linear", "issue", "--id", match.group(1)], timeout)
     issue = (data or {}).get("issue") or data or {}
     return str(issue.get("title") or "").strip()
 
@@ -169,7 +169,7 @@ def jira_title(url: str, timeout: float = LOOKUP_TIMEOUT_S) -> str:
     if not match:
         return ""
     key, project = match.groups()
-    data = _run_json(["pmos", "jira", "issues", "--projectKey", project, "--jql", f"key = {key}",
+    data = _run_json(["switchboard", "jira", "issues", "--projectKey", project, "--jql", f"key = {key}",
                       "--fields", "summary", "--maxResults", "1", "--response-format", "minimal"], timeout)
     issues = (((data or {}).get("data") or {}).get("issues")) or []
     first = issues[0] if issues and isinstance(issues[0], dict) else {}
@@ -204,7 +204,7 @@ def slack_thread_text(url: str, timeout: float = LOOKUP_TIMEOUT_S) -> str:
             return ""
     except Exception:  # noqa: BLE001 (a broken gate must not break dispatch)
         return ""
-    data = _run_json(["pmos", "slack", *slack_backoff.json_argv(argv)], timeout, slack_backoff.loads)
+    data = _run_json(["switchboard", "slack", *slack_backoff.json_argv(argv)], timeout, slack_backoff.loads)
     messages = (data or {}).get("messages") or []
     first = messages[0] if messages and isinstance(messages[0], dict) else {}
     text = str(first.get("text") or "")

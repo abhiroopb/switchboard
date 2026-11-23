@@ -6,7 +6,7 @@ caller's workspace, and detect which multiplexer runs.
 wmux runs against the fake wmux CLI from test_cmux_shim.py (a Claude composer
 on screen, agent-state, typing). cmux runs against a fake `cmux` that records
 `agent message` and answers in cmux's JSON shape. Both go through the same
-owner_tabs.agent_message() and permission_relay entry points PM OS uses.
+owner_tabs.agent_message() and permission_relay entry points switchboard uses.
 """
 from __future__ import annotations
 
@@ -78,7 +78,7 @@ class WmuxAgentMessageTest(unittest.TestCase):
         self.assertEqual(reply["recipient_workspace_id"], "ws-1")
 
     def test_bracketed_paste_is_opt_in(self):
-        self.h.message("workspace:1", "a\nb", PM_OS_WMUX_PASTE="bracketed")
+        self.h.message("workspace:1", "a\nb", SWITCHBOARD_WMUX_PASTE="bracketed")
         sent = [c for c in self.sends() if c[0] == "send"][0]
         self.assertEqual(sent[-1], "\x1b[200~a\nb\x1b[201~")
 
@@ -107,7 +107,7 @@ class WmuxAgentMessageTest(unittest.TestCase):
     def test_draft_parked_at_home_is_kept_when_it_looks_like_a_suggestion(self):
         # The cursor alone cannot tell these apart. The composer check before Enter can.
         self.h.set_state(composer={"parked": "half-typed note"}, agent=CLAUDE_IDLE)
-        _, reply = self.h.message("workspace:1", "report", PM_OS_SHIM_VERIFY_SECONDS="0")
+        _, reply = self.h.message("workspace:1", "report", SWITCHBOARD_SHIM_VERIFY_SECONDS="0")
         self.assertIn("draft", reply["failure_reason"])
         state = self.h.get_state()
         self.assertNotIn("submitted", state)
@@ -242,7 +242,7 @@ class ProvenDeliveryHarness(WmuxHarness):
         self.spill = tmp / "spill"
 
     def env(self, **extra):
-        return super().env(PM_OS_WMUX_SPILL_DIR=str(self.spill), PM_OS_SHIM_VERIFY_SECONDS="0.3", **extra)
+        return super().env(SWITCHBOARD_WMUX_SPILL_DIR=str(self.spill), SWITCHBOARD_SHIM_VERIFY_SECONDS="0.3", **extra)
 
 
 class WmuxProvenDeliveryTest(unittest.TestCase):
@@ -272,19 +272,19 @@ class WmuxProvenDeliveryTest(unittest.TestCase):
         self.assertEqual(reply["spilled_chars"], len(self.REPORT))
 
     def test_short_text_is_typed_whole(self):
-        _, reply = self.h.message("workspace:1", "[🧭 PM OS · rt-1] done: short")
+        _, reply = self.h.message("workspace:1", "[🧭 switchboard · rt-1] done: short")
         self.assertEqual((reply["state"], reply["verified"]), ("delivered", "prompt-log"))
         self.assertNotIn("spilled_to", reply)
 
     def test_a_truncated_prompt_entry_is_garbled_not_delivered(self):
         self.h.set_state(prompt_truncate=40)
-        _, reply = self.h.message("workspace:1", "[🧭 PM OS · rt-1] done: " + "word " * 40)
+        _, reply = self.h.message("workspace:1", "[🧭 switchboard · rt-1] done: " + "word " * 40)
         self.assertEqual(reply["state"], "garbled")
         self.assertIn("did not arrive whole", reply["failure_reason"])
 
     def test_no_new_prompt_entry_reads_queued_not_delivered(self):
         self.h.set_state(prompt_lag=True)
-        _, reply = self.h.message("workspace:1", "[🧭 PM OS · rt-1] done: short")
+        _, reply = self.h.message("workspace:1", "[🧭 switchboard · rt-1] done: short")
         self.assertEqual((reply["state"], reply["verified"]), ("queued", "none"))
         self.assertIsNone(reply["failure_reason"])
 
@@ -292,15 +292,15 @@ class WmuxProvenDeliveryTest(unittest.TestCase):
         env = self.h.env()
         with mock.patch.dict(os.environ, env, clear=True), \
                 mock.patch.object(owner_tabs, "_cmux_argv", return_value=[sys.executable, str(SHIM)]):
-            ok = owner_tabs.agent_message("workspace:1", "[🧭 PM OS · rt-1] done: short", "PM OS report")
+            ok = owner_tabs.agent_message("workspace:1", "[🧭 switchboard · rt-1] done: short", "switchboard report")
             self.assertTrue(ok["ok"] and ok["verified"], ok)
             self.assertEqual(ok["proof"], "prompt-log")
             self.h.set_state(prompt_lag=True)
-            queued = owner_tabs.agent_message("workspace:1", "[🧭 PM OS · rt-2] done: short", "PM OS report")
+            queued = owner_tabs.agent_message("workspace:1", "[🧭 switchboard · rt-2] done: short", "switchboard report")
             self.assertTrue(queued["ok"])
             self.assertFalse(queued["verified"])
             self.h.set_state(prompt_lag=False, prompt_truncate=10)
-            garbled = owner_tabs.agent_message("workspace:1", "[🧭 PM OS · rt-3] done: " + "x " * 60, "PM OS report")
+            garbled = owner_tabs.agent_message("workspace:1", "[🧭 switchboard · rt-3] done: " + "x " * 60, "switchboard report")
             self.assertFalse(garbled["ok"] or garbled["verified"])
 
     def test_agent_seen_finds_a_marker_on_the_prompt_log_then_the_screen(self):
@@ -309,24 +309,24 @@ class WmuxProvenDeliveryTest(unittest.TestCase):
         self.assertEqual(json.loads(out.stdout)["where"], "prompt-log", out.stderr)
         out = self.h.run("agent", "seen", "workspace:1", "--marker", "rt-nothere] done:", "--json")
         self.assertFalse(json.loads(out.stdout)["seen"])
-        self.h.set_state(prompt_log=[], submitted=[], composer={"draft": "", "scrollback": ["> [🧭 PM OS · rt-9]", "  done: queued"]})
-        out = self.h.run("agent", "seen", "workspace:1", "--marker", "[🧭 PM OS · rt-9] done:", "--json")
+        self.h.set_state(prompt_log=[], submitted=[], composer={"draft": "", "scrollback": ["> [🧭 switchboard · rt-9]", "  done: queued"]})
+        out = self.h.run("agent", "seen", "workspace:1", "--marker", "[🧭 switchboard · rt-9] done:", "--json")
         self.assertEqual(json.loads(out.stdout)["where"], "screen")
 
     def test_agent_seen_ignores_a_line_still_in_the_composer(self):
         # An Enter that never landed leaves the line in the box: not taken.
-        self.h.set_state(prompt_log=[], submitted=[], composer={"draft": "[🧭 PM OS · rt-9] done: unsent", "scrollback": []})
-        out = self.h.run("agent", "seen", "workspace:1", "--marker", "[🧭 PM OS · rt-9] done:", "--json")
+        self.h.set_state(prompt_log=[], submitted=[], composer={"draft": "[🧭 switchboard · rt-9] done: unsent", "scrollback": []})
+        out = self.h.run("agent", "seen", "workspace:1", "--marker", "[🧭 switchboard · rt-9] done:", "--json")
         self.assertFalse(json.loads(out.stdout)["seen"], out.stdout)
 
     def test_agent_seen_rejects_a_pointer_line_cut_short(self):
         # The opening arrived, the file path did not.
-        self.h.set_state(prompt_log=["[🧭 PM OS · rt-9] done: start … [full message, 2900 characters: C:\\Us"])
-        out = self.h.run("agent", "seen", "workspace:1", "--marker", "[🧭 PM OS · rt-9] done:", "--json")
+        self.h.set_state(prompt_log=["[🧭 switchboard · rt-9] done: start … [full message, 2900 characters: C:\\Us"])
+        out = self.h.run("agent", "seen", "workspace:1", "--marker", "[🧭 switchboard · rt-9] done:", "--json")
         self.assertFalse(json.loads(out.stdout)["seen"], out.stdout)
-        self.h.set_state(prompt_log=["[🧭 PM OS · rt-9] done: start … [full message, 2900 characters: C:\\m.md: "
+        self.h.set_state(prompt_log=["[🧭 switchboard · rt-9] done: start … [full message, 2900 characters: C:\\m.md: "
                                      "read that file and show it in full]"])
-        out = self.h.run("agent", "seen", "workspace:1", "--marker", "[🧭 PM OS · rt-9] done:", "--json")
+        out = self.h.run("agent", "seen", "workspace:1", "--marker", "[🧭 switchboard · rt-9] done:", "--json")
         self.assertTrue(json.loads(out.stdout)["seen"], out.stdout)
 
     def test_owner_tabs_seen_on_macos_cmux_is_unsupported(self):
@@ -423,7 +423,7 @@ if sys.argv[1:3] == ["agent", "message"]:
 
 class DetectionTest(unittest.TestCase):
     def env(self, **values):
-        base = {k: v for k, v in os.environ.items() if not k.startswith(("CMUX_", "WMUX", "PM_OS_MUX"))}
+        base = {k: v for k, v in os.environ.items() if not k.startswith(("CMUX_", "WMUX", "SWITCHBOARD_MUX"))}
         base.update(values)
         return mock.patch.dict(os.environ, base, clear=True)
 

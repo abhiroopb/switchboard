@@ -6,7 +6,7 @@ This file is written for the coding agent that installs switchboard. A person ca
 
 - **Ask only the questions in step 2,** in that order, each with its default. Every other choice is already made in [docs/install-decisions.md](docs/install-decisions.md). Apply those and do not ask about them.
 - **The user runs every sign-in.** A `login`, `auth` or OAuth step opens the user's browser or asks for a token. Explain the step, show the command, and let the user run it in their own terminal (in Claude Code they can type `! <command>`). Never start one yourself. Skipping a service is always fine, and the user can add it later.
-- **Secrets stay out of the repo.** Tokens live in each tool's per-user store: `~/.pm-os/connectors/` for `pmos` and the system keyring for `gh`. Never write a token, client file or app secret into the install folder, and never read or echo one. Do not print the contents of `~/.pm-os/env`.
+- **Secrets stay out of the repo.** Tokens live in each tool's per-user store: `~/.switchboard/connectors/` for `switchboard` and the system keyring for `gh`. Never write a token, client file or app secret into the install folder, and never read or echo one. Do not print the contents of `~/.switchboard/env`.
 - **Show before you write.** Run the dry run in step 3 and show its summary before `--apply`.
 - **Never edit around a missing tool.** If a tool is missing, report it with its install command and move on. Do not delete or rewrite files that call it.
 - **Keep it short.** Report each step in one line. Finish with the summary in the last step.
@@ -44,7 +44,7 @@ Ask these one at a time. Show the default and accept "default" or an empty answe
 
 1. **Name.** "What name should switchboard use for you in drafts and notes?" There is no default. The name is stored only in this install.
 2. **Email.** "Which email address do you draft email from? Press enter to skip." The default is `you@example.com`, which turns email drafting off.
-3. **Folder.** "Where should switchboard live?" The default is `~/Development/pm-os` (`%USERPROFILE%\Development\pm-os` on Windows). Explain in one line that `pm-os` is the folder name its links expect, and that a cloud-synced folder works.
+3. **Folder.** "Where should switchboard live?" The default is `~/Development/switchboard` (`%USERPROFILE%\Development\switchboard` on Windows). Explain in one line that `switchboard` is the folder name its links expect, and that a cloud-synced folder works.
 4. **Agents.** "Which agents should I set up? I found: <list>." The default is every agent found.
 5. **Mode.** Offer the full parallel loop only when a multiplexer was found and `claude` or `amp` is installed: "Full parallel loop (workers in their own tabs) or single session (one agent does tasks one at a time)?" The default is the full loop when it is offered, otherwise single session. If it is not offered, say why in one line and use single session.
 6. **Time zone.** "Which time zone should dates and times use?" The default is the machine's zone (`python3 -c "import datetime; print(datetime.datetime.now().astimezone().tzinfo)"`, or the IANA name from `timedatectl`, `/etc/localtime` or `tzutil /g`). Store the IANA name, such as `Europe/Berlin`.
@@ -79,8 +79,8 @@ The installer fills in your name and paths, creates `people/`, `notes/` and `wor
 Then write the time zone from step 2 into the per-user settings file, which the loop and the scheduled jobs read:
 
 ```
-mkdir -p ~/.pm-os && touch ~/.pm-os/env
-grep -q '^PM_OS_TZ=' ~/.pm-os/env || echo 'PM_OS_TZ=<zone>' >> ~/.pm-os/env
+mkdir -p ~/.switchboard && touch ~/.switchboard/env
+grep -q '^SWITCHBOARD_TZ=' ~/.switchboard/env || echo 'SWITCHBOARD_TZ=<zone>' >> ~/.switchboard/env
 ```
 
 Then, from the install folder:
@@ -101,14 +101,14 @@ Then, from the install folder:
 
 Take them one at a time. For each, explain what the user creates and what the sign-in opens, show the command, wait while the user runs it, then run the check. The full steps, scopes and links are in [docs/connectors.md](docs/connectors.md).
 
-On macOS and Linux, first add `export PATH="<folder>/system/connectors:$PATH"` to the shell profile so `pmos` is found. On Windows, `install.ps1` and the Git Bash hook already did it.
+On macOS and Linux, first add `export PATH="<folder>/system/connectors:$PATH"` to the shell profile so `switchboard` is found. On Windows, `install.ps1` and the Git Bash hook already did it.
 
 | Service | The user creates | The user runs | You check |
 |---|---|---|---|
-| **Google** | Their own OAuth client of type Desktop app, with the Gmail, Drive, Calendar and Sheets APIs on, saved as `~/.pm-os/connectors/google-oauth-client.json` | `pmos login google --scopes full` or `--scopes readonly`. Ask which first: read-only cannot draft email, write files or place to-do calendar holds. | `pmos doctor` shows `ok` for gmail, google-drive and google-calendar |
-| **Dropbox** | Nothing for files, which come through the Dropbox desktop app's folder. For shared links, a small Dropbox app with `sharing.read` and `sharing.write`. | `pmos login dropbox --app-key <KEY>` (shared links only) | `pmos doctor dropbox` shows `ok` |
+| **Google** | Their own OAuth client of type Desktop app, with the Gmail, Drive, Calendar and Sheets APIs on, saved as `~/.switchboard/connectors/google-oauth-client.json` | `switchboard login google --scopes full` or `--scopes readonly`. Ask which first: read-only cannot draft email, write files or place to-do calendar holds. | `switchboard doctor` shows `ok` for gmail, google-drive and google-calendar |
+| **Dropbox** | Nothing for files, which come through the Dropbox desktop app's folder. For shared links, a small Dropbox app with `sharing.read` and `sharing.write`. | `switchboard login dropbox --app-key <KEY>` (shared links only) | `switchboard doctor dropbox` shows `ok` |
 | **GitHub** | Nothing. `gh` must be installed. | `gh auth login`, then `gh auth setup-git` if they want git to use it | `gh auth status` and `gh api user --jq .login` |
-| **Slack** | Their own Slack app with the user token scopes in [system/connectors/README.md](system/connectors/README.md) | `pmos login slack`, pasting the token at the hidden prompt | `pmos doctor` shows `ok` for slack |
+| **Slack** | Their own Slack app with the user token scopes in [system/connectors/README.md](system/connectors/README.md) | `switchboard login slack`, pasting the token at the hidden prompt | `switchboard doctor` shows `ok` for slack |
 
 Report each result in one line. A `FAIL` or an admin block is fine to leave for later. Give the user the line and move on.
 

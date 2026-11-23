@@ -16,8 +16,8 @@ Usage: ensure-routine-workspaces.sh [routine-name ...]
 Launch core routine workspaces if they are missing from cmux.
 Defaults to: todo launchpad comms-triage scheduled-jobs meetings
 (sidebar order on cmux; wmux cannot order tabs).
-comms-triage is skipped, even when named, while PM_OS_COMMS_TRIAGE=off on this machine.
-On a personal machine (PM_OS_MACHINE_ROLE=personal, system/scripts/machine_role.py),
+comms-triage is skipped, even when named, while SWITCHBOARD_COMMS_TRIAGE=off on this machine.
+On a personal machine (SWITCHBOARD_MACHINE_ROLE=personal, system/scripts/machine_role.py),
 launchpad, meetings, and scheduled-jobs are skipped, even when named, until the owner
 loads one: system/scripts/load-surface.sh <surface> ("load Launchpad" in CoS).
 
@@ -40,14 +40,14 @@ fi
 
 for routine_name in "${routines[@]}"; do
     # Machine-local off switch (system/scripts/comms_triage_setting.py).
-    if [[ "$routine_name" == "comms-triage" ]] && declare -F pm_os_comms_triage_enabled >/dev/null \
-        && ! pm_os_comms_triage_enabled; then
-        log_info "Skipping comms-triage: PM_OS_COMMS_TRIAGE=off on this machine"
+    if [[ "$routine_name" == "comms-triage" ]] && declare -F switchboard_comms_triage_enabled >/dev/null \
+        && ! switchboard_comms_triage_enabled; then
+        log_info "Skipping comms-triage: SWITCHBOARD_COMMS_TRIAGE=off on this machine"
         continue
     fi
 
     # Machine role (system/scripts/machine_role.py): on a personal machine these open on demand.
-    if declare -F pm_os_surface_opens_by_default >/dev/null && ! pm_os_surface_opens_by_default "$routine_name"; then
+    if declare -F switchboard_surface_opens_by_default >/dev/null && ! switchboard_surface_opens_by_default "$routine_name"; then
         case "$routine_name" in
             launchpad) surface_label="Launchpad" ;;
             scheduled-jobs) surface_label="Scheduled Jobs" ;;

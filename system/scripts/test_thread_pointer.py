@@ -2,7 +2,7 @@
 """Only an Amp row gets an ampcode.com link; a Claude row names its session.
 
 A Claude Code session id was being written as https://ampcode.com/threads/<id>, a page
-that does not exist (2026-11-08). pm_os_agent.thread_pointer is the one decision, and
+that does not exist (2026-11-08). switchboard_agent.thread_pointer is the one decision, and
 the sweep at the bottom fails on any new emitter outside the allowlist.
 """
 from __future__ import annotations
@@ -17,8 +17,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
-os.environ["PM_OS_TEST_SANDBOX"] = "1"
-import pm_os_agent  # noqa: E402
+os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"
+import switchboard_agent  # noqa: E402
 import report_quiet  # noqa: E402
 import review_surface  # noqa: E402
 
@@ -31,32 +31,32 @@ DEAD_URL = f"https://ampcode.com/threads/{SESSION}"
 
 class ThreadPointer(unittest.TestCase):
     def test_the_row_agent_decides(self) -> None:
-        self.assertEqual(pm_os_agent.thread_pointer(AMP, "amp"), AMP_URL)
-        self.assertEqual(pm_os_agent.thread_pointer(SESSION, "claude"), RESUME)
-        self.assertEqual(pm_os_agent.thread_pointer("sess-1", "claude"), "claude --resume sess-1")
+        self.assertEqual(switchboard_agent.thread_pointer(AMP, "amp"), AMP_URL)
+        self.assertEqual(switchboard_agent.thread_pointer(SESSION, "claude"), RESUME)
+        self.assertEqual(switchboard_agent.thread_pointer("sess-1", "claude"), "claude --resume sess-1")
 
     def test_a_row_with_no_agent_falls_back_to_the_id_shape(self) -> None:
-        self.assertEqual(pm_os_agent.thread_pointer(AMP), AMP_URL)
-        self.assertEqual(pm_os_agent.thread_pointer(SESSION), RESUME)
+        self.assertEqual(switchboard_agent.thread_pointer(AMP), AMP_URL)
+        self.assertEqual(switchboard_agent.thread_pointer(SESSION), RESUME)
 
     def test_a_mismatch_or_nothing_gets_no_pointer(self) -> None:
-        self.assertEqual(pm_os_agent.thread_pointer(SESSION, "amp"), "")
-        self.assertEqual(pm_os_agent.thread_pointer(AMP, "claude"), "")
-        self.assertEqual(pm_os_agent.thread_pointer("not-an-id"), "")
-        self.assertEqual(pm_os_agent.thread_pointer("", "claude"), "")
-        self.assertEqual(pm_os_agent.thread_pointer(None), "")
+        self.assertEqual(switchboard_agent.thread_pointer(SESSION, "amp"), "")
+        self.assertEqual(switchboard_agent.thread_pointer(AMP, "claude"), "")
+        self.assertEqual(switchboard_agent.thread_pointer("not-an-id"), "")
+        self.assertEqual(switchboard_agent.thread_pointer("", "claude"), "")
+        self.assertEqual(switchboard_agent.thread_pointer(None), "")
 
     def test_fix_rewrites_session_links_and_leaves_amp_links(self) -> None:
-        self.assertEqual(pm_os_agent.fix_thread_links(f"done {DEAD_URL} ok"), f"done {RESUME} ok")
-        self.assertEqual(pm_os_agent.fix_thread_links(f"done ({DEAD_URL})"), f"done ({RESUME})")
-        self.assertEqual(pm_os_agent.fix_thread_links(f"[Open link]({DEAD_URL})"), RESUME)
-        self.assertEqual(pm_os_agent.fix_thread_links(f"done {AMP_URL}"), f"done {AMP_URL}")
+        self.assertEqual(switchboard_agent.fix_thread_links(f"done {DEAD_URL} ok"), f"done {RESUME} ok")
+        self.assertEqual(switchboard_agent.fix_thread_links(f"done ({DEAD_URL})"), f"done ({RESUME})")
+        self.assertEqual(switchboard_agent.fix_thread_links(f"[Open link]({DEAD_URL})"), RESUME)
+        self.assertEqual(switchboard_agent.fix_thread_links(f"done {AMP_URL}"), f"done {AMP_URL}")
 
     def test_fix_never_eats_the_prose_before_a_link(self) -> None:
         text = f"Range is [1, 5) checked.\nNext step here. [Open link]({DEAD_URL})"
-        self.assertEqual(pm_os_agent.fix_thread_links(text), f"Range is [1, 5) checked.\nNext step here. {RESUME}")
+        self.assertEqual(switchboard_agent.fix_thread_links(text), f"Range is [1, 5) checked.\nNext step here. {RESUME}")
         same_line = f"Range is [1, 5) checked. [Open link]({DEAD_URL})"
-        self.assertEqual(pm_os_agent.fix_thread_links(same_line), f"Range is [1, 5) checked. {RESUME}")
+        self.assertEqual(switchboard_agent.fix_thread_links(same_line), f"Range is [1, 5) checked. {RESUME}")
 
     def test_a_fenced_draft_stays_as_written(self) -> None:
         text = review_surface.report_text(f"see [1, 5) done.\n```\nkeep this draft {DEAD_URL}\n```\nand {DEAD_URL}")
@@ -94,7 +94,7 @@ class EmitterSweep(unittest.TestCase):
     """A new place that builds an Amp thread link has to justify itself here."""
 
     ALLOWED = {
-        "system/scripts/pm_os_agent.py": "the one helper",
+        "system/scripts/switchboard_agent.py": "the one helper",
         "system/scripts/dispatch.py": "the Amp branch of the launch prompt",
         "system/scripts/cos_review_feed.py": "every link guarded by startswith('T-')",
         "system/scripts/rotate-cos-thread.sh": "exits unless the agent is amp and the id is T-",
@@ -136,7 +136,7 @@ class BoardCopy(unittest.TestCase):
     """The board's copy action, without a shim: find_row and lane_view are stubbed."""
 
     def setUp(self) -> None:
-        spec = importlib.util.spec_from_file_location("pm_os_board_under_test", HERE / "mux/pm-os-board.py")
+        spec = importlib.util.spec_from_file_location("switchboard_board_under_test", HERE / "mux/switchboard-board.py")
         self.board = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.board)
         self.board.lane_view = lambda: {}

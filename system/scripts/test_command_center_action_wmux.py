@@ -7,7 +7,7 @@ with `wmux close-workspace` directly, skipping the wrap-up and draft checks.
 wmux refs come from a counter that only goes up, so there a missed handle is
 refreshed from the live list. cmux reuses numbers and keeps failing closed.
 
-Hermetic: a stub cmux and a temp state folder. PM_OS_TEST_SANDBOX=1 keeps every
+Hermetic: a stub cmux and a temp state folder. SWITCHBOARD_TEST_SANDBOX=1 keeps every
 mux call off the live tabs.
 
   python3 system/scripts/test_command_center_action_wmux.py
@@ -94,12 +94,12 @@ class Base(unittest.TestCase):
 
     def env(self, mux: str, **extra: str) -> dict[str, str]:
         drop = {"CMUX", "CMUX_BIN", "CMUX_AMP_CMUX_BIN", "CMUX_WORKSPACE_ID", "CMUX_SURFACE_ID",
-                "WMUX_SURFACE_ID", "PM_OS_MUX", "CC_STATE_DIR", "CC_DIGEST_SCRIPT", "STATE_DIR", "REPO_ROOT"}
+                "WMUX_SURFACE_ID", "SWITCHBOARD_MUX", "CC_STATE_DIR", "CC_DIGEST_SCRIPT", "STATE_DIR", "REPO_ROOT"}
         env = {k: v for k, v in os.environ.items() if k not in drop}
-        env.update({"PM_OS_TEST_SANDBOX": "1", "PM_OS_MUX": mux, "CMUX_BIN": str(self.stub),
+        env.update({"SWITCHBOARD_TEST_SANDBOX": "1", "SWITCHBOARD_MUX": mux, "CMUX_BIN": str(self.stub),
                     "CMUX": str(self.stub), "CMUX_WORKSPACE_ID": "ws-test-caller",
                     "CC_STATE_DIR": str(self.state), "CC_TEST_LIVE": str(self.live),
-                    "CC_TEST_CALLS": str(self.calls), "PM_OS_STATE_HOME": str(self.root),
+                    "CC_TEST_CALLS": str(self.calls), "SWITCHBOARD_STATE_HOME": str(self.root),
                     "PYTHONIOENCODING": "utf-8"})
         env.update(extra)
         return {k: v for k, v in env.items() if v is not None}
@@ -121,13 +121,13 @@ class Base(unittest.TestCase):
 class WmuxCloseTests(Base):
     def test_close_takes_a_tab_opened_after_the_render(self) -> None:
         self.set_map((285, "ws-cos", "🧭 CoS"), (287, "ws-todo", "✅ Todo"))
-        self.set_live((285, "ws-cos", "🧭 CoS"), (287, "ws-todo", "✅ Todo"), (290, "ws-pmos", "📊 PM OS Maintenance"))
+        self.set_live((285, "ws-cos", "🧭 CoS"), (287, "ws-todo", "✅ Todo"), (290, "ws-switchboard", "📊 Switchboard Maintenance"))
         done = self.action("wmux", "close", "290")
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertIn("close-workspace --workspace workspace:290", self.calls_made())
         self.assertIn("closed workspace:290", done.stdout)
         # The refresh saw every open tab, CoS included.
-        self.assertEqual(self.handles()["290"]["id"], "ws-pmos")
+        self.assertEqual(self.handles()["290"]["id"], "ws-switchboard")
         self.assertEqual(set(self.handles()), {"285", "287", "290"})
 
     def test_works_with_no_map_and_only_cmux_bin_set(self) -> None:
@@ -149,7 +149,7 @@ class WmuxCloseTests(Base):
 
     def test_resolve_matches_the_whole_ref(self) -> None:
         """workspace:29 must not read the title of workspace:290 listed before it."""
-        self.set_live((290, "ws-pmos", "📊 PM OS Maintenance"), (29, "ws-old", "📲 Printer Setup"))
+        self.set_live((290, "ws-switchboard", "📊 Switchboard Maintenance"), (29, "ws-old", "📲 Printer Setup"))
         done = self.action("wmux", "resolve", "29")
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertEqual(done.stdout.strip(), "workspace:29\t📲 Printer Setup")
@@ -163,7 +163,7 @@ class WmuxCloseTests(Base):
         self.assertNotIn("close-workspace", self.calls_made())
 
     def test_a_mismatched_identity_still_fails_closed(self) -> None:
-        self.set_map((290, "ws-old", "📊 PM OS Maintenance"))
+        self.set_map((290, "ws-old", "📊 Switchboard Maintenance"))
         self.set_live((290, "ws-new", "🗂️ Example Assignment"))
         done = self.action("wmux", "close", "290")
         self.assertNotEqual(done.returncode, 0)

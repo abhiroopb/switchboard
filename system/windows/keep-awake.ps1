@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Keep a Windows machine awake while PM OS workers run, with no power-setting change.
+  Keep a Windows machine awake while switchboard workers run, with no power-setting change.
 
 .DESCRIPTION
   Machines with Modern Standby (S0 low power idle) start standby when the
@@ -48,8 +48,8 @@ $ErrorActionPreference = 'Stop'
 $root = (& git -C (Get-Location) rev-parse --show-toplevel 2>$null)
 if (-not $root) { $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot) }
 # A task worktree's .state is a link to main's, so state is shared either way.
-# PM_OS_KEEP_AWAKE_STATE_DIR points a test at its own folder.
-$stateDir = if ($env:PM_OS_KEEP_AWAKE_STATE_DIR) { $env:PM_OS_KEEP_AWAKE_STATE_DIR } else { Join-Path $root '.state' }
+# SWITCHBOARD_KEEP_AWAKE_STATE_DIR points a test at its own folder.
+$stateDir = if ($env:SWITCHBOARD_KEEP_AWAKE_STATE_DIR) { $env:SWITCHBOARD_KEEP_AWAKE_STATE_DIR } else { Join-Path $root '.state' }
 New-Item -ItemType Directory -Force $stateDir | Out-Null
 $statePath = Join-Path $stateDir 'keep-awake.json'
 $logPath = Join-Path $stateDir 'keep-awake.log'
@@ -127,12 +127,12 @@ function Out-Result($obj, [string]$text) {
 }
 
 if ($Hold) {
-    Add-Type -Namespace PmOs -Name Power -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint f);'
+    Add-Type -Namespace Switchboard -Name Power -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint f);'
     $flags = 0x80000003u  # ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED
     $end = [datetime]::Parse($Until)
     try {
         while ((Get-Date) -lt $end) {
-            if ([PmOs.Power]::SetThreadExecutionState($flags) -eq 0) { Write-Log "SetThreadExecutionState failed (pid $PID)" }
+            if ([Switchboard.Power]::SetThreadExecutionState($flags) -eq 0) { Write-Log "SetThreadExecutionState failed (pid $PID)" }
             $left = ($end - (Get-Date)).TotalSeconds
             Start-Sleep -Seconds ([int][math]::Ceiling([math]::Max(1, [math]::Min(60, $left))))
             # One holder: exit once the state file is gone or names another holder,
@@ -145,7 +145,7 @@ if ($Hold) {
             try { $end = [datetime]::Parse($cur.until) } catch { }
         }
     } finally {
-        [void][PmOs.Power]::SetThreadExecutionState(0x80000000u)
+        [void][Switchboard.Power]::SetThreadExecutionState(0x80000000u)
         Write-Log "hold ended (pid $PID)"
     }
     exit 0

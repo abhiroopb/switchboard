@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # Per-machine Comms Triage switch: the bash twin of system/scripts/comms_triage_setting.py.
-# Returns 1 when PM_OS_COMMS_TRIAGE is off in the environment or in this machine's file,
+# Returns 1 when SWITCHBOARD_COMMS_TRIAGE is off in the environment or in this machine's file,
 # local/machines/<MACHINE>.env (host name up to its first dot, upper case). A machine with
 # no such file returns 0, so the default stays on. Never exits a sourcing script.
-pm_os_comms_triage_enabled() {
-    local value="${PM_OS_COMMS_TRIAGE:-}"
+switchboard_comms_triage_enabled() {
+    local value="${SWITCHBOARD_COMMS_TRIAGE:-}"
     if [[ -z "$value" ]]; then
         local root dir name file
-        root="${PM_OS_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
-        dir="${PM_OS_LOCAL_DIR:-$root/local}"
+        root="${SWITCHBOARD_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
+        dir="${SWITCHBOARD_LOCAL_DIR:-$root/local}"
         if [[ -d "$dir/machines" ]]; then
-            name="${PM_OS_MACHINE:-${HOSTNAME:-$(hostname)}}"
+            name="${SWITCHBOARD_MACHINE:-${HOSTNAME:-$(hostname)}}"
             name="$(printf '%s' "${name%%.*}" | tr '[:lower:]' '[:upper:]')"
             file="$dir/machines/$name.env"
             if [[ -f "$file" ]]; then
-                value="$(sed -n 's/^[^A-Za-z#]*PM_OS_COMMS_TRIAGE[[:space:]]*=\(.*\)$/\1/p' "$file" | tail -n 1)"
+                value="$(sed -n 's/^[^A-Za-z#]*SWITCHBOARD_COMMS_TRIAGE[[:space:]]*=\(.*\)$/\1/p' "$file" | tail -n 1)"
             fi
         fi
     fi

@@ -6,7 +6,7 @@ argument-hint: "<update type and audience>"
 
 # Stakeholder Update
 
-> Connected tools in PM OS: the `pmos` connectors (Slack, Gmail, Google Drive, Calendar). Read `~/Development/pm-os/knowledge/` before drafting.
+> Connected tools in switchboard: the `switchboard` connectors (Slack, Gmail, Google Drive, Calendar). Read `~/Development/switchboard/knowledge/` before drafting.
 
 Generate a stakeholder update tailored to the audience and cadence.
 

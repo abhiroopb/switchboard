@@ -6,7 +6,7 @@ description: "Reviews substantive work against the owner's user-maintained judgm
 ## Use For
 Use as final QA for substantive drafts, plans, recommendations, status updates, and artifacts. Skip the full pass for trivial lookups.
 ## Pull Context First
-Read `local/user-lens.yaml` in the PM OS root, then the owning workflow, workstream/project context, stakeholder profiles, and source of truth. If the profile is absent, do not invent preferences: apply the `AGENTS.md` writing rules and the neutral defaults below. `templates/user-lens.yaml.example` is the blank profile.
+Read `local/user-lens.yaml` in the switchboard root, then the owning workflow, workstream/project context, stakeholder profiles, and source of truth. If the profile is absent, do not invent preferences: apply the `AGENTS.md` writing rules and the neutral defaults below. `templates/user-lens.yaml.example` is the blank profile.
 ## Judgment Profile
 Apply only the configured `decision_principles`, `tradeoff_preferences`, `communication_tone`, `grounding_standard`, `verification_standard`, and `hard_stops`. Neutral defaults are evidence before assertion, explicit tradeoffs, concise communication, and honest verification.
 ## Review Rubric

@@ -4,7 +4,7 @@
 # Reads background-tasks.yaml, checks which tasks are due based on
 # background-task-state.json, and runs each task with its declared executor.
 #
-# Runs every 30 min via launchd (com.pm-os.background-tasks).
+# Runs every 30 min via launchd (com.switchboard.background-tasks).
 # Tasks are run synchronously, one at a time, inside a tick bounded by
 # MAX_TICK_SECONDS so one tick never overlaps the next launchd start.
 #
@@ -28,11 +28,11 @@ if [[ -f "$HOME/.config/amp/secrets.env" ]]; then
     source "$HOME/.config/amp/secrets.env"
 fi
 
-REPO_ROOT="${REPO_ROOT:-{{PM_OS_ROOT}}}"
-# Task Scheduler on Windows gives a task the PATH from sign-in, so pm-os-env.sh
-# exports PM_OS_PYTHON and PM_OS_RUBY from ~/.pm-os/env. Elsewhere both stay unset.
-PY="${PM_OS_PYTHON:-python3}"
-RUBY="${PM_OS_RUBY:-ruby}"
+REPO_ROOT="${REPO_ROOT:-{{SWITCHBOARD_ROOT}}}"
+# Task Scheduler on Windows gives a task the PATH from sign-in, so switchboard-env.sh
+# exports SWITCHBOARD_PYTHON and SWITCHBOARD_RUBY from ~/.switchboard/env. Elsewhere both stay unset.
+PY="${SWITCHBOARD_PYTHON:-python3}"
+RUBY="${SWITCHBOARD_RUBY:-ruby}"
 RUNTIME_STATE_DIR="$REPO_ROOT/.state"
 TASKS_FILE="$REPO_ROOT/system/background-tasks.yaml"
 STATE_FILE="$REPO_ROOT/system/background-task-state.json"
@@ -138,7 +138,7 @@ update_timestamp_state() {
     local lock_file="$RUNTIME_STATE_DIR/background-task-locks/$(basename "$state_file").lock"
     mkdir -p "$(dirname "$lock_file")"
 
-    PM_OS_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" \
+    SWITCHBOARD_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" \
     "${PY:-python3}" - "$state_file" "$task_name" "$now_iso" "$lock_file" <<'PYEOF'
 import json
 import os
@@ -147,7 +147,7 @@ import sys
 try:
     import fcntl
 except ImportError:  # Windows: flock() over msvcrt, system/scripts/flock_compat.py
-    sys.path.insert(0, os.environ["PM_OS_SCRIPTS_DIR"])
+    sys.path.insert(0, os.environ["SWITCHBOARD_SCRIPTS_DIR"])
     import flock_compat as fcntl
 
 state_file, task_name, now_iso, lock_file = sys.argv[1:5]

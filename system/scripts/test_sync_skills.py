@@ -33,11 +33,11 @@ class Base(unittest.TestCase):
         self.home.mkdir()
         self.state = self.tmp / "state" / "skill-sync.json"
         self.edits = self.tmp / "skill-edits"
-        env = mock.patch.dict(os.environ, {"PM_OS_LOCKS_DIR": str(self.tmp / "locks"), "PM_OS_PERSONAL_SKILLS": "off",
-                                           "PM_OS_SKILL_EDITS_DIR": str(self.edits)})
+        env = mock.patch.dict(os.environ, {"SWITCHBOARD_LOCKS_DIR": str(self.tmp / "locks"), "SWITCHBOARD_PERSONAL_SKILLS": "off",
+                                           "SWITCHBOARD_SKILL_EDITS_DIR": str(self.edits)})
         env.start()
         self.addCleanup(env.stop)
-        for key in ("SKILL_SYNC_DISABLED", "PM_OS_TEST_SANDBOX"):
+        for key in ("SKILL_SYNC_DISABLED", "SWITCHBOARD_TEST_SANDBOX"):
             os.environ.pop(key, None)
         self.sent: list[str] = []
         cos = mock.patch.object(sync, "cos_line", side_effect=lambda main, text, status="done": self.sent.append(text) or True)
@@ -67,7 +67,7 @@ class Skips(Base):
         self.assertFalse((self.home / ".claude").exists())
 
     def test_the_sandbox_never_touches_the_real_home(self) -> None:
-        with mock.patch.dict(os.environ, {"PM_OS_TEST_SANDBOX": "1"}):
+        with mock.patch.dict(os.environ, {"SWITCHBOARD_TEST_SANDBOX": "1"}):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 self.assertEqual(sync.main_cli(["--state", str(self.state)]), 0)
@@ -94,7 +94,7 @@ class FullRun(Base):
             code, out = self.run_sync("--notify")
         self.assertEqual(code, 0, out)
         dest = self.home / ".claude" / "skills"
-        self.assertTrue((dest / "chief-of-staff" / ".pm-os-source").exists())
+        self.assertTrue((dest / "chief-of-staff" / ".switchboard-source").exists())
         self.assertTrue((dest / "humanizer" / "SKILL.md").exists())
         override = REPO / "system" / "skill-overrides" / "todo" / "SKILL.md"
         self.assertEqual((dest / "todo" / "SKILL.md").read_bytes(), override.read_bytes())
@@ -157,7 +157,7 @@ class AmpCopies(Base):
         path.mkdir(parents=True)
         (path / "SKILL.md").write_text(f"---\nname: {name}\n---\n", encoding="utf-8")
         if marker:
-            (path / ".pm-os-source").write_text("{}", encoding="utf-8")
+            (path / ".switchboard-source").write_text("{}", encoding="utf-8")
         return path
 
     def test_only_old_repo_copies_with_a_managed_twin_go_to_the_trash(self) -> None:
@@ -201,12 +201,12 @@ class Codex(Base):
                 code, out = self.run_sync()
         self.assertEqual(code, 0, out)
         self.assertEqual(self.trashed, ["recall"])
-        self.assertTrue((agents / "recall" / ".pm-os-source").exists(), "Codex gets a managed copy back")
+        self.assertTrue((agents / "recall" / ".switchboard-source").exists(), "Codex gets a managed copy back")
         self.assertNotIn("STALE-COPY-7Q", (agents / "recall" / "SKILL.md").read_text(encoding="utf-8"))
         self.assertEqual((library / "SKILL.md").read_text(encoding="utf-8"), "---\nname: slack\n---\nlibrary\n")
-        self.assertFalse((library / ".pm-os-source").exists())
+        self.assertFalse((library / ".switchboard-source").exists())
         self.assertTrue((agents / "todo" / "SKILL.md").exists())
-        self.assertFalse((agents / "todo" / ".pm-os-source").exists(), "todo is the library's, not a managed copy")
+        self.assertFalse((agents / "todo" / ".switchboard-source").exists(), "todo is the library's, not a managed copy")
         code, out = self.run_sync()
         self.assertEqual(code, 0, out)
 
@@ -220,7 +220,7 @@ class Junctions(Base):
         target = claude / "recall"
         target.mkdir(parents=True)
         (target / "SKILL.md").write_text("---\nname: recall\n---\n", encoding="utf-8")
-        (target / ".pm-os-source").write_text("{}", encoding="utf-8")
+        (target / ".switchboard-source").write_text("{}", encoding="utf-8")
         _winapi.CreateJunction(str(REPO / ".agents" / "skills" / "recall"), str(agents / "recall"))
         try:
             self.assertEqual(sync.tidy_agents_copies(REPO, self.home, dry_run=False), [])

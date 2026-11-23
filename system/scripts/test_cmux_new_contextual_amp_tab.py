@@ -47,7 +47,7 @@ class ContextualAmpTabTests(unittest.TestCase):
         (self.workstream / "sources" / "source.md").write_text("# Source\n")
         self.env = patch.dict(
             os.environ,
-            {"PM_OS_ROOT": str(self.root), "PM_OS_WORKSTREAM_SLUG": ""},
+            {"SWITCHBOARD_ROOT": str(self.root), "SWITCHBOARD_WORKSTREAM_SLUG": ""},
         )
         self.env.start()
 
@@ -152,7 +152,7 @@ class ContextualAmpTabTests(unittest.TestCase):
             ],
             title="Unknown Workspace",
         )
-        self.assertIsNone(plan.pm_os_root)
+        self.assertIsNone(plan.switchboard_root)
         self.assertIsNone(plan.workstream_slug)
         # No workstream config -> policy default (ultra, directive 2026-09-08).
         self.assertEqual(plan.mode, "ultra")
@@ -296,7 +296,7 @@ class ContextualAmpTabTests(unittest.TestCase):
             "cmd+t",
         )
         self.assertEqual(
-            installed["actions"]["pm-os.newContextualAmpTabCtrl"]["shortcut"],
+            installed["actions"]["switchboard.newContextualAmpTabCtrl"]["shortcut"],
             "ctrl+t",
         )
         self.assertIn(

@@ -17,7 +17,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
-HOOK = ROOT / ".claude" / "hooks" / "pm-os-guardrails.py"
+HOOK = ROOT / ".claude" / "hooks" / "switchboard-guardrails.py"
 SETTINGS = ROOT / ".claude" / "settings.json"
 CURRENT = "PLAIN_EXECUTE_REFUSAL = 'invented'\n"
 OLD = 'execute_flag = "--execute" in sys.argv\n'

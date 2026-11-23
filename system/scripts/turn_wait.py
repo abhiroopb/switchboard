@@ -106,8 +106,8 @@ def classify(text: str) -> dict[str, object]:
 
 
 def _state_dir() -> Path:
-    if os.environ.get("PM_OS_STATE_DIR"):
-        return Path(os.environ["PM_OS_STATE_DIR"])
+    if os.environ.get("SWITCHBOARD_STATE_DIR"):
+        return Path(os.environ["SWITCHBOARD_STATE_DIR"])
     root = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True).stdout.strip()
     return Path(root or SCRIPTS.parent.parent) / "system" / "state"
 
@@ -172,7 +172,7 @@ def _seen(task_id: str, digest: str, record: bool) -> bool:
 
 
 def _report(args: list[str], summary: str) -> tuple[subprocess.CompletedProcess, dict]:
-    env = {k: v for k, v in os.environ.items() if k not in {"PM_OS_WORKER_ID"}}
+    env = {k: v for k, v in os.environ.items() if k not in {"SWITCHBOARD_WORKER_ID"}}
     result = subprocess.run([*args, summary], capture_output=True, text=True, timeout=120, env=env)
     line = (result.stdout.strip().splitlines() or [""])[-1]
     try:

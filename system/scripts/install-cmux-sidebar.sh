@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Install the PM OS cmux sidebar from its tracked source.
+# Install the switchboard cmux sidebar from its tracked source.
 #
-# The pm-os sidebar (system/cmux-sidebars/pm-os.swift) renders the cmux
+# The switchboard sidebar (system/cmux-sidebars/switchboard.swift) renders the cmux
 # workspace board: Pinned / Needs Attention / To Review / Active / P0 To-dos /
 # Waiting / Paused / Idle / Background. cmux loads sidebars from
 # ~/.config/cmux/sidebars/, so this script symlinks the tracked source there —
@@ -18,8 +18,8 @@ HELPER_TARGET="$HOME/.config/cmux-sidebar/scripts/cmux_new_contextual_amp_tab.py
 CMUX="${CMUX_BIN:-${CMUX:-/Applications/cmux.app/Contents/Resources/bin/cmux}}"
 
 # workspaces.swift is also installed by the standalone cmux-sidebar installer.
-# Keep its helper entrypoints compatible with the PM OS recorder. Reapply on
-# every PM OS install/start-day, including after a standalone sidebar reinstall.
+# Keep its helper entrypoints compatible with the switchboard recorder. Reapply on
+# every switchboard install/start-day, including after a standalone sidebar reinstall.
 # Use wrappers, not symlinks: the standalone install uses cp, which would follow
 # symlinks and overwrite our tracked scripts.
 install_action_helpers() {
@@ -66,7 +66,7 @@ install_sidebar() {
 }
 
 mkdir -p "$TARGET_DIR"
-install_sidebar pm-os.swift
+install_sidebar switchboard.swift
 install_action_helpers
 
 mkdir -p "$(dirname "$HELPER_TARGET")"

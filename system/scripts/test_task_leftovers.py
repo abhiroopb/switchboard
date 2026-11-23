@@ -25,7 +25,7 @@ class Base(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         root = Path(self.tmp.name)
-        self.repo = root / "pm-os"
+        self.repo = root / "switchboard"
         self.worktrees = root / "worktrees"
         (self.repo / ".amp" / "in").mkdir(parents=True)
         self.worktrees.mkdir()
@@ -36,10 +36,10 @@ class Base(unittest.TestCase):
         self.wt_old = self.worktrees / OLD   # removed: never created on disk
         self.log_path = root / "leftover-stops.jsonl"
         self.killed: list[int] = []
-        env = mock.patch.dict(os.environ, {"PM_OS_TEST_SANDBOX": "1"})
+        env = mock.patch.dict(os.environ, {"SWITCHBOARD_TEST_SANDBOX": "1"})
         env.start()
         self.addCleanup(env.stop)
-        os.environ.pop("PM_OS_LEFTOVER_SWEEP", None)
+        os.environ.pop("SWITCHBOARD_LEFTOVER_SWEEP", None)
 
     def killer(self, victim):
         self.killed.append(victim["pid"])
@@ -68,7 +68,7 @@ class Base(unittest.TestCase):
                                        log_path=self.log_path, killer=self.killer, log=lambda m: None)
 
 
-def vite_tree(task_id: str, base_pid: int = 100, cwd: str = r"C:\Users\x\AppData\Local\pm-os\prototyping\react-starter"):
+def vite_tree(task_id: str, base_pid: int = 100, cwd: str = r"C:\Users\x\AppData\Local\switchboard\prototyping\react-starter"):
     """The 2026-11-13 shape: cmd /c npm.cmd run dev -> node npm -> cmd /c vite -> node vite, with conhosts."""
     t = 1000.0
     return [
@@ -179,7 +179,7 @@ class NeverStopped(Base):
         inside = str(self.wt_done)
         procs = [
             Proc(600, 1, "python3.exe", "python3 system/scripts/owner_browser.py broker", cwd=inside, created=5.0, env_task=DONE),
-            Proc(601, 1, "python3.exe", "python3 C:\\x\\pm-os\\system\\scripts\\mux\\note-links.py serve --port 7472", cwd=inside, created=5.0),
+            Proc(601, 1, "python3.exe", "python3 C:\\x\\switchboard\\system\\scripts\\mux\\note-links.py serve --port 7472", cwd=inside, created=5.0),
             Proc(602, 1, "python3.exe", "python3 system/scripts/keep_awake.py --hold", cwd=inside, created=5.0),
             Proc(603, 1, "python3.exe", "python3 system/scripts/dispatch.py release", cwd=inside, created=5.0),
             Proc(604, 1, "bash.exe", "bash system/scripts/report-waiter.sh rt-000000000045", cwd=inside, created=5.0),
@@ -264,11 +264,11 @@ class NeverStopped(Base):
     def test_kill_without_creation_time_is_refused_on_windows(self) -> None:
         if os.name != "nt":
             self.skipTest("Windows kill path")
-        with mock.patch.dict(os.environ, {"PM_OS_TEST_SANDBOX": "0"}):
+        with mock.patch.dict(os.environ, {"SWITCHBOARD_TEST_SANDBOX": "0"}):
             self.assertIn("creation time unknown", tl._windows_kill({"pid": 4, "created": None}))
 
     def test_kill_switch(self) -> None:
-        with mock.patch.dict(os.environ, {"PM_OS_LEFTOVER_SWEEP": "off"}):
+        with mock.patch.dict(os.environ, {"SWITCHBOARD_LEFTOVER_SWEEP": "off"}):
             result = self.run_sweep(vite_tree(DONE))
         self.assertEqual(self.killed, [])
         self.assertIn("skipped", result)
@@ -331,7 +331,7 @@ class Parsers(unittest.TestCase):
         self.assertEqual(tl.parse_comm(out), {10: "electron", 11: "zsh"})
 
     def test_parse_env_tasks(self) -> None:
-        out = "123 node vite.js PATH=/bin PM_OS_WORKER_TASK_ID=rt-000000000045 HOME=/u\n124 bash HOME=/u\n"
+        out = "123 node vite.js PATH=/bin SWITCHBOARD_WORKER_TASK_ID=rt-000000000045 HOME=/u\n124 bash HOME=/u\n"
         self.assertEqual(tl.parse_env_tasks(out), {123: "rt-000000000045"})
 
     def test_parse_lsof(self) -> None:

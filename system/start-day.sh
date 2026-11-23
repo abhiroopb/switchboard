@@ -6,7 +6,7 @@ set -euo pipefail
 # One command to start your day:
 #   1. Validates prerequisites (cmux, amp, jq)
 #   2. Bootstraps cmux without changing focus (optional explicit focus)
-#   3. Opens the Megadesk workspace, launches Amp, pins it to the top,
+#   3. Opens the switchboard workspace, launches Amp, pins it to the top,
 #      and keeps the tab title stamped as 🧭 CoS
 #   4. Creates today's daily note deterministically (idempotent skeleton;
 #      CoS populates placeholders asynchronously), rebuilds queue/now state
@@ -26,11 +26,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # The default is the main checkout, not this script's own tree: start-day run
 # from a task worktree would relink ~/.config/amp plugins and ~/bin onto
 # .amp/worktrees/<task>/..., which dispatch.py deletes at reap. Helpers below still come from SCRIPT_DIR so a worktree can test them.
-PM_OS_MAIN_CHECKOUT="${PM_OS_ROOT:-$HOME/Development/pm-os}"
+SWITCHBOARD_MAIN_CHECKOUT="${SWITCHBOARD_ROOT:-$HOME/Development/switchboard}"
 if [[ -n "${START_DAY_REPO_ROOT:-}" ]]; then
     REPO_ROOT="$START_DAY_REPO_ROOT"
-elif [[ -d "$PM_OS_MAIN_CHECKOUT/system" ]]; then
-    REPO_ROOT="$PM_OS_MAIN_CHECKOUT"
+elif [[ -d "$SWITCHBOARD_MAIN_CHECKOUT/system" ]]; then
+    REPO_ROOT="$SWITCHBOARD_MAIN_CHECKOUT"
     if [[ "$(cd "$SCRIPT_DIR/.." && pwd)" != "$REPO_ROOT" ]]; then
         echo "start-day: running from $SCRIPT_DIR; REPO_ROOT stays the main checkout $REPO_ROOT" >&2
     fi
@@ -57,8 +57,8 @@ QUEUE_FILE="$SYSTEM_DIR/state/queue.json"
 PLANS_ARCHIVE="$SYSTEM_DIR/plans"
 LOGS_DIR="$SYSTEM_DIR/logs"
 COS_PROMPT="$SYSTEM_DIR/chief-of-staff-prompt.md"
-COS_WORKSPACE_NAME="megadesk"
-COS_WORKSPACE_DISPLAY_NAME="Megadesk"
+COS_WORKSPACE_NAME="switchboard"
+COS_WORKSPACE_DISPLAY_NAME="switchboard"
 PEOPLE_MAINTENANCE_SCRIPT="$SYSTEM_DIR/scripts/people_maintenance.py"
 PEOPLE_SUMMARY_FILE="$SYSTEM_DIR/state/sources/people.json"
 PEOPLE_MAINTENANCE_STATE_FILE="$SYSTEM_DIR/state/people-maintenance.json"
@@ -91,7 +91,7 @@ NOTE_PATH=""
 IS_FIRST_RUN=false
 NOTE_PREEXISTED=false
 COS_ALREADY_RUNNING=false
-ROUTER_ORIGIN="${PM_OS_ROUTER_ORIGIN:-0}"
+ROUTER_ORIGIN="${SWITCHBOARD_ROUTER_ORIGIN:-0}"
 
 # ============================================================================
 # CLI
@@ -103,7 +103,7 @@ parse_args() {
             --upgrade)       log_info "--upgrade is now default (ignored)" ;;
             --all)           FLAG_ALL=true ;;
             --with-resolvers) FLAG_WITH_RESOLVERS=true ;;
-            --with-browser-stack) log_warn "--with-browser-stack is retired (Megadesk app archived); ignoring" ;;
+            --with-browser-stack) log_warn "--with-browser-stack is retired (switchboard app archived); ignoring" ;;
             --dry-run)       FLAG_DRY_RUN=true ;;
             --focus)         FLAG_FOCUS=true ;;
             --no-fullscreen) FLAG_FOCUS=false ;; # compatibility: now the default
@@ -175,7 +175,7 @@ print_welcome() {
 |                                                       |
 |  1. Create notes/daily/ for your daily notes          |
 |  2. Create system/plans/ for plan archives            |
-|  3. Open Megadesk workspace in cmux                   |
+|  3. Open switchboard workspace in cmux                   |
 |  4. Amp generates config.yaml for each workstream     |
 |     (based on existing CONTEXT.md files)              |
 |  5. Script creates today's daily-note skeleton        |
@@ -207,9 +207,9 @@ phase_1_discover() {
         exit 1
     fi
     local agent_cli="$AMP_CMD"
-    [[ "$(pm_os_agent)" == "claude" ]] && agent_cli="$CLAUDE_CMD"
+    [[ "$(switchboard_agent)" == "claude" ]] && agent_cli="$CLAUDE_CMD"
     if ! command -v "$agent_cli" >/dev/null 2>&1; then
-        log_error "$agent_cli CLI not found in PATH (router.yaml agent: $(pm_os_agent))"
+        log_error "$agent_cli CLI not found in PATH (router.yaml agent: $(switchboard_agent))"
         exit 1
     fi
     if ! command -v jq >/dev/null 2>&1; then
@@ -232,19 +232,19 @@ phase_1_discover() {
     log_ok "Prerequisites validated"
 
     if [[ "$FLAG_DRY_RUN" == "true" ]]; then
-        log_info "[DRY RUN] Would install and verify PM OS Amp plugins"
+        log_info "[DRY RUN] Would install and verify switchboard Amp plugins"
     elif ! bash "$AMP_PLUGIN_INSTALLER"; then
-        log_error "Failed to install or verify PM OS Amp plugins"
+        log_error "Failed to install or verify switchboard Amp plugins"
         exit 1
     fi
 
-    # Self-heal tracked PM OS CLIs (system/bin/ -> ~/bin symlinks, e.g. amp-mem).
+    # Self-heal tracked switchboard CLIs (system/bin/ -> ~/bin symlinks, e.g. amp-mem).
     if [[ "$FLAG_DRY_RUN" == "true" ]]; then
-        log_info "[DRY RUN] Would install and verify PM OS bin scripts"
-    elif ! bash "$SYSTEM_DIR/scripts/install-pm-os-bin.sh"; then
+        log_info "[DRY RUN] Would install and verify switchboard bin scripts"
+    elif ! bash "$SYSTEM_DIR/scripts/install-switchboard-bin.sh"; then
         # A differing runtime copy is skipped, never clobbered; that is a
         # warning, not a reason to cancel the morning.
-        log_warn "PM OS bin scripts not fully installed (see warnings above; run: bash system/scripts/install-pm-os-bin.sh --force to back up and replace)"
+        log_warn "switchboard bin scripts not fully installed (see warnings above; run: bash system/scripts/install-switchboard-bin.sh --force to back up and replace)"
     fi
 
     # Snapshot todo state into git + push (morning backstop for days when the
@@ -265,21 +265,21 @@ phase_1_discover() {
     if [[ "$FLAG_DRY_RUN" == "true" ]]; then
         log_info "[DRY RUN] Would apply tracked skill overrides"
     elif ! bash "$SYSTEM_DIR/scripts/sync-skill-overrides.sh" >/dev/null 2>&1; then
-        log_warn "Skill override sync failed — runtime skills may be missing pm-os fixes (run: bash system/scripts/sync-skill-overrides.sh)"
+        log_warn "Skill override sync failed — runtime skills may be missing switchboard fixes (run: bash system/scripts/sync-skill-overrides.sh)"
     else
         log_ok "Skill overrides applied"
     fi
 
-    # Self-heal the pm-os cmux sidebar symlink (cosmetic — warn, never abort).
+    # Self-heal the switchboard cmux sidebar symlink (cosmetic — warn, never abort).
     # The sidebar is a macOS Swift build; wmux lanes come from the shim's sidecar,
     # so off macOS there is nothing to install.
     if [[ "$(uname -s)" != "Darwin" ]]; then
         :
     elif [[ "$FLAG_DRY_RUN" == "true" ]]; then
-        log_info "[DRY RUN] Would install pm-os cmux sidebar symlink"
+        log_info "[DRY RUN] Would install switchboard cmux sidebar symlink"
     else
         bash "$CMUX_SIDEBAR_INSTALLER" >/dev/null 2>&1 || \
-            log_warn "Failed to install pm-os cmux sidebar symlink (non-fatal)"
+            log_warn "Failed to install switchboard cmux sidebar symlink (non-fatal)"
     fi
 
     # Discover workstreams (directories with CONTEXT.md, excluding shared/)
@@ -394,7 +394,7 @@ phase_2_cmux_bootstrap() {
 phase_2b_cleanup_workspaces() {
     log_info "Phase 2b: Inventorying existing managed workspaces"
 
-    if COS_REF=$(find_workspace_ref_for_key "megadesk" 2>/dev/null); then
+    if COS_REF=$(find_workspace_ref_for_key "switchboard" 2>/dev/null); then
         COS_ALREADY_RUNNING=true
         log_info "Detected existing $COS_WORKSPACE_DISPLAY_NAME workspace: $COS_REF"
     else
@@ -432,7 +432,7 @@ phase_2b_cleanup_workspaces() {
         append_managed_workspace_name "CoS"
         append_managed_workspace_name "$COS_WORKSPACE_DISPLAY_NAME"
         append_managed_workspace_name "Chief of Staff"
-        append_managed_workspace_name "megadesk"
+        append_managed_workspace_name "switchboard"
     fi
 
     for ws_name in ${WORKSTREAMS_FOUND[@]+"${WORKSTREAMS_FOUND[@]}"}; do
@@ -506,7 +506,7 @@ phase_2b_cleanup_workspaces() {
 update_amp() {
     # Only Amp is updated here. Claude Code updates itself in the background,
     # so a claude knob (router.yaml `agent:`) skips this step.
-    if [[ "$(pm_os_agent)" != "amp" ]]; then
+    if [[ "$(switchboard_agent)" != "amp" ]]; then
         log_info "Agent is $(agent_display_name); skipping amp update"
         return 0
     fi
@@ -615,20 +615,20 @@ EOF
 }
 
 # ============================================================================
-# Phase 3: Megadesk Bootstrap
+# Phase 3: switchboard Bootstrap
 # ============================================================================
 
 refresh_comms_review_state() {
-    if declare -F pm_os_comms_triage_enabled >/dev/null && ! pm_os_comms_triage_enabled; then
+    if declare -F switchboard_comms_triage_enabled >/dev/null && ! switchboard_comms_triage_enabled; then
         log_info "Comms Triage is off on this machine; skipping the comms collector"
     else
         log_info "Refreshing comms candidates for CoS planning"
         python3 "$SYSTEM_DIR/scripts/collect-comms-candidates.py" >/dev/null 2>&1 || \
             log_warn "Failed to refresh comms candidates; CoS will use the existing queue and comms state"
     fi
-    python3 "$SYSTEM_DIR/scripts/rebuild-megadesk-state.py" --write --event-source start-day-pre-cos >/dev/null 2>&1 || \
-        log_warn "Failed to refresh the Megadesk queue with the latest comms candidates"
-    publish_megadesk_status
+    python3 "$SYSTEM_DIR/scripts/rebuild-switchboard-state.py" --write --event-source start-day-pre-cos >/dev/null 2>&1 || \
+        log_warn "Failed to refresh the switchboard queue with the latest comms candidates"
+    publish_switchboard_status
 }
 
 post_start_day_review() {
@@ -711,7 +711,7 @@ phase_3_chief_of_staff() {
     if [[ "$COS_ALREADY_RUNNING" == "true" && -n "$COS_REF" ]]; then
         log_info "Reusing existing $COS_WORKSPACE_DISPLAY_NAME workspace without reset: $COS_REF"
         rotate_cos_thread_at_start_of_day
-        style_megadesk_workspace "$COS_REF"
+        style_switchboard_workspace "$COS_REF"
         arrange_workspace_sidebar
         set_workspace_status "$COS_REF" "role" "$COS_WORKSPACE_DISPLAY_NAME" "" "#4A90D9"
         post_start_day_review
@@ -732,13 +732,13 @@ phase_3_chief_of_staff() {
     local cos_reset_rc=0
     reset_workspace_surface "$COS_REF" || cos_reset_rc=$?
     if (( cos_reset_rc == 3 )); then
-        # A live (or unverifiable) Amp session is already in the Megadesk tab
+        # A live (or unverifiable) Amp session is already in the switchboard tab
         # even though phase 2b didn't flag it as running. NOTHING was typed
         # into it. Preserve it and fall back to the
         # guarded-refresh reuse path instead of typing a launch command.
-        log_warn "Live Amp session preserved in Megadesk tab $COS_REF; reusing it without reset"
+        log_warn "Live Amp session preserved in switchboard tab $COS_REF; reusing it without reset"
         rotate_cos_thread_at_start_of_day
-        style_megadesk_workspace "$COS_REF"
+        style_switchboard_workspace "$COS_REF"
         arrange_workspace_sidebar
         set_workspace_status "$COS_REF" "role" "$COS_WORKSPACE_DISPLAY_NAME" "" "#4A90D9"
         post_start_day_review
@@ -746,14 +746,14 @@ phase_3_chief_of_staff() {
         return 0
     elif (( cos_reset_rc != 0 )); then
         set_workspace_status "$COS_REF" "status" "failed" "" "#FF0000"
-        log_warn "Could not clear the Megadesk surface ($COS_REF); skipping CoS launch (non-fatal)"
+        log_warn "Could not clear the switchboard surface ($COS_REF); skipping CoS launch (non-fatal)"
         return 0
     fi
 
     # Now launch the configured agent (router.yaml `agent:`)
     log_info "Launching $(agent_display_name) in: $COS_WORKSPACE_NAME"
     # CoS launches in ultra. The mode comes from
-    # routines/megadesk/config.yaml via resolve_agent_mode, which also floors
+    # routines/switchboard/config.yaml via resolve_agent_mode, which also floors
     # core surfaces to ultra — never hardcode -m here. A dated
     # `cos_mode_trial:` window in router.yaml may lower CoS alone.
     local cos_agent_mode
@@ -773,11 +773,11 @@ phase_3_chief_of_staff() {
         return 0
     fi
 
-    # Keep Megadesk visually stable in cmux even when Amp tries to
+    # Keep switchboard visually stable in cmux even when Amp tries to
     # replace the active surface title with its own session text.
-    style_megadesk_workspace "$COS_REF"
+    style_switchboard_workspace "$COS_REF"
 
-    # Keep the Megadesk and core routine tabs in the expected sidebar order.
+    # Keep the switchboard and core routine tabs in the expected sidebar order.
     arrange_workspace_sidebar
 
     # Set sidebar badges
@@ -786,7 +786,7 @@ phase_3_chief_of_staff() {
 
     log_info "Initializing CoS with only the bounded start-day review"
     post_start_day_review
-    style_megadesk_workspace "$COS_REF"
+    style_switchboard_workspace "$COS_REF"
     set_workspace_status "$COS_REF" "status" "ready" "" "#00CC00"
 }
 
@@ -802,25 +802,25 @@ phase_3_chief_of_staff() {
 # CoS enrichment of the same state files continues asynchronously.
 
 # Both state files parse and contain the expected top-level keys.
-megadesk_state_valid() {
+switchboard_state_valid() {
     [[ -f "$NOW_FILE" && -f "$QUEUE_FILE" ]] &&
         jq -e '.now' "$NOW_FILE" >/dev/null 2>&1 &&
         jq -e '.queue' "$QUEUE_FILE" >/dev/null 2>&1
 }
 
-# Publish the Megadesk sidebar tile without discarding failures. Benign skips
-# (no cmux, no megadesk workspace, dynamic UI disabled) exit 0 inside the
+# Publish the switchboard sidebar tile without discarding failures. Benign skips
+# (no cmux, no switchboard workspace, dynamic UI disabled) exit 0 inside the
 # publisher and stay quiet here; a nonzero exit means status writes actually
 # failed and the tile may be stale, which deserves a visible warning.
-publish_megadesk_status() {
+publish_switchboard_status() {
     local publish_err
-    if ! publish_err=$(bash "$SYSTEM_DIR/scripts/publish-megadesk-status.sh" 2>&1 >/dev/null); then
-        log_warn "Megadesk status publish failed: ${publish_err:-unknown error}"
+    if ! publish_err=$(bash "$SYSTEM_DIR/scripts/publish-switchboard-status.sh" 2>&1 >/dev/null); then
+        log_warn "switchboard status publish failed: ${publish_err:-unknown error}"
     fi
 }
 
 # Both state files were written during THIS run (mtime >= script start).
-megadesk_state_fresh() {
+switchboard_state_fresh() {
     local now_m queue_m
     now_m=$(mux_mtime "$NOW_FILE" || echo 0)
     queue_m=$(mux_mtime "$QUEUE_FILE" || echo 0)
@@ -863,15 +863,15 @@ phase_4_verify_state() {
 
     # Phase 4b rebuilds state synchronously just before this runs. If that
     # rebuild failed or was skipped, repair here — loudly, with output visible.
-    if ! megadesk_state_valid || ! megadesk_state_fresh; then
+    if ! switchboard_state_valid || ! switchboard_state_fresh; then
         log_warn "Queue state missing or stale after Phase 4b rebuild; rebuilding deterministically"
-        if ! python3 "$SYSTEM_DIR/scripts/rebuild-megadesk-state.py" --write --event-source start-day-verify; then
-            log_warn "Deterministic queue rebuild FAILED (rebuild-megadesk-state.py exited non-zero)"
+        if ! python3 "$SYSTEM_DIR/scripts/rebuild-switchboard-state.py" --write --event-source start-day-verify; then
+            log_warn "Deterministic queue rebuild FAILED (rebuild-switchboard-state.py exited non-zero)"
         fi
     fi
 
-    if megadesk_state_valid; then
-        if ! megadesk_state_fresh; then
+    if switchboard_state_valid; then
+        if ! switchboard_state_fresh; then
             local stale_ts queue_epoch
             queue_epoch=$(mux_mtime "$QUEUE_FILE" || echo 0)
             # BSD date reads -r as epoch seconds, GNU date as a file name, so try both.
@@ -883,7 +883,7 @@ phase_4_verify_state() {
         derive_compat_plan
         log_ok "Queue state ready (deterministic; CoS enrichment continues asynchronously)"
         set_workspace_status "$COS_REF" "status" "plan ready" "" "#00CC00"
-        publish_megadesk_status
+        publish_switchboard_status
         return 0
     fi
 
@@ -893,10 +893,10 @@ phase_4_verify_state() {
     log_warn "============================================"
     log_warn "No usable queue state: now.json/queue.json invalid even after rebuild"
     log_warn "Resolver fan-out will degrade to an empty plan."
-    log_warn "Repair manually: python3 system/scripts/rebuild-megadesk-state.py --write"
+    log_warn "Repair manually: python3 system/scripts/rebuild-switchboard-state.py --write"
     log_warn "============================================"
     set_workspace_status "$COS_REF" "status" "state failed" "" "#FF0000"
-    publish_megadesk_status
+    publish_switchboard_status
     return 0
 }
 
@@ -933,15 +933,15 @@ phase_4b_launch_routines() {
     local p0_launcher="$SYSTEM_DIR/scripts/ensure-p0-workspaces.sh"
 
     if [[ "$FLAG_DRY_RUN" == "true" ]]; then
-        log_info "[DRY RUN] Would refresh generated workstream registry, Megadesk queue, and launch routine workspaces: todo, launchpad, comms-triage (unless off on this machine), scheduled-jobs, meetings. A personal machine (PM_OS_MACHINE_ROLE=personal) opens only todo and leaves launchpad, scheduled-jobs, and meetings for \"load <surface>\" unless loaded or kept today."
+        log_info "[DRY RUN] Would refresh generated workstream registry, switchboard queue, and launch routine workspaces: todo, launchpad, comms-triage (unless off on this machine), scheduled-jobs, meetings. A personal machine (SWITCHBOARD_MACHINE_ROLE=personal) opens only todo and leaves launchpad, scheduled-jobs, and meetings for \"load <surface>\" unless loaded or kept today."
         log_info "[DRY RUN] Would reconcile P0 workspaces (canonical workstream P0 tabs + unlinked reminder cards, sidebar P0 lane):"
         bash "$p0_launcher" --dry-run || true
         return 0
     fi
 
     python3 "$SYSTEM_DIR/scripts/render-workstreams-readme.py" --write >/dev/null 2>&1 || log_warn "Failed to refresh generated workstreams README"
-    python3 "$SYSTEM_DIR/scripts/rebuild-megadesk-state.py" --write --event-source start-day >/dev/null 2>&1 || log_warn "Failed to refresh megadesk queue"
-    publish_megadesk_status
+    python3 "$SYSTEM_DIR/scripts/rebuild-switchboard-state.py" --write --event-source start-day >/dev/null 2>&1 || log_warn "Failed to refresh switchboard queue"
+    publish_switchboard_status
 
     # ensure-routine-workspaces.sh applies the machine role (system/scripts/machine_role.py):
     # a personal machine skips Launchpad, Scheduled Jobs, and Meetings unless the owner
@@ -954,7 +954,7 @@ phase_4b_launch_routines() {
     # research announcements) go here. Each must be non-fatal: `bash x || log_warn`.
 
     # P0 to-do reminder workspaces: one local workspace per active P0 todo,
-    # titled "<emoji> P0 · <title>" so the pm-os sidebar files them in the P0 lane
+    # titled "<emoji> P0 · <title>" so the switchboard sidebar files them in the P0 lane
     # (below Idle, above Background). Reminder cards only — they never execute
     # the task. Idempotent; also reconciles stale reminders whose todo is no
     # longer an active P0. Failure warns but never aborts the morning launch.
@@ -1148,7 +1148,7 @@ launch_single_workstream() {
     fi
 
     # Preamble: skip AGENTS.md session-start, capture source links as durable workstream notes,
-    # and emit updates back to Megadesk.
+    # and emit updates back to switchboard.
     local preamble
     preamble="$(workstream_launch_preamble "$source_key")"
     local launch_prompt
@@ -1202,7 +1202,7 @@ $launch_prompt"
     # Prepare workspace (find/create, reset, launch amp, wait for ready)
     if [[ "$reused_p0" != "true" && "$reused_live" != "true" ]]; then
         local prep_rc=0
-        ws_ref=$(PM_OS_LAUNCH_SEED_FILE="$launch_prompt_file" PM_OS_LAUNCH_SEED_HYDRATION="start-day-launch" \
+        ws_ref=$(SWITCHBOARD_LAUNCH_SEED_FILE="$launch_prompt_file" SWITCHBOARD_LAUNCH_SEED_HYDRATION="start-day-launch" \
             prepare_workspace "$ws_name" "$REPO_ROOT") || prep_rc=$?
         if (( prep_rc == 3 )) && [[ -n "$ws_ref" ]]; then
             # Backstop: the pre-probe above missed a live session (transient
@@ -1280,10 +1280,10 @@ phase_6_archive_and_report() {
         log_info "Plan archived: $PLANS_ARCHIVE/$TODAY.json"
     fi
 
-    # Update Megadesk status
+    # Update switchboard status
     if [[ -n "$COS_REF" && "$FLAG_DRY_RUN" != "true" ]]; then
         set_workspace_status "$COS_REF" "status" "ready" "" "#00CC00"
-        publish_megadesk_status
+        publish_switchboard_status
     fi
 
     phase_6_report
@@ -1328,12 +1328,12 @@ phase_6_report() {
     echo "|            Start of Day -- Status Report              |"
     echo "+======================================================+"
     echo "|  Date:            $TODAY"
-    echo "|  Megadesk:       ${COS_REF:-not started}"
+    echo "|  switchboard:       ${COS_REF:-not started}"
 
     if [[ -f "$NOTE_PATH" ]]; then
         echo "|  Daily note:      $NOTE_PATH (exists)"
     else
-        echo "|  Daily note:      $NOTE_PATH (pending Megadesk creation)"
+        echo "|  Daily note:      $NOTE_PATH (pending switchboard creation)"
     fi
 
     if [[ -f "$NOW_FILE" ]]; then

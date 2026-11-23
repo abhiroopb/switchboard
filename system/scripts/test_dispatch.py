@@ -50,23 +50,23 @@ STUB.chmod(STUB.stat().st_mode | stat.S_IEXEC)
 # Applied only while this module loads and runs (scoped_test_env), never left in
 # os.environ for another suite in the same process.
 ENV = {
-    "PM_OS_TEST_SANDBOX": "1",   # never a live cmux or wmux tab
+    "SWITCHBOARD_TEST_SANDBOX": "1",   # never a live cmux or wmux tab
     "REPO_ROOT": str(REPO_ROOT),
-    "PM_OS_STATE_DIR": str(TMP / "state"),
+    "SWITCHBOARD_STATE_DIR": str(TMP / "state"),
     "RUNNING_TASKS_FILE": str(TMP / "state" / "running-tasks.json"),
     "CMUX_BIN": str(STUB),
     "CC_CMUX_SESSION_JSON": str(TMP / "no-session-store.json"),
-    "PM_OS_WORKTREES_DIR": str(TMP / "worktrees"),
-    "PM_OS_LOCKS_DIR": str(TMP / "locks"),
+    "SWITCHBOARD_WORKTREES_DIR": str(TMP / "worktrees"),
+    "SWITCHBOARD_LOCKS_DIR": str(TMP / "locks"),
     # Every test below that patches dispatch.launch expects the inline launch;
     # AsyncLaunchTests clears this to exercise the detached path.
-    "PM_OS_DISPATCH_SYNC": "1",
+    "SWITCHBOARD_DISPATCH_SYNC": "1",
     # No test reads a real Drive, Slack, Jira, Linear, or GitHub title; the
     # linked-title tests patch dispatch.link_titles.fetch_titles.
-    "PM_OS_LINK_TITLES_OFFLINE": "1",
+    "SWITCHBOARD_LINK_TITLES_OFFLINE": "1",
     # A queued steer never spawns a real deliver-steers process from a test; the
     # queued-steer tests call deliver_queued_steers directly.
-    "PM_OS_NO_STEER_SPAWN": "1",
+    "SWITCHBOARD_NO_STEER_SPAWN": "1",
 }
 setUpModule, tearDownModule = scoped_test_env.module_hooks(ENV)
 
@@ -111,7 +111,7 @@ def write_ledger(*tasks: dict) -> None:
 
 
 def run_dispatch(**overrides) -> tuple[int, dict]:
-    args = argparse.Namespace(prompt=["do the thing"], origin="cos", workstream="pm-os-maintenance", task_id=None,
+    args = argparse.Namespace(prompt=["do the thing"], origin="cos", workstream="switchboard-maintenance", task_id=None,
                               depends_on=[], continuation_of=None, request_id=None, delivery=None, force_redispatch=False)
     for key, value in overrides.items():
         setattr(args, key, value)
@@ -229,7 +229,7 @@ class ReceiptReconciliationTests(unittest.TestCase):
 class ExplicitWorkstreamTests(unittest.TestCase):
     """The directive in the ask outranks lexical overlap (hermetic: temp workstreams tree)."""
 
-    PROMPT = ("Workstream: pm-os-maintenance (fold into the open reliability review). Workers are not "
+    PROMPT = ("Workstream: switchboard-maintenance (fold into the open reliability review). Workers are not "
               "resuming; add the two new stall classes to the fix and its regression tests.")
     CONTINUATION_PROMPT = ("Workstream: example-integrations (google-workspace substream). "
                            "Continuation of rt-000000000047. Finish the meeting packet.")
@@ -238,7 +238,7 @@ class ExplicitWorkstreamTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         root = Path(tmp.name)
-        for slug in ("pm-os-maintenance", "example-integrations", "meet-example"):
+        for slug in ("switchboard-maintenance", "example-integrations", "meet-example"):
             (root / "workstreams" / slug).mkdir(parents=True)
             (root / "workstreams" / slug / "CONTEXT.md").write_text("# fixture\n")
         patcher = patch.object(dispatch, "REPO_ROOT", root)
@@ -246,17 +246,17 @@ class ExplicitWorkstreamTests(unittest.TestCase):
         self.addCleanup(patcher.stop)
 
     def test_pick_workstream_honors_directive(self) -> None:
-        pack = {"explicit_workstream": "pm-os-maintenance",
+        pack = {"explicit_workstream": "switchboard-maintenance",
                 "candidate_owners": [{"slug": "meet-example", "score": 408.5},
-                                     {"slug": "pm-os-maintenance", "score": 264.9}]}
+                                     {"slug": "switchboard-maintenance", "score": 264.9}]}
         with patch.object(dispatch, "run", return_value=argparse.Namespace(stdout=json.dumps(pack), returncode=0)):
-            self.assertEqual(dispatch.pick_workstream(self.PROMPT, dispatch.DEFAULTS), "pm-os-maintenance")
+            self.assertEqual(dispatch.pick_workstream(self.PROMPT, dispatch.DEFAULTS), "switchboard-maintenance")
 
     def test_unknown_directive_falls_back_to_ranking(self) -> None:
         pack = {"explicit_workstream": "no-such-workstream",
-                "candidate_owners": [{"slug": "pm-os-maintenance", "score": 100}]}
+                "candidate_owners": [{"slug": "switchboard-maintenance", "score": 100}]}
         with patch.object(dispatch, "run", return_value=argparse.Namespace(stdout=json.dumps(pack), returncode=0)):
-            self.assertEqual(dispatch.pick_workstream("x", dispatch.DEFAULTS), "pm-os-maintenance")
+            self.assertEqual(dispatch.pick_workstream("x", dispatch.DEFAULTS), "switchboard-maintenance")
 
     def test_explicit_directive_beats_ranking_without_consulting_context_pack(self) -> None:
         # Wrong impl: fuzzy ranking runs first and its top candidate wins.
@@ -281,37 +281,37 @@ class ExplicitWorkstreamTests(unittest.TestCase):
 
 
 class MaintenanceMisfileWarningTests(unittest.TestCase):
-    """A brief sent to pm-os-maintenance that reads as an owner topic gets a one-line warning and
+    """A brief sent to switchboard-maintenance that reads as an owner topic gets a one-line warning and
     still routes. Invented text only."""
 
     def test_owner_topic_brief_warns(self) -> None:
-        # Wrong impl: no check, so a Downloads or DNS brief runs as PM OS Maintenance in silence.
-        for brief in ("Workstream: pm-os-maintenance\nSort the Downloads folder and file the pay stubs.",
-                      "Workstream: pm-os-maintenance\nAdd SPF and DMARC records for the example.org domain."):
-            warning = dispatch.maintenance_misfile_warning(brief, "pm-os-maintenance")
+        # Wrong impl: no check, so a Downloads or DNS brief runs as Switchboard Maintenance in silence.
+        for brief in ("Workstream: switchboard-maintenance\nSort the Downloads folder and file the pay stubs.",
+                      "Workstream: switchboard-maintenance\nAdd SPF and DMARC records for the example.org domain."):
+            warning = dispatch.maintenance_misfile_warning(brief, "switchboard-maintenance")
             self.assertTrue(warning.startswith("warning: this brief reads as an owner topic ("), brief)
             self.assertNotIn("\n", warning)
-            self.assertIn("pm-os-maintenance is only for PM OS", warning)
+            self.assertIn("switchboard-maintenance is only for switchboard", warning)
 
-    def test_pm_os_fix_that_mentions_an_owner_topic_stays_quiet(self) -> None:
+    def test_switchboard_fix_that_mentions_an_owner_topic_stays_quiet(self) -> None:
         # Wrong impl: any owner-topic word warns, so a guardrail fix about Downloads would too.
-        brief = ("Workstream: pm-os-maintenance\nThe Downloads folder guardrail blocks a PDF read of an insurance form; "
+        brief = ("Workstream: switchboard-maintenance\nThe Downloads folder guardrail blocks a PDF read of an insurance form; "
                  "fix the hook and add a regression test.")
-        self.assertEqual(dispatch.maintenance_misfile_warning(brief, "pm-os-maintenance"), "")
+        self.assertEqual(dispatch.maintenance_misfile_warning(brief, "switchboard-maintenance"), "")
 
     def test_other_owner_or_plain_system_brief_stays_quiet(self) -> None:
         self.assertEqual(dispatch.maintenance_misfile_warning("Sort the Downloads folder.", "organizing-downloads"), "")
         self.assertEqual(dispatch.maintenance_misfile_warning(
-            "Workstream: pm-os-maintenance\nWorker tabs vanish after a sweep.", "pm-os-maintenance"), "")
+            "Workstream: switchboard-maintenance\nWorker tabs vanish after a sweep.", "switchboard-maintenance"), "")
         # One passing owner word is not a topic, and `claude --resume` is not an owner term.
         self.assertEqual(dispatch.maintenance_misfile_warning(
-            "Workstream: pm-os-maintenance\nThe board should reopen rows with claude --resume; the old budget link test is moot.",
-            "pm-os-maintenance"), "")
+            "Workstream: switchboard-maintenance\nThe board should reopen rows with claude --resume; the old budget link test is moot.",
+            "switchboard-maintenance"), "")
 
     def test_warning_rides_on_the_dispatch_message(self) -> None:
-        choice = {"slug": "pm-os-maintenance", "reason": "directive", "created": False, "weak_match": None,
-                  "warning": "warning: this brief reads as an owner topic (dns), not PM OS itself"}
-        self.assertEqual(dispatch.owner_note(choice), "; warning: this brief reads as an owner topic (dns), not PM OS itself")
+        choice = {"slug": "switchboard-maintenance", "reason": "directive", "created": False, "weak_match": None,
+                  "warning": "warning: this brief reads as an owner topic (dns), not switchboard itself"}
+        self.assertEqual(dispatch.owner_note(choice), "; warning: this brief reads as an owner topic (dns), not switchboard itself")
 
 
 class WorkstreamCreationRuleTests(unittest.TestCase):
@@ -330,7 +330,7 @@ class WorkstreamCreationRuleTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.repo = Path(self.tmp.name)
-        for slug in ("pm-os-maintenance", "garden-revamp", "recipe-search"):
+        for slug in ("switchboard-maintenance", "garden-revamp", "recipe-search"):
             (self.repo / "workstreams" / slug).mkdir(parents=True)
             (self.repo / "workstreams" / slug / "CONTEXT.md").write_text(f"# {slug}\n")
         (self.repo / "workstreams" / "old-catalog" / "inbox").mkdir(parents=True)
@@ -363,9 +363,9 @@ class WorkstreamCreationRuleTests(unittest.TestCase):
 
     def test_unknown_directive_creates_that_workstream(self) -> None:
         # Wrong impl (the old one): the directive is dropped and ranking binds the ask to the
-        # closest existing owner (here pm-os-maintenance on a real match term).
+        # closest existing owner (here switchboard-maintenance on a real match term).
         pack = {"explicit_workstream": "signup-notes",
-                "candidate_owners": [{"slug": "pm-os-maintenance", "score": 100, "evidence": ['match term "pm-os script"']}]}
+                "candidate_owners": [{"slug": "switchboard-maintenance", "score": 100, "evidence": ['match term "switchboard script"']}]}
         with patch.object(dispatch, "run", side_effect=self.fake_run(pack)):
             choice = dispatch.choose_workstream("Workstream: signup-notes. Write a note on signup conversion.",
                                                 dispatch.DEFAULTS)
@@ -395,9 +395,9 @@ class WorkstreamCreationRuleTests(unittest.TestCase):
 
     def test_continuation_goes_to_a_new_topic_named_on_the_first_line(self) -> None:
         # A continuation of a task misfiled under
-        # pm-os-maintenance goes where CoS names it. Wrong impl (the old one): the parent's
+        # switchboard-maintenance goes where CoS names it. Wrong impl (the old one): the parent's
         # workstream wins and the new topic is never created.
-        payload = {"tasks": [{"id": "rt-000000000047", "workstream": "pm-os-maintenance", "status": "done"}]}
+        payload = {"tasks": [{"id": "rt-000000000047", "workstream": "switchboard-maintenance", "status": "done"}]}
         with patch.object(dispatch.ledger, "load_payload", return_value=payload), \
                 patch.object(dispatch, "run", side_effect=self.fake_run({"candidate_owners": []})):
             choice = dispatch.choose_workstream("Workstream: bike-repair-notes\nContinue the repair notes.",
@@ -412,7 +412,7 @@ class WorkstreamCreationRuleTests(unittest.TestCase):
                 patch.object(dispatch, "run", side_effect=AssertionError("nothing to run")):
             choice = dispatch.choose_workstream("Workstream: shared\nContinue.", dispatch.DEFAULTS,
                                                 continuation_of="rt-000000000047")
-        self.assertEqual((choice["slug"], choice["reason"]), ("pm-os-maintenance", "continuation"))
+        self.assertEqual((choice["slug"], choice["reason"]), ("switchboard-maintenance", "continuation"))
 
     def test_reserved_or_private_directive_is_not_created(self) -> None:
         # Wrong impl: "Workstream: _archive" or "Workstream: shared" scaffolds a folder in a reserved place.
@@ -420,7 +420,7 @@ class WorkstreamCreationRuleTests(unittest.TestCase):
             self.calls.clear()
             with patch.object(dispatch, "run", side_effect=self.fake_run({"candidate_owners": []}, scaffold_rc=2)):
                 choice = dispatch.choose_workstream(f"Workstream: {bad}. do a thing", dispatch.DEFAULTS)
-            self.assertEqual(choice["slug"], "pm-os-maintenance", bad)
+            self.assertEqual(choice["slug"], "switchboard-maintenance", bad)
             self.assertFalse(any("--name" in c for c in self.scaffold_calls()), bad)
 
     def test_lexical_only_match_above_floor_creates_instead_of_binding(self) -> None:
@@ -495,12 +495,12 @@ class WorkstreamCreationRuleTests(unittest.TestCase):
     def test_scaffold_failure_falls_back_to_default_and_keeps_the_weak_candidate(self) -> None:
         with patch.object(dispatch, "run", side_effect=self.fake_run({"candidate_owners": [self.WEAK]}, scaffold_rc=1)):
             choice = dispatch.choose_workstream("Mock a prompt box", dispatch.DEFAULTS)
-        self.assertEqual((choice["slug"], choice["reason"], choice["created"]), ("pm-os-maintenance", "default", False))
+        self.assertEqual((choice["slug"], choice["reason"], choice["created"]), ("switchboard-maintenance", "default", False))
         self.assertEqual(choice["weak_match"]["slug"], "recipe-search")
         self.assertEqual(dispatch.owner_note(choice), "")
 
 
-    START_OF_DAY = ("start of day. Run PM_OS_ROUTER_ORIGIN=1 bash system/start-day.sh and report back. "
+    START_OF_DAY = ("start of day. Run SWITCHBOARD_ROUTER_ORIGIN=1 bash system/start-day.sh and report back. "
                     "Context from last night's CoS session: the ABC-101 ticket is waiting on review; "
                     "the vendor thread needs a nudge.")
     TICKET = {"slug": "vendor-ticket-followup", "score": 420.0, "evidence": ['match term "abc-101"']}
@@ -513,15 +513,15 @@ class WorkstreamCreationRuleTests(unittest.TestCase):
         (self.repo / "workstreams" / "vendor-ticket-followup" / "CONTEXT.md").write_text("# vendor\n")
         with patch.object(dispatch, "run", side_effect=self.fake_run({"candidate_owners": [self.TICKET]})):
             choice = dispatch.choose_workstream(self.START_OF_DAY, dispatch.DEFAULTS)
-        self.assertEqual((choice["slug"], choice["reason"], choice["created"]), ("pm-os-maintenance", "system-routine", False))
+        self.assertEqual((choice["slug"], choice["reason"], choice["created"]), ("switchboard-maintenance", "system-routine", False))
         self.assertEqual(self.calls, [], "neither ranking nor scaffolding runs for a system routine")
         miss_log = self.repo / "system" / "logs" / dispatch.ROUTER_MISS_LOG
         (row,) = [json.loads(line) for line in miss_log.read_text().splitlines()]
-        self.assertEqual((row["kind"], row["chosen"]), ("system-routine", "pm-os-maintenance"))
+        self.assertEqual((row["kind"], row["chosen"]), ("system-routine", "switchboard-maintenance"))
         self.assertTrue(row["prompt"].startswith("start of day."))
 
     def test_system_routine_routes_to_its_own_owner_when_it_exists(self) -> None:
-        # pm-os-maintenance is for PM OS itself, so system routines get their own owner and the tab reads "📅 Daily Routines <n>".
+        # switchboard-maintenance is for switchboard itself, so system routines get their own owner and the tab reads "📅 Daily Routines <n>".
         for slug in ("daily-routines", "vendor-ticket-followup"):
             (self.repo / "workstreams" / slug).mkdir(parents=True)
             (self.repo / "workstreams" / slug / "CONTEXT.md").write_text(f"# {slug}\n")
@@ -539,7 +539,7 @@ class WorkstreamCreationRuleTests(unittest.TestCase):
     def test_system_routine_phrasings_and_near_misses(self) -> None:
         for prompt in ("Start of day", "start my day please", "good morning, run start-day", "SOD",
                        "closing day", "Close the day and write the EOD note", "end of day", "eod",
-                       "Run PM_OS_ROUTER_ORIGIN=1 bash system/start-day.sh", "chief of staff: morning triage"):
+                       "Run SWITCHBOARD_ROUTER_ORIGIN=1 bash system/start-day.sh", "chief of staff: morning triage"):
             self.assertTrue(dispatch.system_routine(prompt), prompt)
         for prompt in ("Write the ABC-101 vendor nudge; close the day on it by 5pm",
                        "Sodium levels in the demo data look off",
@@ -664,17 +664,17 @@ class LinkedTitleOwnerTests(WorkstreamCreationRuleTests):
 
 class IncidentOwnerRoutingTests(unittest.TestCase):
     """A dispatch with no --workstream must not scaffold a stray workstream when an owner
-    exists. Reading only the top-ranked candidate lets pm-os-maintenance's big config win on
+    exists. Reading only the top-ranked candidate lets switchboard-maintenance's big config win on
     shared words as a weak match, so every named owner below it is ignored. The real router-context-pack.py ranks each shortened prompt against a hermetic workstreams tree
-    whose pm-os-maintenance and session-review configs share many words with every ask."""
+    whose switchboard-maintenance and session-review configs share many words with every ask."""
 
-    BIG = ("Owns PM OS scripts, router, dispatch, worker tabs, owner tabs, review notes, review links, "
+    BIG = ("Owns switchboard scripts, router, dispatch, worker tabs, owner tabs, review notes, review links, "
            "Claude Code settings, hooks, skills, image generation, email drafting, flyer and export packaging, "
            "Windows install tests, drift check, reports, root cause analysis, options with a lean, "
            "seed catalog sheets, labeling research, spreadsheet review, pick up finished work.")
     TREE = {
-        "pm-os-maintenance": ("PM OS Maintenance", BIG, []),
-        "session-review": ("Session Review", BIG.replace("PM OS", "Session"), []),
+        "switchboard-maintenance": ("Switchboard Maintenance", BIG, []),
+        "session-review": ("Session Review", BIG.replace("switchboard", "Session"), []),
         "garden-planner-export": ("Garden Planner Export", "CSV and PDF export for the Garden Planner app, Windows support.", []),
         "flyer-skill": ("Flyer Skill", "Flyer generation skill.", []),
         "site-template-library": ("Site Template Library", "Template library for Netlify sites.", ["netlify"]),
@@ -697,11 +697,11 @@ class IncidentOwnerRoutingTests(unittest.TestCase):
     FLYER = ("the owner: 'Can you update the flyer and email skills to use image generation for better pictures?' "
              "Context Slack thread: https://example.slack.com/archives/CHANNEL/p1700000000000000. "
              "Read the full thread first, then update those skills. Do not post in the Slack thread.")
-    DUPLICATE = ("Why did two workers start for one ask when PM OS should stop that? CoS dispatched 'Can you pick "
+    DUPLICATE = ("Why did two workers start for one ask when switchboard should stop that? CoS dispatched 'Can you pick "
                  "up the Garden export work' with no --workstream; the router created garden-export although "
                  "workstreams/garden-planner-export exists and its note "
                  "workstreams/garden-planner-export/2026-01-15-export-csv-fixes.md was named. Fold the strays "
-                 "into pm-os-maintenance. Run tests and the drift check.")
+                 "into switchboard-maintenance. Run tests and the drift check.")
 
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -752,17 +752,17 @@ class IncidentOwnerRoutingTests(unittest.TestCase):
         choice = self.choose(self.EXPORT)
         self.assertEqual((choice["slug"], choice["reason"]), ("garden-planner-export", "path"))
 
-    def test_review_links_ask_goes_to_pm_os_maintenance(self) -> None:
+    def test_review_links_ask_goes_to_switchboard_maintenance(self) -> None:
         choice = self.choose(self.LINKS)
-        self.assertEqual((choice["slug"], choice["created"]), ("pm-os-maintenance", False))
+        self.assertEqual((choice["slug"], choice["created"]), ("switchboard-maintenance", False))
 
-    def test_dispatch_diagnosis_goes_to_pm_os_maintenance(self) -> None:
+    def test_dispatch_diagnosis_goes_to_switchboard_maintenance(self) -> None:
         choice = self.choose(self.ONLY_DIAG)
-        self.assertEqual((choice["slug"], choice["created"]), ("pm-os-maintenance", False))
+        self.assertEqual((choice["slug"], choice["created"]), ("switchboard-maintenance", False))
 
-    def test_duplicate_worker_ask_goes_to_pm_os_maintenance(self) -> None:
+    def test_duplicate_worker_ask_goes_to_switchboard_maintenance(self) -> None:
         choice = self.choose(self.DUPLICATE)
-        self.assertEqual((choice["slug"], choice["created"]), ("pm-os-maintenance", False))
+        self.assertEqual((choice["slug"], choice["created"]), ("switchboard-maintenance", False))
 
     def test_flyer_ask_goes_to_the_flyer_skill_owner(self) -> None:
         choice = self.choose(self.FLYER)
@@ -792,13 +792,13 @@ class IncidentOwnerRoutingTests(unittest.TestCase):
 class PickOwnerTierTests(unittest.TestCase):
     """pick_owner reads past rank 1 only for named evidence."""
 
-    BIG = {"slug": "pm-os-maintenance", "score": 1900, "evidence": ["shared topic terms: owner, kit, note, open"]}
+    BIG = {"slug": "switchboard-maintenance", "score": 1900, "evidence": ["shared topic terms: owner, kit, note, open"]}
 
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         repo = Path(self.tmp.name)
-        for slug in ("pm-os-maintenance", "photo-book-kit", "signup-flow"):
+        for slug in ("switchboard-maintenance", "photo-book-kit", "signup-flow"):
             (repo / "workstreams" / slug).mkdir(parents=True)
             (repo / "workstreams" / slug / "CONTEXT.md").write_text("# x\n")
         patcher = patch.object(dispatch, "REPO_ROOT", repo)
@@ -827,7 +827,7 @@ class PickOwnerTierTests(unittest.TestCase):
         self.assertEqual(dispatch.pick_owner(pack, dispatch.DEFAULTS)[1], "path")
 
     def test_subject_beats_a_strong_top_candidate(self) -> None:
-        top = {**self.BIG, "evidence": ["PM OS system named: router", *self.BIG["evidence"]]}
+        top = {**self.BIG, "evidence": ["switchboard system named: router", *self.BIG["evidence"]]}
         kit = {"slug": "photo-book-kit", "score": 900, "evidence": ['subject names this workstream: "photo kit"']}
         picked, tier = dispatch.pick_owner({"candidate_owners": [top, kit]}, dispatch.DEFAULTS)
         self.assertEqual((picked["slug"], tier), ("photo-book-kit", "subject"))
@@ -1130,12 +1130,12 @@ class SymlinkLoopGuardTests(unittest.TestCase):
         self.reopen_leak()
         self._git("add", "-A", cwd=self.path)
         err = io.StringIO()
-        with patch.dict(os.environ, {"PM_OS_CHECKOUT": str(self.path)}), redirect_stderr(err):
+        with patch.dict(os.environ, {"SWITCHBOARD_CHECKOUT": str(self.path)}), redirect_stderr(err):
             code = dispatch.command_check_symlinks(argparse.Namespace())
         self.assertEqual(code, 1)
         self.assertIn("people -> ", err.getvalue())
         self._git("reset", "-q", "--", "people", cwd=self.path)
-        with patch.dict(os.environ, {"PM_OS_CHECKOUT": str(self.path)}), redirect_stderr(io.StringIO()):
+        with patch.dict(os.environ, {"SWITCHBOARD_CHECKOUT": str(self.path)}), redirect_stderr(io.StringIO()):
             self.assertEqual(dispatch.command_check_symlinks(argparse.Namespace()), 0)
 
 
@@ -1278,7 +1278,7 @@ class StuckLifecycleTests(unittest.TestCase):
     def test_reaper_closes_a_delivered_tab_whose_stamp_is_stuck_running(self) -> None:
         finished = iso(datetime.now(timezone.utc) - timedelta(minutes=10))
         write_ledger({**self.row, "status": "done", "report_delivered": True, "finished_at": finished, "worktree": None})
-        workspaces = [{"ref": "workspace:9", "id": "w1", "title": "pm-os-maintenance · worker-0123456789ab"}]
+        workspaces = [{"ref": "workspace:9", "id": "w1", "title": "switchboard-maintenance · worker-0123456789ab"}]
         closed_refs: list[str] = []
         with patch.object(dispatch, "cmux_workspaces", lambda *a, **k: workspaces), \
                 patch.object(dispatch, "cmux_close_result", lambda ref, wid, *why: (closed_refs.append(ref) or True, "")), \
@@ -1297,9 +1297,9 @@ class StuckLifecycleTests(unittest.TestCase):
         # stamp: the screen check needs a "workspace:N" ref,
         # so it must read the tab the reaper resolved, not the row's title.
         finished = iso(datetime.now(timezone.utc) - timedelta(minutes=10))
-        title = "pm-os-maintenance · worker-0123456789ab"
+        title = "switchboard-maintenance · worker-0123456789ab"
         write_ledger({**self.row, "status": "done", "report_delivered": True, "finished_at": finished, "worktree": None,
-                      "workspace_ref": title, "worker_id": "worker-0123456789ab", "workstream": "pm-os-maintenance",
+                      "workspace_ref": title, "worker_id": "worker-0123456789ab", "workstream": "switchboard-maintenance",
                       "reaped_at": iso(datetime.now(timezone.utc) - timedelta(hours=3))})
         workspaces = [{"ref": "workspace:9", "id": "w1", "title": title}]
         closed_refs: list[str] = []
@@ -1374,7 +1374,7 @@ class OrphanedRouteRequeueTests(unittest.TestCase):
         return {t["id"]: t for t in ledger.load_payload()["tasks"]}
 
     def test_stale_workerless_routing_row_is_requeued_once_with_a_trace(self) -> None:
-        write_ledger({"id": "rt-orphan", "status": "routing", "attempt_id": "rt-orphan.a1", "workstream": "pm-os-maintenance",
+        write_ledger({"id": "rt-orphan", "status": "routing", "attempt_id": "rt-orphan.a1", "workstream": "switchboard-maintenance",
                       "origin": "cos", "prompt": "held route", "depends_on": ["rt-dep"], "created_at": self.old,
                       "updated_at": self.old, "launching_at": None, "summary": "Prerequisites finished; starting the held route."},
                      {"id": "rt-dep", "status": "done"})
@@ -1581,8 +1581,8 @@ class LaunchPromptClauseTests(unittest.TestCase):
         """A bare number such as "example-repo#10001" or "pause 10001" never stands in
         for a name. The launch prompt carries Rule 13: name first, id in
         parentheses or the link, never in the ask, fetch titles via named_refs."""
-        task = {"id": "rt-nn", "attempt_id": "rt-nn.a1.abc", "workstream": "pm-os-maintenance", "origin": "cos",
-                "prompt": "Workstream: pm-os-maintenance\nCodify the names rule"}
+        task = {"id": "rt-nn", "attempt_id": "rt-nn.a1.abc", "workstream": "switchboard-maintenance", "origin": "cos",
+                "prompt": "Workstream: switchboard-maintenance\nCodify the names rule"}
         prompt = dispatch.launch_prompt(task, Path("/tmp/wt-rt-nn"), "worker-nn")
         clause = next((line for line in prompt.splitlines() if line.startswith("Names, never bare numbers")), "")
         self.assertTrue(clause, "launch prompt carries a Names, never bare numbers clause")
@@ -1623,7 +1623,7 @@ class LaunchPromptClauseTests(unittest.TestCase):
         prompt = dispatch.launch_prompt(task, Path("/tmp/wt-rt-gm"), "worker-gm")
         clause = next((line for line in prompt.splitlines() if line.startswith("Email drafts:")), "")
         self.assertTrue(clause, "launch prompt carries an email draft clause")
-        self.assertIn("`pmos mail draft`", clause)
+        self.assertIn("`switchboard mail draft`", clause)
         self.assertIn("never sent", clause)
 
     def test_stakeholder_reply_clause_requires_the_draft_in_the_report(self) -> None:
@@ -1654,7 +1654,7 @@ class LaunchPromptClauseTests(unittest.TestCase):
         self.assertNotIn("2026-10-28", clause)
         self.assertIn("Rule 4 item 6", clause)
         self.assertIn("slack-people-links", clause)
-        self.assertIn("pmos slack people", clause)
+        self.assertIn("switchboard slack people", clause)
         self.assertIn("Email uses full names", clause)
         # Steer additions: shorthand links to the artifact.
         self.assertIn("ref 05", clause)
@@ -1687,8 +1687,8 @@ class LaunchPromptClauseTests(unittest.TestCase):
         status defaults while CoS reads real options from the review note. The prompt
         tells a worker finishing blocked or needs-ruling to put the options and the lean in the
         report text in the one shape both surfaces parse, and names the warning it earns otherwise."""
-        task = {"id": "rt-op", "attempt_id": "rt-op.a1.abc", "workstream": "pm-os-maintenance", "origin": "cos",
-                "prompt": "Workstream: pm-os-maintenance\nFix the feed"}
+        task = {"id": "rt-op", "attempt_id": "rt-op.a1.abc", "workstream": "switchboard-maintenance", "origin": "cos",
+                "prompt": "Workstream: switchboard-maintenance\nFix the feed"}
         prompt = dispatch.launch_prompt(task, Path("/tmp/wt-rt-op"), "worker-op")
         lines = prompt.splitlines()
         clause = next((line for line in lines if line.startswith("Options on decision reports")), "")
@@ -1709,8 +1709,8 @@ class LaunchPromptClauseTests(unittest.TestCase):
         """Open work named only in a done report's prose ("reload plugins after landing")
         reaches no surface. The prompt tells a worker finishing done with open work to carry one
         "Follow-up: <what stays open>" line, to count vetoes as "N veto items", and names the warning."""
-        task = {"id": "rt-fu", "attempt_id": "rt-fu.a1.abc", "workstream": "pm-os-maintenance", "origin": "cos",
-                "prompt": "Workstream: pm-os-maintenance\nFix the feed"}
+        task = {"id": "rt-fu", "attempt_id": "rt-fu.a1.abc", "workstream": "switchboard-maintenance", "origin": "cos",
+                "prompt": "Workstream: switchboard-maintenance\nFix the feed"}
         prompt = dispatch.launch_prompt(task, Path("/tmp/wt-rt-fu"), "worker-fu")
         lines = prompt.splitlines()
         clause = next((line for line in lines if line.startswith("Follow-up on done reports")), "")
@@ -1793,7 +1793,7 @@ class HermeticRepo(unittest.TestCase):
         return ledger.find_task(ledger.load_payload(), tid) or {}
 
     def worker_row(self, **extra) -> dict:
-        return {"id": "rt-wt", "status": "active", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "audit it",
+        return {"id": "rt-wt", "status": "active", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "audit it",
                 "attempt": 1, "attempt_id": "rt-wt.a1.aaa", "worker_id": "worker-aaaaaaaaaaaa", "worktree": str(self.path),
                 "branch": self.branch, "thread_id": "T-dead", "workspace_ref": "workspace:40",
                 "started_at": self.stale, "heartbeat_at": self.stale, "updated_at": self.stale, **extra}
@@ -1852,7 +1852,7 @@ class ReapStopsLeftoverProcessesTests(HermeticRepo):
         self.assertEqual(sorted(r["pid"] for r in logged), [500, 501, 600])
 
     def test_kill_switch_leaves_everything_running(self) -> None:
-        with patch.dict(os.environ, {"PM_OS_LEFTOVER_SWEEP": "off"}), redirect_stderr(io.StringIO()):
+        with patch.dict(os.environ, {"SWITCHBOARD_LEFTOVER_SWEEP": "off"}), redirect_stderr(io.StringIO()):
             result = dispatch.reap_all(dispatch.config())
         self.assertEqual(self.killed, [])
         self.assertNotIn("leftover_sweep", result)
@@ -1868,7 +1868,7 @@ class ReapSettlesCancelledAndUnlandedTests(HermeticRepo):
 
     def setUp(self) -> None:
         super().setUp()
-        self.ws = {"ref": "workspace:40", "id": "w-40", "title": "pm-os-maintenance · worker-aaaaaaaaaaaa"}
+        self.ws = {"ref": "workspace:40", "id": "w-40", "title": "switchboard-maintenance · worker-aaaaaaaaaaaa"}
         self.workspaces = [self.ws]
         finished = iso(datetime.now(timezone.utc) - timedelta(minutes=30))
         write_ledger(self.worker_row(status="cancelled", report_delivered=False, finished_at=finished,
@@ -2074,7 +2074,7 @@ class ReapSettlesCancelledAndUnlandedTests(HermeticRepo):
         # A worker-titled tab is closed even on a ref the old list named, and a stray
         # protected_workspaces key in router.yaml no longer changes the verdict.
         write_ledger(self.worker_row(status="done", report_delivered=True, workspace_ref="workspace:252", finished_at=finished))
-        self.workspaces = [{"ref": "workspace:252", "id": "w-252", "title": "pm-os-maintenance · worker-aaaaaaaaaaaa"}]
+        self.workspaces = [{"ref": "workspace:252", "id": "w-252", "title": "switchboard-maintenance · worker-aaaaaaaaaaaa"}]
         result = dispatch.reap_all({**dispatch.config(), "protected_workspaces": ["workspace:252"]})
         self.assertEqual([c["task_id"] for c in result["closed"]], ["rt-wt"])
         self.assertEqual(self.closed, ["workspace:252"])
@@ -2110,9 +2110,9 @@ class DecideTests(HermeticRepo):
 
     def setUp(self) -> None:
         super().setUp()
-        self.ctx = self.repo / "workstreams" / "pm-os-maintenance" / "CONTEXT.md"
+        self.ctx = self.repo / "workstreams" / "switchboard-maintenance" / "CONTEXT.md"
         self.ctx.parent.mkdir(parents=True)
-        self.ctx.write_text("# PM OS Maintenance\n\nStatus: active\n")
+        self.ctx.write_text("# Switchboard Maintenance\n\nStatus: active\n")
         self._git("add", "--", "workstreams")
         self._git("commit", "-q", "-m", "ctx")
         write_ledger(self.worker_row(status="done"))
@@ -2154,7 +2154,7 @@ class DecideTests(HermeticRepo):
         body = self.ctx.read_text()
         self.assertIn("someone's unsaved paragraph", body, "the other edit survives")
         self.assertIn("owner: keep", body)
-        self.assertIn(" M workstreams/pm-os-maintenance/CONTEXT.md", self._git("status", "--porcelain"))
+        self.assertIn(" M workstreams/switchboard-maintenance/CONTEXT.md", self._git("status", "--porcelain"))
 
     def test_unknown_task_fails_without_touching_context(self) -> None:
         out = io.StringIO()
@@ -2167,7 +2167,7 @@ class DecideTests(HermeticRepo):
 class WorkerTabIdentityTests(HermeticRepo):
     """Worker tabs are titled like the owner tab
     plus a slot number ("⚖️ Meal Planner 2") and carry the description
-    "PM OS worker <task-id>". Wrong impls: a renamed owner tab passes as a worker
+    "switchboard worker <task-id>". Wrong impls: a renamed owner tab passes as a worker
     because its title ends in a digit; one worker reaps another's tab; two
     concurrent workers of one workstream take the same slot; a tab whose row has
     not yet opened loses its slot to the next launch."""
@@ -2177,45 +2177,45 @@ class WorkerTabIdentityTests(HermeticRepo):
         ws = self.repo / "workstreams"
         (ws / "meal-planner").mkdir(parents=True)
         (ws / "meal-planner" / "config.yaml").write_text('name: "Meal Planner"\nemoji: "⚖️"\nstatus: active\n')
-        (ws / "pm-os-maintenance").mkdir()
-        (ws / "pm-os-maintenance" / "config.yaml").write_text("name: PM OS Maintenance\nemoji: 🛠️\n")
+        (ws / "switchboard-maintenance").mkdir()
+        (ws / "switchboard-maintenance" / "config.yaml").write_text("name: Switchboard Maintenance\nemoji: 🛠️\n")
         (ws / "bare-slug").mkdir()
         (ws / "bare-slug" / "config.yaml").write_text("status: active\n")
 
     def test_titles_come_from_config_yaml_like_the_owner_tab(self) -> None:
         self.assertEqual(dispatch.owner_title("meal-planner"), "⚖️ Meal Planner")
-        self.assertEqual(dispatch.owner_title("pm-os-maintenance"), "🛠️ PM OS Maintenance")
+        self.assertEqual(dispatch.owner_title("switchboard-maintenance"), "🛠️ Switchboard Maintenance")
         self.assertEqual(dispatch.owner_title("bare-slug"), "📁 Bare Slug")        # cmux-helpers fallback
         self.assertEqual(dispatch.owner_title("no-such-workstream"), "📁 No Such Workstream")
         self.assertEqual(dispatch.worker_title("meal-planner", 2), "⚖️ Meal Planner 2")
-        self.assertEqual(dispatch.worker_description("rt-abc"), "PM OS worker rt-abc")
+        self.assertEqual(dispatch.worker_description("rt-abc"), "switchboard worker rt-abc")
         self.assertEqual(dispatch.owner_titles()["⚖️ Meal Planner"], "meal-planner")
 
     def test_next_slot_is_the_lowest_free_integer_across_tabs_and_opening_rows(self) -> None:
         tabs = [{"ref": "workspace:1", "title": "⚖️ Meal Planner"},            # the owner tab holds no slot
                 {"ref": "workspace:2", "title": "⚖️ Meal Planner 1"},
                 {"ref": "workspace:3", "title": "⚖️ Meal Planner 3"},
-                {"ref": "workspace:4", "custom_title": "🛠️ PM OS Maintenance 2"}]  # another workstream's slot
+                {"ref": "workspace:4", "custom_title": "🛠️ Switchboard Maintenance 2"}]  # another workstream's slot
         payload = {"tasks": [{"workstream": "meal-planner", "status": "active", "tab_title": "⚖️ Meal Planner 2"},
                              {"workstream": "meal-planner", "status": "done", "tab_title": "⚖️ Meal Planner 4"}]}
         self.assertEqual(dispatch.next_worker_slot("meal-planner", payload, tabs), 4)   # 1,3 open; 2 opening; 4's row is terminal
-        self.assertEqual(dispatch.next_worker_slot("pm-os-maintenance", payload, tabs), 1)
+        self.assertEqual(dispatch.next_worker_slot("switchboard-maintenance", payload, tabs), 1)
         self.assertEqual(dispatch.next_worker_slot("meal-planner", {"tasks": []}, []), 1)
 
     def test_worker_tab_reason_prefers_the_description_and_rejects_renamed_owner_tabs(self) -> None:
         mine = {"id": "rt-wt", "tab_title": "⚖️ Meal Planner 1"}
-        other = {"ref": "workspace:7", "title": "⚖️ Meal Planner 1", "description": "PM OS worker rt-other"}
+        other = {"ref": "workspace:7", "title": "⚖️ Meal Planner 1", "description": "switchboard worker rt-other"}
         self.assertEqual(dispatch.worker_tab_reason(other, mine), "tab belongs to another worker (rt-other)")
         self.assertEqual(dispatch.worker_tab_reason(other), "")                      # still a worker tab, just not mine
-        self.assertEqual(dispatch.worker_tab_reason({"title": "anything", "description": "PM OS worker rt-wt"}, mine), "")
+        self.assertEqual(dispatch.worker_tab_reason({"title": "anything", "description": "switchboard worker rt-wt"}, mine), "")
         # A reused slot title alone never proves the tab is this row's; its own ref plus the title does.
         self.assertEqual(dispatch.worker_tab_reason({"title": "⚖️ Meal Planner 1"}, mine),
                          "title is not a worker tab of rt-wt (⚖️ Meal Planner 1)")
         self.assertEqual(dispatch.worker_tab_reason({"ref": "workspace:7", "title": "⚖️ Meal Planner 1"},
                                                     {**mine, "workspace_ref": "workspace:7"}), "")
         # With no row to compare: "<owner> <n>" for a known workstream, the legacy form.
-        self.assertEqual(dispatch.worker_tab_reason({"title": "🛠️ PM OS Maintenance 12"}), "")
-        self.assertEqual(dispatch.worker_tab_reason({"title": "pm-os-maintenance · worker-0123456789ab"}), "")
+        self.assertEqual(dispatch.worker_tab_reason({"title": "🛠️ Switchboard Maintenance 12"}), "")
+        self.assertEqual(dispatch.worker_tab_reason({"title": "switchboard-maintenance · worker-0123456789ab"}), "")
         # Not workers: owner tabs, an owner tab the owner renamed to end in a digit for an unknown
         # workstream, a P0 tab, fixed surfaces, a slot of 0.
         self.assertEqual(dispatch.worker_tab_reason({"title": "⚖️ Meal Planner"}), "title is not a worker tab (⚖️ Meal Planner)")
@@ -2228,12 +2228,12 @@ class WorkerTabIdentityTests(HermeticRepo):
         finished = iso(datetime.now(timezone.utc) - timedelta(minutes=30))
         write_ledger(self.worker_row(status="done", report_delivered=True, finished_at=finished,
                                      workstream="meal-planner", tab_title="⚖️ Meal Planner 1"))
-        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "⚖️ Meal Planner 1", "description": "PM OS worker rt-other"}]
+        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "⚖️ Meal Planner 1", "description": "switchboard worker rt-other"}]
         dispatch.reap_all(dispatch.config())
         self.assertEqual(self.closed, [])   # another worker's tab is not this row's tab at all, ref or title
         write_ledger(self.worker_row(status="done", report_delivered=True, finished_at=finished,
                                      workstream="meal-planner", tab_title="⚖️ Meal Planner 1"))
-        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "⚖️ Meal Planner 1", "description": "PM OS worker rt-wt"}]
+        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "⚖️ Meal Planner 1", "description": "switchboard worker rt-wt"}]
         result = dispatch.reap_all(dispatch.config())
         self.assertEqual([c["task_id"] for c in result["closed"]], ["rt-wt"])
         self.assertEqual(self.closed, ["workspace:40"])
@@ -2246,8 +2246,8 @@ class WorkerTabIdentityTests(HermeticRepo):
         uuid = "603CBCB6-FE9F-492C-B399-1FD5C9C89B99"
         write_ledger(self.worker_row(status="done", report_delivered=True, finished_at=finished, workspace_ref=uuid,
                                      workstream="meal-planner", tab_title="⚖️ Meal Planner 1"))
-        self.workspaces = [{"ref": "workspace:83", "id": uuid, "title": "⚖️ Meal Planner 1", "description": "PM OS worker rt-wt"},
-                           {"ref": "workspace:84", "id": "w-84", "title": "⚖️ Meal Planner 2", "description": "PM OS worker rt-other"}]
+        self.workspaces = [{"ref": "workspace:83", "id": uuid, "title": "⚖️ Meal Planner 1", "description": "switchboard worker rt-wt"},
+                           {"ref": "workspace:84", "id": "w-84", "title": "⚖️ Meal Planner 2", "description": "switchboard worker rt-other"}]
         result = dispatch.reap_all(dispatch.config())
         self.assertEqual([(c["task_id"], c["workspace_ref"], c["was_open"]) for c in result["closed"]], [("rt-wt", "workspace:83", True)])
         self.assertEqual(self.closed, ["workspace:83"])
@@ -2269,22 +2269,22 @@ class CloseoutRecordTests(HermeticRepo):
 
     def setUp(self) -> None:
         super().setUp()
-        self.ctx = self.repo / "workstreams" / "pm-os-maintenance" / "CONTEXT.md"
+        self.ctx = self.repo / "workstreams" / "switchboard-maintenance" / "CONTEXT.md"
         self.ctx.parent.mkdir(parents=True)
-        (self.ctx.parent / "config.yaml").write_text("name: PM OS Maintenance\nemoji: 🛠️\n")
-        self.ctx.write_text("# 🛠️ PM OS Maintenance\n\n## Log\n\n### 2026-10-05 — something\n")
+        (self.ctx.parent / "config.yaml").write_text("name: Switchboard Maintenance\nemoji: 🛠️\n")
+        self.ctx.write_text("# 🛠️ Switchboard Maintenance\n\n## Log\n\n### 2026-10-05 — something\n")
         self._git("add", "-A", "--", "workstreams")
         self._git("commit", "-q", "-m", "workstream")
-        self.task = self.worker_row(status="done", tab_title="🛠️ PM OS Maintenance 1", thread_id="T-abc",
+        self.task = self.worker_row(status="done", tab_title="🛠️ Switchboard Maintenance 1", thread_id="T-abc",
                                     summary="done: sidebar lane shipped")
 
     def test_line_format_and_idempotence(self) -> None:
         line = dispatch.closeout_line(self.task, "done", "done: sidebar lane shipped. https://ampcode.com/threads/T-abc", "T-abc")
         today = datetime.now(timezone.utc).date().isoformat()
-        self.assertEqual(line, f"- {today} · `rt-wt` · 🛠️ PM OS Maintenance 1 · done: sidebar lane shipped. https://ampcode.com/threads/T-abc")
+        self.assertEqual(line, f"- {today} · `rt-wt` · 🛠️ Switchboard Maintenance 1 · done: sidebar lane shipped. https://ampcode.com/threads/T-abc")
         # No link in the result -> the thread link is appended; whitespace collapsed; status prefix not doubled.
         line = dispatch.closeout_line(self.task, "blocked", "blocked:  needs\n  the owner", "T-abc")
-        self.assertEqual(line, f"- {today} · `rt-wt` · 🛠️ PM OS Maintenance 1 · blocked: needs the owner · https://ampcode.com/threads/T-abc")
+        self.assertEqual(line, f"- {today} · `rt-wt` · 🛠️ Switchboard Maintenance 1 · blocked: needs the owner · https://ampcode.com/threads/T-abc")
         # A Claude row names its session: no ampcode.com link, in either direction.
         session = "00000000-0000-4000-8000-000000000001"
         claude = {**self.task, "agent": "claude", "session_id": session}
@@ -2307,10 +2307,10 @@ class CloseoutRecordTests(HermeticRepo):
         self.assertEqual(second["reason"], "already recorded")
         text = self.ctx.read_text()
         self.assertEqual(text.count("`rt-wt`"), 1)
-        self.assertTrue(text.startswith("# 🛠️ PM OS Maintenance\n\n## Log\n"))
+        self.assertTrue(text.startswith("# 🛠️ Switchboard Maintenance\n\n## Log\n"))
         self.assertTrue(text.endswith(f"\n\n## Worker close-outs\n{first['line']}\n"), text)
         # A second task appends under the existing heading, keeping the first line.
-        other = {**self.task, "id": "rt-two", "tab_title": "🛠️ PM OS Maintenance 2"}
+        other = {**self.task, "id": "rt-two", "tab_title": "🛠️ Switchboard Maintenance 2"}
         dispatch.record_closeout(other, "failed", "merge conflict", "T-def", self.repo)
         text = self.ctx.read_text()
         self.assertEqual(text.count("## Worker close-outs"), 1)
@@ -2335,7 +2335,7 @@ class CloseoutRecordTests(HermeticRepo):
         self.assertTrue(outcome["recorded"])
         self.assertFalse(outcome["committed"])
         self.assertIn("uncommitted edits on main", outcome["reason"])
-        self.assertEqual(sorted(dispatch.dirty_main_paths()), ["a.md", "workstreams/pm-os-maintenance/CONTEXT.md"])
+        self.assertEqual(sorted(dispatch.dirty_main_paths()), ["a.md", "workstreams/switchboard-maintenance/CONTEXT.md"])
         self.assertIn("the owner mid-edit", self.ctx.read_text())
         self.assertIn("`rt-two`", self.ctx.read_text())
 
@@ -2354,7 +2354,7 @@ class CloseoutRecordTests(HermeticRepo):
         self.assertTrue(outcome["recorded"] and outcome["committed"], outcome)
         self.assertEqual(outcome["added"], [ctx])
         self.assertEqual(self._git("show", "--name-only", "--format=%an|%s", "HEAD").split(),
-                         ["PM", "OS", "worker|rt-wt:", "worker", "close-out", "recorded", "in", ctx, ctx])
+                         ["switchboard", "worker|rt-wt:", "worker", "close-out", "recorded", "in", ctx, ctx])
         self.assertIn("`rt-wt`", self._git("show", f"HEAD:{ctx}"))
         status = self._git("status", "--porcelain", "--untracked-files=all").splitlines()
         self.assertEqual(sorted(status), ["?? workstreams/reading-list/config.yaml", "M  a.md"],
@@ -2389,11 +2389,11 @@ class CloseoutRecordTests(HermeticRepo):
     def test_reaper_records_before_it_closes(self) -> None:
         finished = iso(datetime.now(timezone.utc) - timedelta(minutes=30))
         write_ledger({**self.task, "report_delivered": True, "finished_at": finished})
-        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "🛠️ PM OS Maintenance 1", "description": "PM OS worker rt-wt"}]
+        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "🛠️ Switchboard Maintenance 1", "description": "switchboard worker rt-wt"}]
         result = dispatch.reap_all(dispatch.config())
         self.assertEqual([c["task_id"] for c in result["closed"]], ["rt-wt"])
         self.assertTrue(result["closed"][0]["recorded"])
-        self.assertIn("`rt-wt` · 🛠️ PM OS Maintenance 1 · done: sidebar lane shipped · https://ampcode.com/threads/T-abc", self.ctx.read_text())
+        self.assertIn("`rt-wt` · 🛠️ Switchboard Maintenance 1 · done: sidebar lane shipped · https://ampcode.com/threads/T-abc", self.ctx.read_text())
         self.assertEqual(self.closed, ["workspace:40"])
 
 
@@ -2405,14 +2405,14 @@ class LegacyTabResolutionTests(HermeticRepo):
     an owner tab whose title a row happened to record; re-record or re-close a
     row whose tab is really gone; close a legacy tab whose branch never landed."""
 
-    LEGACY = "pm-os-maintenance · worker-aaaaaaaaaaaa"
+    LEGACY = "switchboard-maintenance · worker-aaaaaaaaaaaa"
 
     def setUp(self) -> None:
         super().setUp()
-        self.ctx = self.repo / "workstreams" / "pm-os-maintenance" / "CONTEXT.md"
+        self.ctx = self.repo / "workstreams" / "switchboard-maintenance" / "CONTEXT.md"
         self.ctx.parent.mkdir(parents=True)
-        (self.ctx.parent / "config.yaml").write_text("name: PM OS Maintenance\nemoji: 🛠️\n")
-        self.ctx.write_text("# 🛠️ PM OS Maintenance\n\n## Log\n")
+        (self.ctx.parent / "config.yaml").write_text("name: Switchboard Maintenance\nemoji: 🛠️\n")
+        self.ctx.write_text("# 🛠️ Switchboard Maintenance\n\n## Log\n")
         self._git("add", "-A", "--", "workstreams")
         self._git("commit", "-q", "-m", "workstream")
 
@@ -2430,7 +2430,7 @@ class LegacyTabResolutionTests(HermeticRepo):
         self.assertIs(dispatch.worker_tab_for(self.legacy_row(workspace_ref=owner["title"]), tabs), legacy)   # by "<slug> · <worker-id>"
         self.assertIsNone(dispatch.worker_tab_for(self.legacy_row(workspace_ref=owner["title"], worker_id=""), tabs))
         self.assertIsNone(dispatch.worker_tab_for(self.legacy_row(worker_id="worker-bbbbbbbbbbbb"), [owner]))
-        recorded = {"ref": "workspace:90", "id": "w-90", "title": "🛠️ PM OS Maintenance 1"}
+        recorded = {"ref": "workspace:90", "id": "w-90", "title": "🛠️ Switchboard Maintenance 1"}
         # A recorded slot title with no ref behind it proves nothing: slots are reused.
         self.assertIsNone(dispatch.worker_tab_for(self.legacy_row(workspace_ref="not-a-ref", tab_title=recorded["title"]), [owner, recorded]))
         # A row that stored a slot title as its ref does not match a live tab holding that slot, either.
@@ -2441,7 +2441,7 @@ class LegacyTabResolutionTests(HermeticRepo):
         self._git("branch", "-D", self.branch)
         write_ledger(self.legacy_row())
         self.workspaces = [{"ref": "workspace:46", "id": "w-46", "title": self.LEGACY},
-                           {"ref": "workspace:14", "id": "w-14", "title": "🛠️ PM OS Maintenance"}]
+                           {"ref": "workspace:14", "id": "w-14", "title": "🛠️ Switchboard Maintenance"}]
         result = dispatch.reap_all(dispatch.config())
         self.assertEqual([c["task_id"] for c in result["closed"]], ["rt-wt"])
         self.assertEqual(result["skipped"], [])
@@ -2477,7 +2477,7 @@ class IdleOwnerCloseTests(HermeticRepo):
 
     def setUp(self) -> None:
         super().setUp()
-        for slug, name, emoji in (("meal-planner", "Meal Planner", "⚖️"), ("pm-os-maintenance", "PM OS Maintenance", "🛠️")):
+        for slug, name, emoji in (("meal-planner", "Meal Planner", "⚖️"), ("switchboard-maintenance", "Switchboard Maintenance", "🛠️")):
             (self.repo / "workstreams" / slug).mkdir(parents=True)
             (self.repo / "workstreams" / slug / "config.yaml").write_text(f"name: {name}\nemoji: {emoji}\n")
         self.at = datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc)
@@ -2489,20 +2489,20 @@ class IdleOwnerCloseTests(HermeticRepo):
 
     def test_boundary_and_exclusions(self) -> None:
         tabs = [self.owner("⚖️ Meal Planner", "workspace:1"),
-                self.owner("🛠️ PM OS Maintenance", "workspace:2", latest_submitted_at=self.fresh),
+                self.owner("🛠️ Switchboard Maintenance", "workspace:2", latest_submitted_at=self.fresh),
                 self.owner("🧭 CoS", "workspace:3"), self.owner("📨 Comms Triage", "workspace:4"), self.owner("🚀 Launchpad", "workspace:5"),
                 self.owner("⚖️ Meal Planner", "workspace:6", pinned=True),
                 self.owner("⚖️ Meal Planner", "workspace:7", color="#BB9AF7"),
-                self.owner("⚖️ Meal Planner 1", "workspace:8", description="PM OS worker rt-x"),   # a worker tab
+                self.owner("⚖️ Meal Planner 1", "workspace:8", description="switchboard worker rt-x"),   # a worker tab
                 self.owner("⚖️ P0 · Meal Planner", "workspace:9"),
                 {"ref": "workspace:10", "id": "w-10", "title": "⚖️ Meal Planner"}]                  # no stamps at all
         got = dispatch.idle_owner_candidates(tabs, {"tasks": []}, {}, 4, self.at)
         self.assertEqual([(c["ref"], c["workstream"], c["idle_hours"]) for c in got], [("workspace:1", "meal-planner", 4.0)])
 
     def test_busy_workstream_keeps_its_owner_tab_open(self) -> None:
-        tabs = [self.owner("⚖️ Meal Planner", "workspace:1"), self.owner("🛠️ PM OS Maintenance", "workspace:2")]
+        tabs = [self.owner("⚖️ Meal Planner", "workspace:1"), self.owner("🛠️ Switchboard Maintenance", "workspace:2")]
         payload = {"tasks": [{"id": "rt-live", "workstream": "meal-planner", "status": "active"},
-                             {"id": "rt-old", "workstream": "pm-os-maintenance", "status": "done"}]}
+                             {"id": "rt-old", "workstream": "switchboard-maintenance", "status": "done"}]}
         got = dispatch.idle_owner_candidates(tabs, payload, {}, 4, self.at)
         self.assertEqual([c["ref"] for c in got], ["workspace:2"])
         agents = {"T-m": {"state": "Running", "state_ts": (self.at - timedelta(hours=5)).timestamp(), "workspace_id": "w-2"}}
@@ -2670,7 +2670,7 @@ REAL_CMUX_CLOSE_RESULT = dispatch.cmux_close_result   # captured before any fixt
 
 class CmuxCloseTests(HermeticRepo):
     """cmux 0.65 refuses `close-workspace` on a workspace with a running process
-    unless --force is passed, and every PM OS tab runs an agent CLI. These drive the real cmux_close_result against a fake cmux that emulates each
+    unless --force is passed, and every switchboard tab runs an agent CLI. These drive the real cmux_close_result against a fake cmux that emulates each
     version. Wrong impls: omit --force (0.65 refuses); send --force to an older
     cmux with no fallback (unknown option); swallow cmux's stderr in the reap
     skip reason; skip the unpin or the skip-record sentinel on the way."""
@@ -2734,7 +2734,7 @@ exit 0
         # The sweep path end to end: a done, delivered, landed row whose tab is
         # a worker tab. Wrong impl: the row sits in skipped as "cmux close
         # failed" on every tick.
-        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "🛠️ PM OS Maintenance 1", "description": "PM OS worker rt-wt"}]
+        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "🛠️ Switchboard Maintenance 1", "description": "switchboard worker rt-wt"}]
         self.agents["T-dead"] = {"state": "Idle", "state_ts": 1.0, "workspace_id": "w-40", "title": "worker"}
         write_ledger(self.worker_row(status="done", report_delivered=True,
                                      finished_at=iso(datetime.now(timezone.utc) - timedelta(minutes=30)), summary="done"))
@@ -2771,7 +2771,7 @@ class AbandonedRowTests(HermeticRepo):
     when the session store is empty; touch rows whose thread is live or fresh."""
 
     def test_clean_abandoned_checkout_is_relaunched_once_as_a_new_attempt(self) -> None:
-        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "pm-os-maintenance · worker-aaaaaaaaaaaa"}]
+        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "switchboard-maintenance · worker-aaaaaaaaaaaa"}]
         write_ledger(self.worker_row(resume_sent_at=self.stale, landed_commit="deadbeef"))
         result = dispatch.fail_abandoned_rows(dispatch.config())
         self.assertEqual(result, {"relaunched": [{"task_id": "rt-wt", "replaced_attempt": "rt-wt.a1.aaa"}], "blocked": []})
@@ -2797,7 +2797,7 @@ class AbandonedRowTests(HermeticRepo):
     def test_relaunch_parks_a_checkout_that_turns_dirty_between_judgement_and_drop(self) -> None:
         # Fix B3-lite: the sweep judged the checkout clean, then a late write landed
         # before drop_worktree ran. Wrong impl: `worktree remove --force` deletes it.
-        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "pm-os-maintenance · worker-aaaaaaaaaaaa"}]
+        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "switchboard-maintenance · worker-aaaaaaaaaaaa"}]
         write_ledger(self.worker_row())
         real_unlanded = dispatch.unlanded_work
 
@@ -2915,7 +2915,7 @@ class WorktreeGuardTests(HermeticRepo):
     never read done."""
 
     def test_launch_fails_the_row_and_opens_no_tab_when_the_worktree_does_not_verify(self) -> None:
-        write_ledger({"id": "rt-bad", "status": "queued", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "do it",
+        write_ledger({"id": "rt-bad", "status": "queued", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "do it",
                       "attempt": 1, "attempt_id": "rt-bad.a1.aaa", "created_at": iso(datetime.now(timezone.utc))})
         calls: list[list[str]] = []
         real_run, real_create = dispatch.run, dispatch.create_worktree
@@ -2946,7 +2946,7 @@ class WorktreeGuardTests(HermeticRepo):
     def launch_with_cmux(self, create, task_id: str = "rt-slow") -> dict:
         """Run release_queued for one queued row with `create(cmd, **kw)` standing
         in for the cmux new-workspace call (every other `run` is real)."""
-        write_ledger({"id": task_id, "status": "queued", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "do it",
+        write_ledger({"id": task_id, "status": "queued", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "do it",
                       "attempt": 1, "attempt_id": f"{task_id}.a1.aaa", "created_at": iso(datetime.now(timezone.utc))})
         real_run = dispatch.run
 
@@ -2969,17 +2969,17 @@ class WorktreeGuardTests(HermeticRepo):
         row = self.launch_with_cmux(create)
         self.assertEqual((row["status"], row["workspace_ref"], row["summary"]), ("routing", "workspace:4073", "started"))
         self.assertTrue(Path(row["worktree"]).is_dir())
-        self.assertEqual(self.workspaces[-1]["description"], "PM OS worker rt-slow")
+        self.assertEqual(self.workspaces[-1]["description"], "switchboard worker rt-slow")
 
     def test_launch_adopts_the_tab_after_a_hung_cmux_cli(self) -> None:
         def create(cmd, **kw):
-            self.workspaces.append({"ref": "workspace:4074", "id": "w-74", "title": "x", "description": "PM OS worker rt-slow"})
+            self.workspaces.append({"ref": "workspace:4074", "id": "w-74", "title": "x", "description": "switchboard worker rt-slow"})
             raise subprocess.TimeoutExpired(cmd, kw.get("timeout", 60))
         row = self.launch_with_cmux(create)
         self.assertEqual((row["status"], row["workspace_ref"]), ("routing", "workspace:4074"))
 
     def test_launch_without_a_tab_after_two_timeouts_fails_the_row_and_drops_the_worktree(self) -> None:
-        self.workspaces.append({"ref": "workspace:4075", "id": "w-75", "title": "x", "description": "PM OS worker rt-other"})
+        self.workspaces.append({"ref": "workspace:4075", "id": "w-75", "title": "x", "description": "switchboard worker rt-other"})
         calls: list[list[str]] = []
         row = self.launch_with_cmux(lambda cmd, **kw: calls.append(cmd) or subprocess.CompletedProcess(cmd, 1, "", self.CMUX_TIMEOUT))
         self.assertEqual(len(calls), 2, "a timeout with no tab anywhere is retried exactly once")
@@ -2997,7 +2997,7 @@ class WorktreeGuardTests(HermeticRepo):
             calls.append(cmd)
             if len(calls) == 1:
                 raise subprocess.TimeoutExpired(cmd, kw.get("timeout", 60))
-            self.workspaces.append({"ref": "workspace:4081", "id": "w-81", "title": "x", "description": "PM OS worker rt-slow"})
+            self.workspaces.append({"ref": "workspace:4081", "id": "w-81", "title": "x", "description": "switchboard worker rt-slow"})
             return subprocess.CompletedProcess(cmd, 0, "workspace:4081\n", "")
         with patch.object(dispatch, "CMUX_TIMEOUT_LOG", self.repo / "cmux-timeouts.jsonl"):
             row = self.launch_with_cmux(create)
@@ -3017,8 +3017,8 @@ class WorktreeGuardTests(HermeticRepo):
             if len(calls) == 1:
                 raise subprocess.TimeoutExpired(cmd, 60)
             # The retry's tab answers; the first call's tab lands late, right after.
-            self.workspaces.append({"ref": "workspace:4082", "id": "w-82", "title": "x", "description": "PM OS worker rt-slow"})
-            self.workspaces.append({"ref": "workspace:4083", "id": "w-83", "title": "x", "description": "PM OS worker rt-slow"})
+            self.workspaces.append({"ref": "workspace:4082", "id": "w-82", "title": "x", "description": "switchboard worker rt-slow"})
+            self.workspaces.append({"ref": "workspace:4083", "id": "w-83", "title": "x", "description": "switchboard worker rt-slow"})
             return subprocess.CompletedProcess(cmd, 0, "workspace:4082\n", "")
         row = self.launch_with_cmux(create)
         self.assertEqual((row["status"], row["workspace_ref"]), ("routing", "workspace:4082"))
@@ -3065,7 +3065,7 @@ class WorktreeGuardTests(HermeticRepo):
         # Repeated workspace.list timeouts while a launch is in flight.
         # Wrong impl: carry on with an empty tab list (slot 1, dup-close blind) or
         # leave the row where it was with nothing to say why.
-        write_ledger({"id": "rt-deaf", "status": "queued", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "do it",
+        write_ledger({"id": "rt-deaf", "status": "queued", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "do it",
                       "attempt": 1, "attempt_id": "rt-deaf.a1.aaa", "created_at": iso(datetime.now(timezone.utc))})
         calls: list[list[str]] = []
         real_run = dispatch.run
@@ -3121,13 +3121,13 @@ class StuckRouteTests(HermeticRepo):
 
     def routing_row(self, minutes_ago: int, **extra) -> dict:
         when = iso(datetime.now(timezone.utc) - timedelta(minutes=minutes_ago))
-        return {"id": "rt-stuck", "status": "routing", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "do it",
+        return {"id": "rt-stuck", "status": "routing", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "do it",
                 "attempt": 1, "attempt_id": "rt-stuck.a1.aaa", "worker_id": "worker-aaaaaaaaaaaa", "worktree": str(self.path),
                 "branch": self.branch, "workspace_ref": "workspace:540", "created_at": when, "launched_at": when,
                 "updated_at": iso(datetime.now(timezone.utc)), **extra}   # updated_at fresh, as a retype leaves it
 
     def test_routing_row_past_the_threshold_with_no_thread_is_flagged_once_and_the_origin_told(self) -> None:
-        self.workspaces = [{"ref": "workspace:540", "id": "w-540", "title": "🛠️ PM OS Maintenance 1"}]
+        self.workspaces = [{"ref": "workspace:540", "id": "w-540", "title": "🛠️ Switchboard Maintenance 1"}]
         write_ledger(self.routing_row(11))
         result = dispatch.flag_stuck_routes(self.CFG)
         self.assertEqual([(s["task_id"], s["status_was"], s["age_minutes"]) for s in result["stuck"]], [("rt-stuck", "routing", 11)])
@@ -3169,7 +3169,7 @@ class StuckRouteTests(HermeticRepo):
 
     def test_queued_row_is_stuck_only_when_nothing_holds_it(self) -> None:
         def queued(**extra):
-            return {"id": "rt-q", "status": "queued", "origin": "launchpad", "workstream": "pm-os-maintenance", "prompt": "later",
+            return {"id": "rt-q", "status": "queued", "origin": "launchpad", "workstream": "switchboard-maintenance", "prompt": "later",
                     "attempt": 1, "attempt_id": "rt-q.a1.aaa",
                     "created_at": iso(datetime.now(timezone.utc) - timedelta(minutes=45)), **extra}
         write_ledger(queued(depends_on=["rt-dep"]), {"id": "rt-dep", "status": "active", "attempt_id": "rt-dep.a1.x"})
@@ -3178,7 +3178,7 @@ class StuckRouteTests(HermeticRepo):
         write_ledger(queued(), active)
         self.assertEqual(dispatch.flag_stuck_routes({**self.CFG, "max_workers": 1})["stuck"], [], "held by the worker cap")
         # A dated launch hold: a row queued for hours behind it is waiting on purpose.
-        dated = {**self.CFG, "launch_holds": [{"workstreams": ["pm-os-maintenance"], "reason": "dated event",
+        dated = {**self.CFG, "launch_holds": [{"workstreams": ["switchboard-maintenance"], "reason": "dated event",
                                                "until": iso(datetime.now(timezone.utc) + timedelta(hours=3))}]}
         write_ledger(queued())
         self.assertEqual(dispatch.flag_stuck_routes(dated)["stuck"], [], "held by a dated launch hold")
@@ -3358,13 +3358,13 @@ class LaunchVerificationTests(HermeticRepo):
                   "Type 'yes' to acknowledge this warning: ")
     AMP = "╭──────────────────────────────────────────╮\n│ >                                        │\n╰──────────────────────────────────────────╯\n Ctrl+O for help"
     ZSH = "Last login: Sun Oct 19 19:44:01 on ttys013\nowner@mac rt-x % "
-    STARSHIP = "\n~/Development/pm-os/.amp/worktrees/rt-000000000048 on task/rt-000000000048\n❯ "
+    STARSHIP = "\n~/Development/switchboard/.amp/worktrees/rt-000000000048 on task/rt-000000000048\n❯ "
 
     def setUp(self) -> None:
         super().setUp()
         # Amp-shaped fixtures (screens, `amp -m` commands): pin the agent knob,
-        # which defaults to claude (pm_os_agent.py).
-        env_pin = patch.dict(os.environ, {"PM_OS_AGENT": "amp"})
+        # which defaults to claude (switchboard_agent.py).
+        env_pin = patch.dict(os.environ, {"SWITCHBOARD_AGENT": "amp"})
         env_pin.start()
         self.addCleanup(env_pin.stop)
         self.sent: list[str] = []
@@ -3379,7 +3379,7 @@ class LaunchVerificationTests(HermeticRepo):
         fake clock advances AMP_VERIFY_POLL_SECONDS per sleep so a 30 s budget
         is a bounded number of polls."""
         self.screens = list(screens)
-        write_ledger({"id": task_id, "status": "queued", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "do it",
+        write_ledger({"id": task_id, "status": "queued", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "do it",
                       "attempt": 1, "attempt_id": f"{task_id}.a1.aaa", "created_at": iso(datetime.now(timezone.utc))})
         real_run = dispatch.run
 
@@ -3418,10 +3418,10 @@ class LaunchVerificationTests(HermeticRepo):
     # --- the prompt names the session the tab is launched with ------------------
 
     def test_claude_launch_prompt_names_the_session_it_launches_with(self) -> None:
-        with patch.dict(os.environ, {"PM_OS_AGENT": "claude"}):
+        with patch.dict(os.environ, {"SWITCHBOARD_AGENT": "claude"}):
             self.launch([self.ZSH])
         session = self.command.split("--session-id ", 1)[1].split()[0]
-        prompt = next(dispatch.LAUNCH_PROMPTS.glob("pm-os-maintenance-rt-cf.a1*")).read_text(encoding="utf-8")
+        prompt = next(dispatch.LAUNCH_PROMPTS.glob("switchboard-maintenance-rt-cf.a1*")).read_text(encoding="utf-8")
         self.assertIn(f"--thread-id {session} ", prompt)
         self.assertIn(f"claude --resume {session}", prompt)
         self.assertNotIn("ampcode.com/threads", prompt)
@@ -3463,7 +3463,7 @@ class LaunchVerificationTests(HermeticRepo):
         echo = "cat /tmp/launch-prompt.md | amp -m ultra"  # the echoed launch command; self.command exists only after launch()
         first = (f"{echo}\n"
                  "ECONNRESET: The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()\n"
-                 "~/Development/pm-os/.amp/worktrees/rt-cf/workstreams/pm-os-maintenance task/rt-cf ")
+                 "~/Development/switchboard/.amp/worktrees/rt-cf/workstreams/switchboard-maintenance task/rt-cf ")
         row = self.launch([first] * 16 + [self.AMP])
         self.assertEqual(self.sent, [self.command, "<Enter>"])
         self.assertEqual((row["launch_retyped"], row["amp_verified"]), (True, True))
@@ -3471,20 +3471,20 @@ class LaunchVerificationTests(HermeticRepo):
 
         self.sent.clear()
         second = ("Couldn't connect to the Amp server. Check your network connection and try again.\n"
-                  "~/Development/pm-os/.amp/worktrees/rt-cf2/workstreams/example-cli-consent-copy task/rt-cf2 ")
+                  "~/Development/switchboard/.amp/worktrees/rt-cf2/workstreams/example-cli-consent-copy task/rt-cf2 ")
         row = self.launch([second], task_id="rt-cf2")
         self.assertEqual(self.sent.count(self.command), len(dispatch.LAUNCH_RETYPE_PAUSES_SECONDS))
         self.assertIn("amp exited: Couldn't connect to the Amp server", row["amp_verify_note"])
         self.assertEqual(row["amp_verified"], False)
 
     def test_this_macs_glyphless_prompt_is_a_shell_but_a_command_echo_is_not(self) -> None:
-        prompt = "~/Development/pm-os/.amp/worktrees/rt-x/workstreams/pm-os-maintenance task/rt-x "
+        prompt = "~/Development/switchboard/.amp/worktrees/rt-x/workstreams/switchboard-maintenance task/rt-x "
         self.assertEqual(dispatch.classify_screen(prompt), "shell")
-        self.assertEqual(dispatch.classify_screen("~/Development/pm-os main "), "shell")
+        self.assertEqual(dispatch.classify_screen("~/Development/switchboard main "), "shell")
         self.assertEqual(dispatch.classify_screen("~ "), "shell", "outside a git checkout __git_ps1 prints nothing")
         self.assertEqual(dispatch.classify_screen(f"{prompt}cat /tmp/p.md | amp -m ultra"), "unknown")
         self.assertEqual(dispatch.classify_screen("Loading 100%"), "unknown")
-        self.assertEqual(dispatch.classify_screen("reading ~/Development/pm-os/notes"), "unknown", "a path mid-sentence is not a prompt")
+        self.assertEqual(dispatch.classify_screen("reading ~/Development/switchboard/notes"), "unknown", "a path mid-sentence is not a prompt")
 
     def test_sweep_retypes_a_stalled_launch_once_per_tick_until_the_cap(self) -> None:
         # The launcher gave up (two retypes); the sweep keeps typing the exact
@@ -3558,18 +3558,18 @@ class LaunchVerificationTests(HermeticRepo):
             self.assertEqual(unreadable["retyped"], [])
             self.assertEqual(unreadable["skipped"][0]["screen"], "cmux unreadable")
             self.assertEqual(created, [])
-            self.workspaces = [{"ref": "workspace:4511", "id": "w-511", "title": "🛠️ PM OS Maintenance 2",
-                                "description": "PM OS worker rt-other"}]
+            self.workspaces = [{"ref": "workspace:4511", "id": "w-511", "title": "🛠️ Switchboard Maintenance 2",
+                                "description": "switchboard worker rt-other"}]
             result = dispatch.retype_stalled_launches()
         self.assertEqual([(r["task_id"], r["workspace_ref"], r["retypes"], r["reopened_from"]) for r in result["retyped"]],
                          [("rt-cf", "workspace:4519", 3, "workspace:4090")])
         self.assertEqual(len(created), 1)
         create = created[0]
         self.assertEqual(create[create.index("--command") + 1], self.command, "the identical command the first tab ran")
-        self.assertEqual(create[create.index("--description") + 1], "PM OS worker rt-cf")
+        self.assertEqual(create[create.index("--description") + 1], "switchboard worker rt-cf")
         self.assertEqual(create[create.index("--name") + 1], row["tab_title"])
         # Same cwd rule as launch(): the workstream folder when the worktree has one, else the worktree root.
-        ws_dir = Path(row["worktree"]) / "workstreams" / "pm-os-maintenance"
+        ws_dir = Path(row["worktree"]) / "workstreams" / "switchboard-maintenance"
         self.assertEqual(create[create.index("--cwd") + 1], str(ws_dir if ws_dir.is_dir() else Path(row["worktree"])))
         row = self.row("rt-cf")
         self.assertEqual((row["status"], row["workspace_ref"], row["tab_reopened_from"], row["launch_retypes"]),
@@ -3577,7 +3577,7 @@ class LaunchVerificationTests(HermeticRepo):
         self.assertIn("reopened as workspace:4519", row["amp_verify_note"])
 
         # The same task already has a tab under another ref: rebind nothing, open nothing.
-        self.workspaces = [{"ref": "workspace:4520", "id": "w-520", "title": row["tab_title"], "description": "PM OS worker rt-cf"}]
+        self.workspaces = [{"ref": "workspace:4520", "id": "w-520", "title": row["tab_title"], "description": "switchboard worker rt-cf"}]
         ledger.locked_mutation(lambda p: ledger.find_task(p, "rt-cf").update(updated_at=aged) or ledger.find_task(p, "rt-cf"))
         with patch.object(dispatch, "run", fake_run), patch.object(dispatch, "read_tab_screen", lambda ref: self.AMP), \
                 redirect_stdout(io.StringIO()):
@@ -3586,7 +3586,7 @@ class LaunchVerificationTests(HermeticRepo):
 
         # No launch prompt on disk: the reopen is refused and reported, not typed blind.
         self.workspaces = [{"ref": "workspace:1", "id": "w-1", "title": "🧭 CoS"}]
-        (dispatch.LAUNCH_PROMPTS / f"pm-os-maintenance-{row['attempt_id']}.md").unlink()
+        (dispatch.LAUNCH_PROMPTS / f"switchboard-maintenance-{row['attempt_id']}.md").unlink()
         ledger.locked_mutation(lambda p: ledger.find_task(p, "rt-cf").update(updated_at=aged) or ledger.find_task(p, "rt-cf"))
         with patch.object(dispatch, "run", fake_run), redirect_stdout(io.StringIO()):
             self.assertEqual(dispatch.retype_stalled_launches()["skipped"], [{"task_id": "rt-cf", "workspace_ref": "workspace:4519", "screen": "tab gone; reopen failed"}])
@@ -3748,7 +3748,7 @@ class ScaffoldCommitTests(HermeticRepo):
         self.assertEqual(created, self.SLUG)
         self.assertEqual(self.dirty_under_workstreams(), [], "scaffold paths must be committed on main, not left dirty")
         head = self._git("log", "-1", "--format=%an %s")
-        self.assertIn("PM OS worker", head)
+        self.assertIn("switchboard worker", head)
         self.assertIn(f"{self.SLUG}: scaffold workstream", head)
         tracked = set(self._git("ls-tree", "-r", "--name-only", "HEAD", "--", "workstreams").splitlines())
         self.assertLessEqual({f"workstreams/{self.SLUG}/CONTEXT.md", f"workstreams/{self.SLUG}/config.yaml",
@@ -3778,15 +3778,15 @@ class ScaffoldCommitTests(HermeticRepo):
     def test_existing_workstream_with_edits_in_flight_is_not_swept(self) -> None:
         # Wrong impl: treating any dirty workstreams/<slug> as a scaffold would commit a
         # human's half-written CONTEXT.md at every launch. Only a folder HEAD does not track counts.
-        folder = self.repo / "workstreams" / "pm-os-maintenance"
+        folder = self.repo / "workstreams" / "switchboard-maintenance"
         folder.mkdir()
         (folder / "CONTEXT.md").write_text("# tracked\n")
-        self._git("add", "--", "workstreams/pm-os-maintenance")
+        self._git("add", "--", "workstreams/switchboard-maintenance")
         self._git("commit", "-q", "-m", "existing workstream")
         (folder / "CONTEXT.md").write_text("# tracked\nhalf-written edit\n")
-        self.assertFalse(dispatch.workstream_untracked("pm-os-maintenance"))
+        self.assertFalse(dispatch.workstream_untracked("switchboard-maintenance"))
         self.assertFalse(dispatch.workstream_untracked("never-existed"))
-        self.assertEqual(self.dirty_under_workstreams(), [" M workstreams/pm-os-maintenance/CONTEXT.md"])
+        self.assertEqual(self.dirty_under_workstreams(), [" M workstreams/switchboard-maintenance/CONTEXT.md"])
 
     def test_foreign_staged_changes_block_the_scaffold_commit(self) -> None:
         # A human's staged edit elsewhere on main must not be swept into the scaffold commit.
@@ -4041,15 +4041,15 @@ class FsmonitorTests(unittest.TestCase):
         # socket is named by the unresolved path while its root is /private/tmp; a
         # daemon whose socket was unlinked reports a relative socket name.
         lsof = "\n".join([
-            "p57990", "fDIR", "tDIR", "n/home/a/pm-os/.amp/worktrees/rt-7e04", "n/home/a/pm-os/.amp/worktrees",
-            "n/home/a/pm-os/.amp", "n/home/a/pm-os", "n/home/a", "n/Users",
-            "n/home/a/pm-os/.git/worktrees/rt-7e04", "n/home/a/pm-os/.git/worktrees", "n/home/a/pm-os/.git",
-            "n/home/a/pm-os", "n/home/a", "n/Users",
-            "tunix", "n->0xfbe2824c5e948f26", "n/home/a/pm-os/.git/worktrees/rt-7e04/fsmonitor--daemon.ipc",
-            "p60038", "tDIR", "n/home/a/pm-os", "n/home/a", "n/Users", "tunix", "n/home/a/pm-os/.git/fsmonitor--daemon.ipc",
-            "p82561", "tDIR", "n/private/tmp/kit-home/pm-os", "n/private/tmp/kit-home", "n/private/tmp", "n/private",
-            "tunix", "n/tmp/kit-home/pm-os/.git/fsmonitor--daemon.ipc",
-            "p21328", "tDIR", "n/private/var/T/kit-real-9v3/home/pm-os", "n/private/var/T/kit-real-9v3/home",
+            "p57990", "fDIR", "tDIR", "n/home/a/switchboard/.amp/worktrees/rt-7e04", "n/home/a/switchboard/.amp/worktrees",
+            "n/home/a/switchboard/.amp", "n/home/a/switchboard", "n/home/a", "n/Users",
+            "n/home/a/switchboard/.git/worktrees/rt-7e04", "n/home/a/switchboard/.git/worktrees", "n/home/a/switchboard/.git",
+            "n/home/a/switchboard", "n/home/a", "n/Users",
+            "tunix", "n->0xfbe2824c5e948f26", "n/home/a/switchboard/.git/worktrees/rt-7e04/fsmonitor--daemon.ipc",
+            "p60038", "tDIR", "n/home/a/switchboard", "n/home/a", "n/Users", "tunix", "n/home/a/switchboard/.git/fsmonitor--daemon.ipc",
+            "p82561", "tDIR", "n/private/tmp/kit-home/switchboard", "n/private/tmp/kit-home", "n/private/tmp", "n/private",
+            "tunix", "n/tmp/kit-home/switchboard/.git/fsmonitor--daemon.ipc",
+            "p21328", "tDIR", "n/private/var/T/kit-real-9v3/home/switchboard", "n/private/var/T/kit-real-9v3/home",
             "n/private/var/T", "tunix", "nfsmonitor--daemon.ipc", ""])
 
         def canned(cmd, **kw):
@@ -4062,10 +4062,10 @@ class FsmonitorTests(unittest.TestCase):
         with patch.object(dispatch, "run", canned):
             table = dispatch.fsmonitor_daemons()
         self.assertEqual(table, {
-            57990: {"root": "/home/a/pm-os/.amp/worktrees/rt-7e04", "gitdir": "/home/a/pm-os/.git/worktrees/rt-7e04"},
-            60038: {"root": "/home/a/pm-os", "gitdir": "/home/a/pm-os/.git"},
-            82561: {"root": "/tmp/kit-home/pm-os", "gitdir": "/tmp/kit-home/pm-os/.git"},
-            21328: {"root": "/private/var/T/kit-real-9v3/home/pm-os", "gitdir": ""},
+            57990: {"root": "/home/a/switchboard/.amp/worktrees/rt-7e04", "gitdir": "/home/a/switchboard/.git/worktrees/rt-7e04"},
+            60038: {"root": "/home/a/switchboard", "gitdir": "/home/a/switchboard/.git"},
+            82561: {"root": "/tmp/kit-home/switchboard", "gitdir": "/tmp/kit-home/switchboard/.git"},
+            21328: {"root": "/private/var/T/kit-real-9v3/home/switchboard", "gitdir": ""},
         })
 
     def test_daemon_lookup_matches_the_checkout_not_its_ancestors(self) -> None:
@@ -4102,7 +4102,7 @@ class FsmonitorTests(unittest.TestCase):
         # `git status` in main runs `git status --porcelain=2` inside a nested repo, and
         # that child can hang on the nested repo's wedged daemon while holding main's
         # .git/index.lock. Wrong impls: pin only the
-        # pm-os config (the nested repo still inherits true); keep recursing into
+        # switchboard config (the nested repo still inherits true); keep recursing into
         # the nested repo (a wedged daemon there still blocks dirty_main_paths).
         nested = self._add_nested_repo()
         effective = lambda path: dispatch.run(["git", "-C", str(path), "config", "core.fsmonitor"]).stdout.strip()  # noqa: E731
@@ -4384,7 +4384,7 @@ class AutoPushGateTests(unittest.TestCase):
     def test_the_command_never_lets_git_prompt_for_credentials(self) -> None:
         # Wrong impl: unattended tick opens Git Credential Manager's window and waits forever.
         seen: dict[str, str | None] = {}
-        with patch.dict(os.environ, {"PM_OS_AUTO_PUSH": "on"}), patch.object(
+        with patch.dict(os.environ, {"SWITCHBOARD_AUTO_PUSH": "on"}), patch.object(
                 dispatch, "auto_push_tick",
                 lambda: seen.update(prompt=os.environ.get("GIT_TERMINAL_PROMPT"), gcm=os.environ.get("GCM_INTERACTIVE")) or {"action": "up-to-date"}), \
                 patch("builtins.print"):
@@ -4392,17 +4392,17 @@ class AutoPushGateTests(unittest.TestCase):
         self.assertEqual(seen, {"prompt": "0", "gcm": "never"})
 
     def test_the_command_is_off_unless_turned_on(self) -> None:
-        # Wrong impl: PM OS stays local, yet a tick still fetches and pushes main.
+        # Wrong impl: switchboard stays local, yet a tick still fetches and pushes main.
         called: list[bool] = []
-        env = {k: v for k, v in os.environ.items() if k != "PM_OS_AUTO_PUSH"}
+        env = {k: v for k, v in os.environ.items() if k != "SWITCHBOARD_AUTO_PUSH"}
         for value in (None, "off", "1", "yes"):
             if value is not None:
-                env["PM_OS_AUTO_PUSH"] = value
+                env["SWITCHBOARD_AUTO_PUSH"] = value
             with patch.dict(os.environ, env, clear=True), patch.object(
                     dispatch, "auto_push_tick", lambda: called.append(True) or {"action": "pushed"}),                     patch("builtins.print") as printed:
                 self.assertEqual(dispatch.command_auto_push(argparse.Namespace()), 0)
             self.assertIn('"disabled"', printed.call_args[0][0])
-        self.assertEqual(called, [], "auto-push ran its gate while PM_OS_AUTO_PUSH was not on")
+        self.assertEqual(called, [], "auto-push ran its gate while SWITCHBOARD_AUTO_PUSH was not on")
 
     def test_the_real_repo_tracks_no_sensitive_path(self) -> None:
         # The key assertion: people/, notes/sensitive, notes/chrome-tabs,
@@ -4432,7 +4432,7 @@ class WorkerCapTests(unittest.TestCase):
     or absent is unlimited at both call sites; a positive cap still queues."""
 
     def setUp(self) -> None:
-        self.live = [{"id": f"rt-live{i}", "status": "active", "origin": "cos", "workstream": "pm-os-maintenance",
+        self.live = [{"id": f"rt-live{i}", "status": "active", "origin": "cos", "workstream": "switchboard-maintenance",
                       "prompt": "busy", "attempt": 1, "attempt_id": f"rt-live{i}.a1.aaa", "worker_id": "worker-aaaaaaaaaaaa",
                       "thread_id": f"T-live{i}", "created_at": iso(datetime.now(timezone.utc) - timedelta(minutes=i + 1)),
                       "heartbeat_at": ledger.now_iso(), "updated_at": ledger.now_iso()} for i in range(12)]
@@ -4481,14 +4481,14 @@ class WorkerCapTests(unittest.TestCase):
         self.assertIn("12 workers are already running (dispatch.max_workers 6)", result["reason"])
         # The oldest by created_at, not the first in the file; named by its workstream
         # with the id after it (names, never bare numbers).
-        self.assertIn(f"waiting on {dispatch.owner_title('pm-os-maintenance')} (rt-live11)", result["reason"])
+        self.assertIn(f"waiting on {dispatch.owner_title('switchboard-maintenance')} (rt-live11)", result["reason"])
         self.assertNotIn("waiting on rt-live11", result["reason"])
-        self.assertTrue(result["message"].startswith(f"[{dispatch.owner_title('pm-os-maintenance')} · rt-new]"), result["message"])
+        self.assertTrue(result["message"].startswith(f"[{dispatch.owner_title('switchboard-maintenance')} · rt-new]"), result["message"])
         self.assertEqual(self.launched, [])
         self.assertEqual(ledger.find_task(ledger.load_payload(), "rt-new")["status"], "queued")
 
     def test_release_holds_on_capacity_only_with_a_positive_cap(self) -> None:
-        queued = {"id": "rt-q", "status": "queued", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "later",
+        queued = {"id": "rt-q", "status": "queued", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "later",
                   "attempt": 1, "attempt_id": "rt-q.a1.aaa", "created_at": ledger.now_iso(), "updated_at": ledger.now_iso()}
         write_ledger(*self.live, queued)
         out = io.StringIO()
@@ -4505,7 +4505,7 @@ class WorkerCapTests(unittest.TestCase):
 
 class QueueOrderTests(unittest.TestCase):
     """Queue fairness: a brand-new dispatch must not take a freed slot while rows
-    queued on capacity for hours keep waiting. A free slot goes to the eligible queued row that ranks first; owner asks rank before pm-os-maintenance rows until a maintenance row has waited
+    queued on capacity for hours keep waiting. A free slot goes to the eligible queued row that ranks first; owner asks rank before switchboard-maintenance rows until a maintenance row has waited
     queue_maintenance_aging_minutes."""
 
     CAP = {**dispatch.DEFAULTS, "max_workers": 3}
@@ -4513,7 +4513,7 @@ class QueueOrderTests(unittest.TestCase):
     def setUp(self) -> None:
         self.at = datetime.now(timezone.utc)
         # Two live workers under a cap of 3: one slot is free.
-        self.live = [{"id": f"rt-live{i}", "status": "active", "origin": "cos", "workstream": "pm-os-maintenance",
+        self.live = [{"id": f"rt-live{i}", "status": "active", "origin": "cos", "workstream": "switchboard-maintenance",
                       "prompt": "busy", "attempt": 1, "attempt_id": f"rt-live{i}.a1.aaa", "worker_id": "worker-aaaaaaaaaaaa",
                       "thread_id": f"T-live{i}", "created_at": iso(self.at - timedelta(hours=4)),
                       "heartbeat_at": ledger.now_iso(), "updated_at": ledger.now_iso()} for i in range(2)]
@@ -4540,7 +4540,7 @@ class QueueOrderTests(unittest.TestCase):
             return row
         return ledger.locked_mutation(bind)
 
-    def queued(self, task_id: str, minutes_ago: int, workstream: str = "pm-os-maintenance", **extra) -> dict:
+    def queued(self, task_id: str, minutes_ago: int, workstream: str = "switchboard-maintenance", **extra) -> dict:
         return {"id": task_id, "status": "queued", "origin": "cos", "workstream": workstream, "prompt": "later",
                 "attempt": 1, "attempt_id": f"{task_id}.a1.aaa", "summary": "waiting on capacity",
                 "created_at": iso(self.at - timedelta(minutes=minutes_ago)), "updated_at": ledger.now_iso(), **extra}
@@ -4581,7 +4581,7 @@ class QueueOrderTests(unittest.TestCase):
     def test_continuation_owned_and_quiet_window_rows_do_not_count_as_ahead(self) -> None:
         heir = {**self.live[1], "continuation_of": "rt-owned", "created_at": iso(self.at - timedelta(minutes=100))}
         write_ledger(self.live[0], heir, self.queued("rt-owned", 173), self.queued("rt-quiet-held", 150))
-        fresh = {"id": "rt-fresh", "workstream": "pm-os-maintenance", "created_at": iso(self.at)}
+        fresh = {"id": "rt-fresh", "workstream": "switchboard-maintenance", "created_at": iso(self.at)}
         with patch.object(dispatch, "usage_limit_stamp", return_value={"quiet_waiting": ["rt-history-rewrite"]}):
             self.assertEqual(dispatch.queued_ahead(fresh, ledger.load_payload(), self.CAP), [])
         # Without the quiet window the plain queued row is ahead; the continuation-owned one never is.
@@ -4628,19 +4628,19 @@ class QueueOrderTests(unittest.TestCase):
     def test_queue_rank_classes(self) -> None:
         cfg = dispatch.DEFAULTS
         owner = {"workstream": "reading-list", "created_at": iso(self.at)}
-        young_fix = {"workstream": "pm-os-maintenance", "created_at": iso(self.at - timedelta(minutes=29))}
-        aged_fix = {"workstream": "pm-os-maintenance", "created_at": iso(self.at - timedelta(minutes=30))}
+        young_fix = {"workstream": "switchboard-maintenance", "created_at": iso(self.at - timedelta(minutes=29))}
+        aged_fix = {"workstream": "switchboard-maintenance", "created_at": iso(self.at - timedelta(minutes=30))}
         self.assertEqual(dispatch.queue_rank(owner, cfg, self.at)[0], 0)
         self.assertEqual(dispatch.queue_rank(young_fix, cfg, self.at)[0], 1)
         self.assertEqual(dispatch.queue_rank(aged_fix, cfg, self.at)[0], 0)
         self.assertLess(dispatch.queue_rank(aged_fix, cfg, self.at), dispatch.queue_rank(owner, cfg, self.at))
         never_ages = {**cfg, "queue_maintenance_aging_minutes": 0}
         self.assertEqual(dispatch.queue_rank(aged_fix, never_ages, self.at)[0], 1)
-        self.assertEqual(dispatch.queue_rank({"workstream": "pm-os-maintenance"}, cfg, self.at), (1, float("inf")))
+        self.assertEqual(dispatch.queue_rank({"workstream": "switchboard-maintenance"}, cfg, self.at), (1, float("inf")))
 
 
 class DatedLaunchHoldTests(unittest.TestCase):
-    """Dated launch holds (for example: hold new pm-os-maintenance launches until a
+    """Dated launch holds (for example: hold new switchboard-maintenance launches until a
     set time so memory stays free for a reviewer demo). A hold names workstreams or
     task ids and an absolute `until`; it lifts by the clock alone, so it can never get stuck."""
 
@@ -4650,7 +4650,7 @@ class DatedLaunchHoldTests(unittest.TestCase):
     dispatch_fresh, release, status = QueueOrderTests.dispatch_fresh, QueueOrderTests.release, QueueOrderTests.status
 
     def held_cfg(self, minutes_ahead: int = 60, **hold) -> dict:
-        entry = {"workstreams": ["pm-os-maintenance"], "until": iso(self.at + timedelta(minutes=minutes_ahead)),
+        entry = {"workstreams": ["switchboard-maintenance"], "until": iso(self.at + timedelta(minutes=minutes_ahead)),
                  "reason": "memory stays free for the reviewer demo", **hold}
         return {**self.CAP, "launch_holds": [entry]}
 
@@ -4698,8 +4698,8 @@ class DatedLaunchHoldTests(unittest.TestCase):
     def test_typos_fail_open(self) -> None:
         row = self.queued("rt-held-fix", 5)
         far = self.held_cfg(minutes_ahead=60 * 25)     # past launch_hold_max_hours (24)
-        naive = {**self.CAP, "launch_holds": [{"workstreams": ["pm-os-maintenance"], "until": "2026-11-13T14:00:00"}]}
-        junk = {**self.CAP, "launch_holds": [{"workstreams": ["pm-os-maintenance"], "until": "two pm"}, "not a dict"]}
+        naive = {**self.CAP, "launch_holds": [{"workstreams": ["switchboard-maintenance"], "until": "2026-11-13T14:00:00"}]}
+        junk = {**self.CAP, "launch_holds": [{"workstreams": ["switchboard-maintenance"], "until": "two pm"}, "not a dict"]}
         for cfg in (far, naive, junk, {**self.CAP, "launch_holds": None}, dispatch.DEFAULTS):
             self.assertIsNone(dispatch.launch_hold(row, cfg), cfg.get("launch_holds"))
 
@@ -4734,7 +4734,7 @@ class CapacityReportTests(unittest.TestCase):
         self.digest: list[tuple[str, str]] = []
         self.memory = {"free_ram_gb": 20.0, "compressor_gb": 15.2, "swap_used_gb": 1.0, "swap_total_gb": 17.0}
         self.real_memory_snapshot = dispatch.memory_snapshot
-        write_ledger({"id": "rt-w", "status": "active", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "busy",
+        write_ledger({"id": "rt-w", "status": "active", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "busy",
                       "attempt": 1, "attempt_id": "rt-w.a1.aaa", "worker_id": "worker-aaaaaaaaaaaa", "thread_id": "T-w",
                       "created_at": ledger.now_iso(), "heartbeat_at": ledger.now_iso(), "updated_at": ledger.now_iso()})
         for p in [patch.object(dispatch, "CAPACITY_STAMP", root / "capacity.json"),
@@ -5120,7 +5120,7 @@ class SteerTargetTests(unittest.TestCase):
         self.assertEqual((code, result["status"], result["delivered"]), (0, "delivered", True))
         self.assertEqual(len(self.messages), 1)
         target, text, sender = self.messages[0]
-        self.assertEqual((target, sender), ("workspace:612", "PM OS steer (cos)"))
+        self.assertEqual((target, sender), ("workspace:612", "switchboard steer (cos)"))
         self.assertIn("Use the new owner_tabs helper.", text)
         self.assertIn(self.PARENT, text)
         self.assertEqual(len(ledger.load_payload()["tasks"]), before, "a delivered steer writes no new row")
@@ -5350,7 +5350,7 @@ class QueuedSteerDeliveryTests(unittest.TestCase):
         # Wrong impl: the worker's start never triggers delivery (steers wait for the 10-minute sweep),
         # or every heartbeat of every worker spawns a process.
         spawn = ledger.spawn_steer_delivery
-        with patch.dict(os.environ, {"PM_OS_NO_STEER_SPAWN": ""}), patch.object(ledger.subprocess, "Popen") as popen:
+        with patch.dict(os.environ, {"SWITCHBOARD_NO_STEER_SPAWN": ""}), patch.object(ledger.subprocess, "Popen") as popen:
             self.assertTrue(spawn(self.row("active"), {}))
             self.assertIn("deliver-steers", popen.call_args.args[0])
             self.assertIn(self.TID, popen.call_args.args[0])
@@ -5386,7 +5386,7 @@ class AsyncLaunchTests(unittest.TestCase):
         env = patch.dict(os.environ)
         env.start()
         self.addCleanup(env.stop)
-        os.environ.pop("PM_OS_DISPATCH_SYNC", None)
+        os.environ.pop("SWITCHBOARD_DISPATCH_SYNC", None)
         write_ledger()
         self.launch = patch.object(dispatch, "launch", side_effect=self.fake_launch)
         self.launch_mock = self.launch.start()
@@ -5465,7 +5465,7 @@ class AsyncLaunchTests(unittest.TestCase):
         code, result = run_dispatch(sync=True)
         self.assertEqual((code, result["status"], result["workspace_ref"]), (0, "routed", "workspace:4242"), result)
         self.assertNotIn("launch", result)
-        os.environ["PM_OS_DISPATCH_SYNC"] = "1"
+        os.environ["SWITCHBOARD_DISPATCH_SYNC"] = "1"
         code, result = run_dispatch()
         self.assertEqual((code, result["workspace_ref"]), (0, "workspace:4242"), result)
         self.assertEqual(launched, [])
@@ -5535,10 +5535,10 @@ class AsyncLaunchTests(unittest.TestCase):
         # Wrong impl: a second launcher (manual rerun, sweep) launches a row that already has a
         # worker, or a queued/terminal row, creating a duplicate worktree and tab.
         write_ledger({"id": "rt-00000000004b", "status": "routing", "attempt": 1, "attempt_id": "rt-00000000004b.a1.a168e4",
-                      "workstream": "pm-os-maintenance", "origin": "cos", "prompt": "x", "worker_id": "worker-111111111111",
+                      "workstream": "switchboard-maintenance", "origin": "cos", "prompt": "x", "worker_id": "worker-111111111111",
                       "created_at": ledger.now_iso(), "updated_at": ledger.now_iso()},
                      {"id": "rt-00000000004c", "status": "queued", "attempt": 1, "attempt_id": "rt-00000000004c.a1.606bee",
-                      "workstream": "pm-os-maintenance", "origin": "cos", "prompt": "y",
+                      "workstream": "switchboard-maintenance", "origin": "cos", "prompt": "y",
                       "created_at": ledger.now_iso(), "updated_at": ledger.now_iso()})
         for task_id in ("rt-00000000004b", "rt-00000000004c"):
             with self.subTest(task_id=task_id):
@@ -5565,8 +5565,8 @@ class OwnerTabVerifyCommandTests(HermeticRepo):
     def setUp(self) -> None:
         super().setUp()
         # Amp-shaped fixtures (screens, `amp -m` commands): pin the agent knob,
-        # which defaults to claude (pm_os_agent.py).
-        env_pin = patch.dict(os.environ, {"PM_OS_AGENT": "amp"})
+        # which defaults to claude (switchboard_agent.py).
+        env_pin = patch.dict(os.environ, {"SWITCHBOARD_AGENT": "amp"})
         env_pin.start()
         self.addCleanup(env_pin.stop)
         self.sent: list[str] = []
@@ -5673,7 +5673,7 @@ class ConflictGraceTests(HermeticRepo):
                   patch.object(dispatch, "now", lambda: self.clock or datetime.now(timezone.utc))]:
             p.start()
             self.addCleanup(p.stop)
-        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "pm-os-maintenance · worker-aaaaaaaaaaaa"}]
+        self.workspaces = [{"ref": "workspace:40", "id": "w-40", "title": "switchboard-maintenance · worker-aaaaaaaaaaaa"}]
         self.agents["T-dead"] = {"state": "Idle", "state_ts": datetime.now(timezone.utc).timestamp(),
                                  "workspace_id": "w-40", "title": "worker"}
         fresh = iso(datetime.now(timezone.utc) - timedelta(minutes=2))
@@ -5817,7 +5817,7 @@ class ConflictGraceTests(HermeticRepo):
 
 
 class ClaudeAgentLaunchTests(unittest.TestCase):
-    """PM_OS_AGENT=claude: the worker launchers start Claude Code
+    """SWITCHBOARD_AGENT=claude: the worker launchers start Claude Code
     instead of Amp. Wrong impls: the Amp command string changes shape when the
     variable is unset or `amp`; a Claude row misses --dangerously-skip-permissions
     (the worker would stall on its first tool prompt), the mapped model/effort, or
@@ -5825,7 +5825,7 @@ class ClaudeAgentLaunchTests(unittest.TestCase):
     being ready; the transcript readers crash on a session uuid or return
     something other than the Amp readers' None when the file does not exist."""
 
-    ROW = {"workstream": "pm-os-maintenance", "attempt_id": "a1", "worker_id": "w1", "id": "rt-claude", "worktree": "/tmp/wt",
+    ROW = {"workstream": "switchboard-maintenance", "attempt_id": "a1", "worker_id": "w1", "id": "rt-claude", "worktree": "/tmp/wt",
            "mode": "ultra"}
     SID = "0fd3afb0-1234-4abc-8def-0123456789ab"
     CLAUDE_READY = ("────────────────────────────────────────────\n"
@@ -5841,12 +5841,12 @@ class ClaudeAgentLaunchTests(unittest.TestCase):
         prompt_text = prompt.as_posix() if os.name == "nt" else str(prompt)
         worktree = Path(str(row['worktree'])).as_posix() if os.name == "nt" else row['worktree']
         worktree = shlex.quote(str(worktree))
-        env = (f"PM_OS_WORKSTREAM_SLUG={row['workstream']} PM_OS_WORKER_ID={row['worker_id']} PM_OS_WORKER_TASK_ID={row['id']} "
-               f"PM_OS_WORKER_ATTEMPT_ID={row['attempt_id']} PM_OS_WORKTREE={worktree} PM_OS_AGENT_MODE={row['mode']}")
+        env = (f"SWITCHBOARD_WORKSTREAM_SLUG={row['workstream']} SWITCHBOARD_WORKER_ID={row['worker_id']} SWITCHBOARD_WORKER_TASK_ID={row['id']} "
+               f"SWITCHBOARD_WORKER_ATTEMPT_ID={row['attempt_id']} SWITCHBOARD_WORKTREE={worktree} SWITCHBOARD_AGENT_MODE={row['mode']}")
         return f"cat {shlex.quote(prompt_text)} | {env} amp -m {row['mode']}"
 
     def test_agent_kind_precedence(self) -> None:
-        """PM_OS_AGENT env, then router.yaml
+        """SWITCHBOARD_AGENT env, then router.yaml
         `agent:`, then claude. Wrong impls: the old amp default; config ignored;
         env not winning over config; an unrecognised env value forcing amp."""
         with tempfile.TemporaryDirectory() as tmp:
@@ -5858,19 +5858,19 @@ class ClaudeAgentLaunchTests(unittest.TestCase):
                      (None, Path(tmp) / "missing.yaml", "claude"), ("claude", amp_cfg, "claude"),
                      (" AMP ", claude_cfg, "amp"), ("", amp_cfg, "amp"), ("orb", amp_cfg, "amp"), ("orb", none_cfg, "claude")]
             for value, cfg, expected in cases:
-                env = {"ROUTER_CONFIG": str(cfg)} | ({} if value is None else {"PM_OS_AGENT": value})
+                env = {"ROUTER_CONFIG": str(cfg)} | ({} if value is None else {"SWITCHBOARD_AGENT": value})
                 with patch.dict(os.environ, env, clear=False):
                     if value is None:
-                        os.environ.pop("PM_OS_AGENT", None)
-                    self.assertEqual(dispatch.agent_kind(), expected, f"PM_OS_AGENT={value!r} config={cfg.name}")
+                        os.environ.pop("SWITCHBOARD_AGENT", None)
+                    self.assertEqual(dispatch.agent_kind(), expected, f"SWITCHBOARD_AGENT={value!r} config={cfg.name}")
 
     def test_sweep_classifies_by_the_row_agent(self) -> None:
         """A row keeps the agent it launched with: flipping the knob mid-launch
         never reads an Amp tab as a stalled Claude tab or the reverse."""
-        with patch.dict(os.environ, {"PM_OS_AGENT": "claude"}):
+        with patch.dict(os.environ, {"SWITCHBOARD_AGENT": "claude"}):
             self.assertEqual(dispatch.classify_screen(LaunchVerificationTests.AMP, "amp"), "amp")
             self.assertEqual(dispatch.classify_screen(self.CLAUDE_READY, "amp"), "unknown")
-        with patch.dict(os.environ, {"PM_OS_AGENT": "amp"}):
+        with patch.dict(os.environ, {"SWITCHBOARD_AGENT": "amp"}):
             self.assertEqual(dispatch.classify_screen(self.CLAUDE_READY, "claude"), "amp")
 
     def test_mode_table(self) -> None:
@@ -5884,7 +5884,7 @@ class ClaudeAgentLaunchTests(unittest.TestCase):
 
     def test_amp_launch_command_is_unchanged(self) -> None:
         for row in (dict(self.ROW), {**self.ROW, "agent": "amp"}):
-            with patch.dict(os.environ, {"PM_OS_AGENT": "claude"}):
+            with patch.dict(os.environ, {"SWITCHBOARD_AGENT": "claude"}):
                 # launch() stamps the agent on the row; the builder never consults the
                 # environment, so a retype of an Amp row stays Amp whatever the env says.
                 self.assertEqual(dispatch.launch_command_for(row), self.amp_command(row))
@@ -5894,11 +5894,11 @@ class ClaudeAgentLaunchTests(unittest.TestCase):
     def test_claude_launch_command(self) -> None:
         row = {**self.ROW, "agent": "claude", "session_id": self.SID}
         command = dispatch.launch_command_for(row)
-        prompt = dispatch.LAUNCH_PROMPTS / "pm-os-maintenance-a1.md"
-        self.assertTrue(command.startswith("PM_OS_WORKSTREAM_SLUG=pm-os-maintenance PM_OS_WORKER_ID=w1 "), command)
-        self.assertIn(" PM_OS_AGENT_MODE=ultra claude --dangerously-skip-permissions --no-chrome --model opus --effort high ", command)
+        prompt = dispatch.LAUNCH_PROMPTS / "switchboard-maintenance-a1.md"
+        self.assertTrue(command.startswith("SWITCHBOARD_WORKSTREAM_SLUG=switchboard-maintenance SWITCHBOARD_WORKER_ID=w1 "), command)
+        self.assertIn(" SWITCHBOARD_AGENT_MODE=ultra claude --dangerously-skip-permissions --no-chrome --model opus --effort high ", command)
         self.assertIn(f" --session-id {self.SID} ", command)
-        self.assertIn(f" PM_OS_WORKER_SESSION_ID={self.SID} ", command, "task-liveness fences the env ack to this session")
+        self.assertIn(f" SWITCHBOARD_WORKER_SESSION_ID={self.SID} ", command, "task-liveness fences the env ack to this session")
         if os.name == "nt":   # the inline prompt would exceed the Windows command-line limit
             self.assertTrue(command.endswith(shlex.quote(f"Read and follow all instructions in {prompt.as_posix()}")), command)
         else:
@@ -5907,20 +5907,20 @@ class ClaudeAgentLaunchTests(unittest.TestCase):
         self.assertNotIn("| ", command, "stdin would put Claude into -p print mode")
         for mode, flags in [("high", "--model opus --effort high"), ("medium", "--model sonnet --effort medium"),
                             ("low", "--model sonnet --effort low")]:
-            self.assertIn(f" PM_OS_AGENT_MODE={mode} claude --dangerously-skip-permissions --no-chrome {flags} ",
+            self.assertIn(f" SWITCHBOARD_AGENT_MODE={mode} claude --dangerously-skip-permissions --no-chrome {flags} ",
                           dispatch.launch_command_for({**row, "mode": mode}))
         self.assertNotIn("--session-id", dispatch.launch_command_for({**row, "session_id": ""}))
-        self.assertNotIn("PM_OS_WORKER_SESSION_ID", dispatch.launch_command_for({**row, "session_id": ""}))
+        self.assertNotIn("SWITCHBOARD_WORKER_SESSION_ID", dispatch.launch_command_for({**row, "session_id": ""}))
 
     def test_classify_screen_by_agent(self) -> None:
         amp_screen = LaunchVerificationTests.AMP
-        with patch.dict(os.environ, {"PM_OS_AGENT": "claude"}):
+        with patch.dict(os.environ, {"SWITCHBOARD_AGENT": "claude"}):
             self.assertEqual(dispatch.classify_screen(self.CLAUDE_READY), "amp", "the shared label means 'agent TUI up'")
             self.assertEqual(dispatch.classify_screen("  ? for shortcuts"), "amp")
             self.assertEqual(dispatch.classify_screen(self.CLAUDE_DIALOG), "unknown", "a startup dialog is never typed into")
             self.assertEqual(dispatch.classify_screen(LaunchVerificationTests.STARSHIP), "shell", "a bare ❯ is a shell prompt")
             self.assertEqual(dispatch.classify_screen(amp_screen), "unknown", "an Amp box is not a ready Claude")
-        with patch.dict(os.environ, {"PM_OS_AGENT": "amp"}):
+        with patch.dict(os.environ, {"SWITCHBOARD_AGENT": "amp"}):
             self.assertEqual(dispatch.classify_screen(amp_screen), "amp")
             self.assertEqual(dispatch.classify_screen(self.CLAUDE_READY), "unknown")
 
@@ -5971,12 +5971,12 @@ class ClaudeAgentLaunchTests(unittest.TestCase):
             with patch.dict(os.environ, {"WORKSTREAM_THREAD_BINDINGS_FILE": str(bindings)}), \
                     patch.object(dispatch, "worker_tab", return_value={"id": "42", "ref": "workspace:42"}), \
                     patch.object(dispatch, "log") as log:
-                row = dispatch.record_claude_worker_binding("rt-claude", "pm-os-maintenance", self.SID, "workspace:42")
+                row = dispatch.record_claude_worker_binding("rt-claude", "switchboard-maintenance", self.SID, "workspace:42")
                 self.assertEqual((row["thread_id"], row["agent"], row["role"], row["workspace_id"]),
                                  (self.SID, "claude", "worker", "42"))
                 self.assertEqual(row["evidence"]["task_id"], "rt-claude")
                 from workstream_thread_bindings import binding_provenance
-                self.assertEqual(binding_provenance(dispatch.REPO_ROOT, self.SID, "pm-os-maintenance"), "verified")
+                self.assertEqual(binding_provenance(dispatch.REPO_ROOT, self.SID, "switchboard-maintenance"), "verified")
                 self.assertEqual(binding_provenance(dispatch.REPO_ROOT, self.SID, "other-slug"), "unverified")
                 log.assert_not_called()
             with patch.dict(os.environ, {"WORKSTREAM_THREAD_BINDINGS_FILE": str(bindings)}), \
@@ -5984,7 +5984,7 @@ class ClaudeAgentLaunchTests(unittest.TestCase):
                     patch.object(dispatch, "cmux_workspaces", return_value=[]), \
                     patch.object(dispatch, "BINDING_LOOKUP_PAUSES", (0, 0)), \
                     patch.object(dispatch, "log") as log:
-                self.assertIsNone(dispatch.record_claude_worker_binding("rt-claude", "pm-os-maintenance", self.SID, "workspace:42"))
+                self.assertIsNone(dispatch.record_claude_worker_binding("rt-claude", "switchboard-maintenance", self.SID, "workspace:42"))
                 self.assertIn("not recorded", log.call_args[0][0])
                 self.assertIn("cmux listed 0 tabs", log.call_args[0][0])
 
@@ -6000,7 +6000,7 @@ class ClaudeAgentLaunchTests(unittest.TestCase):
                     patch.object(dispatch, "cmux_workspaces", side_effect=lambda *a, **k: lists.pop(0) if lists else []), \
                     patch.object(dispatch, "BINDING_LOOKUP_PAUSES", (0, 0, 0)), \
                     patch.object(dispatch, "log") as log:
-                row = dispatch.record_claude_worker_binding("rt-claude", "pm-os-maintenance", self.SID, "workspace:42")
+                row = dispatch.record_claude_worker_binding("rt-claude", "switchboard-maintenance", self.SID, "workspace:42")
                 self.assertEqual(row["workspace_id"], "TAB-42")
                 log.assert_not_called()
 
@@ -6016,13 +6016,13 @@ class DeferredScaffoldTests(unittest.TestCase):
         env = patch.dict(os.environ)
         env.start()
         self.addCleanup(env.stop)
-        os.environ.pop("PM_OS_DISPATCH_SYNC", None)
+        os.environ.pop("SWITCHBOARD_DISPATCH_SYNC", None)
         write_ledger()
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.repo = Path(self.tmp.name)
-        (self.repo / "workstreams" / "pm-os-maintenance").mkdir(parents=True)
-        (self.repo / "workstreams" / "pm-os-maintenance" / "CONTEXT.md").write_text("# PM OS Maintenance\n")
+        (self.repo / "workstreams" / "switchboard-maintenance").mkdir(parents=True)
+        (self.repo / "workstreams" / "switchboard-maintenance" / "CONTEXT.md").write_text("# Switchboard Maintenance\n")
         (self.repo / "workstreams" / "README.md").write_text("# Workstreams\n")
         self.calls: list[list[str]] = []
         real_run = dispatch.run
@@ -6052,7 +6052,7 @@ class DeferredScaffoldTests(unittest.TestCase):
             return argparse.Namespace(stdout=json.dumps({"slug": slug, "created": True, "name_quality": "name"}),
                                       stderr="", returncode=0)
         if len(cmd) > 1 and cmd[1].endswith("router-context-pack.py"):
-            pack = {"candidate_owners": [{"slug": "pm-os-maintenance", "score": 5, "evidence": ["token overlap"]}]}
+            pack = {"candidate_owners": [{"slug": "switchboard-maintenance", "score": 5, "evidence": ["token overlap"]}]}
             return argparse.Namespace(stdout=json.dumps(pack), stderr="", returncode=0)
         if cmd[0] == "bash":   # agent_mode / review_rule source cmux-helpers.sh
             return argparse.Namespace(stdout="ultra\n", stderr="", returncode=0)
@@ -6158,7 +6158,7 @@ class DeferredLinkedTitleTests(DeferredScaffoldTests):
             self.calls.append(cmd)
             owners = ([{"slug": self.titled_owner, "score": 335.6,
                         "evidence": ['source title "Acme Roadmap" names this workstream (acme)']}]
-                      if self.titled_owner else [{"slug": "pm-os-maintenance", "score": 5, "evidence": ["token overlap"]}])
+                      if self.titled_owner else [{"slug": "switchboard-maintenance", "score": 5, "evidence": ["token overlap"]}])
             return argparse.Namespace(stdout=json.dumps({"candidate_owners": owners}), stderr="", returncode=0)
         return super().fake_run(real_run, cmd, **kw)
 
@@ -6599,7 +6599,7 @@ class WmuxLaunchSubmitTests(HermeticRepo):
 
     def setUp(self) -> None:
         super().setUp()
-        env_pin = patch.dict(os.environ, {"PM_OS_AGENT": "claude"})
+        env_pin = patch.dict(os.environ, {"SWITCHBOARD_AGENT": "claude"})
         env_pin.start()
         self.addCleanup(env_pin.stop)
         self.sent: list[str] = []
@@ -6638,7 +6638,7 @@ class WmuxLaunchSubmitTests(HermeticRepo):
 
     def launch(self, states: list[dict], task_id: str = "rt-wm") -> dict:
         self.states = list(states)
-        write_ledger({"id": task_id, "status": "queued", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "do it",
+        write_ledger({"id": task_id, "status": "queued", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "do it",
                       "attempt": 1, "attempt_id": f"{task_id}.a1.aaa", "created_at": iso(datetime.now(timezone.utc))})
         with patch.object(dispatch, "run", self.fake_run(dispatch.run)), patch.object(dispatch.time, "sleep", self.sleep), \
                 patch.object(dispatch.time, "monotonic", lambda: self.clock), patch.object(dispatch, "on_wmux", lambda: True), \
@@ -6648,7 +6648,7 @@ class WmuxLaunchSubmitTests(HermeticRepo):
 
     def test_classify_reads_the_prompt_log_and_the_claude_session(self) -> None:
         self.assertEqual(dispatch.classify_wmux_launch(self.state(), "rt-a", "claude"), "typed")
-        self.assertEqual(dispatch.classify_wmux_launch(self.state(shell=["X=1 PM_OS_WORKER_TASK_ID=rt-a claude"]), "rt-a", "claude"),
+        self.assertEqual(dispatch.classify_wmux_launch(self.state(shell=["X=1 SWITCHBOARD_WORKER_TASK_ID=rt-a claude"]), "rt-a", "claude"),
                          "submitted")
         self.assertEqual(dispatch.classify_wmux_launch(self.state(provider="claude"), "rt-a", "claude"), "amp")
         self.assertEqual(dispatch.classify_wmux_launch(self.state(agent_prompts=1), "rt-a", "claude"), "amp")
@@ -6661,7 +6661,7 @@ class WmuxLaunchSubmitTests(HermeticRepo):
 
     def test_lost_enter_is_pressed_again_until_the_agent_is_up(self) -> None:
         # Typed until an Enter lands, then the shell has the line, then Claude is up.
-        typed, accepted, up = self.state(), self.state(shell=["PM_OS_WORKER_TASK_ID=rt-wm"]), self.state(provider="claude")
+        typed, accepted, up = self.state(), self.state(shell=["SWITCHBOARD_WORKER_TASK_ID=rt-wm"]), self.state(provider="claude")
         reads_after_enter: list[int] = []
 
         def source() -> dict:
@@ -6686,13 +6686,13 @@ class WmuxLaunchSubmitTests(HermeticRepo):
         self.assertIn("never accepted", row["amp_verify_note"])
 
     def test_an_accepted_line_is_never_pressed_or_retyped(self) -> None:
-        row = self.launch([self.state(shell=["PM_OS_WORKER_TASK_ID=rt-wm claude"])])
+        row = self.launch([self.state(shell=["SWITCHBOARD_WORKER_TASK_ID=rt-wm claude"])])
         self.assertEqual(self.sent, [])
         self.assertEqual(row["amp_verified"], "unknown")
         self.assertIn("accepted by the shell", row["amp_verify_note"])
 
     def test_sweep_presses_enter_on_a_typed_not_submitted_tab_then_retypes(self) -> None:
-        self.launch([self.state(shell=["PM_OS_WORKER_TASK_ID=rt-wm"])])
+        self.launch([self.state(shell=["SWITCHBOARD_WORKER_TASK_ID=rt-wm"])])
         self.sent.clear()
         aged = iso(datetime.now(timezone.utc) - dispatch.SWEEP_RETYPE_MIN_AGE - timedelta(seconds=1))
         self.states = [self.state()]
@@ -6723,13 +6723,13 @@ class VanishedTabTests(HermeticRepo):
     row closes another worker's live tab. Wrong impls: trust a title; trust a ref alone; reuse a tab list read before a slow commit."""
 
     def finished_row(self, **extra) -> dict:
-        return {"id": "rt-old", "status": "cancelled", "origin": "cos", "workstream": "pm-os-maintenance", "attempt": 1,
-                "attempt_id": "rt-old.a1.aaa", "worker_id": "worker-bbbbbbbbbbbb", "tab_title": "📊 PM OS Maintenance 2",
+        return {"id": "rt-old", "status": "cancelled", "origin": "cos", "workstream": "switchboard-maintenance", "attempt": 1,
+                "attempt_id": "rt-old.a1.aaa", "worker_id": "worker-bbbbbbbbbbbb", "tab_title": "📊 Switchboard Maintenance 2",
                 "workspace_ref": "workspace:11", "finished_at": self.stale, "report_delivered": True,
                 "reaped_at": self.stale, **extra}
 
     def live_tab(self, **extra) -> dict:
-        return {"ref": "workspace:74", "id": "w-74", "title": "📊 PM OS Maintenance 2", "description": "", **extra}
+        return {"ref": "workspace:74", "id": "w-74", "title": "📊 Switchboard Maintenance 2", "description": "", **extra}
 
     def test_a_finished_row_never_closes_a_live_tab_that_reuses_its_slot_title(self) -> None:
         self.workspaces = [self.live_tab()]
@@ -6744,7 +6744,7 @@ class VanishedTabTests(HermeticRepo):
         self.assertTrue(self.row("rt-old").get("reaped_at"))
 
     def test_a_finished_row_never_closes_a_tab_described_for_another_worker(self) -> None:
-        self.workspaces = [self.live_tab(description="PM OS worker rt-new")]
+        self.workspaces = [self.live_tab(description="switchboard worker rt-new")]
         write_ledger(self.finished_row(workspace_ref="workspace:74", reaped_at=None))
         dispatch.reap_all(dispatch.config())
         self.assertEqual(self.closed, [], "its stale ref now names another worker's tab")
@@ -6775,7 +6775,7 @@ class VanishedTabTests(HermeticRepo):
         self.assertEqual(self.closed, [])
 
     def test_the_row_still_closes_its_own_tab(self) -> None:
-        self.workspaces = [self.live_tab(description="PM OS worker rt-old")]
+        self.workspaces = [self.live_tab(description="switchboard worker rt-old")]
         write_ledger(self.finished_row(status="done", reaped_at=None))
         dispatch.reap_all(dispatch.config())
         self.assertEqual(self.closed, ["workspace:74"])
@@ -6792,7 +6792,7 @@ class VanishedTabTests(HermeticRepo):
         write_ledger(self.finished_row(status="done", reaped_at=None, workspace_ref="workspace:74"))
 
         def record(task):
-            self.workspaces = [self.live_tab(description="PM OS worker rt-new")]
+            self.workspaces = [self.live_tab(description="switchboard worker rt-new")]
             return {"recorded": False}
 
         with patch.object(dispatch, "record_on_main", record):
@@ -6803,7 +6803,7 @@ class VanishedTabTests(HermeticRepo):
     def test_a_tab_a_live_row_points_at_is_never_reaped(self) -> None:
         self.workspaces = [self.live_tab()]
         write_ledger(self.finished_row(status="done", reaped_at=None, workspace_ref="workspace:74"),
-                     {"id": "rt-new", "status": "active", "workspace_ref": "workspace:74", "workstream": "pm-os-maintenance",
+                     {"id": "rt-new", "status": "active", "workspace_ref": "workspace:74", "workstream": "switchboard-maintenance",
                       "attempt_id": "rt-new.a1.aaa", "thread_id": "T-new"})
         self.agents["T-new"] = {"state": "Idle", "workspace_id": "w-other"}
         result = dispatch.reap_all(dispatch.config())
@@ -6829,7 +6829,7 @@ class LaunchHoldTests(HermeticRepo):
               "Pass an explicit surfaceId pointing at a terminal surface.")
 
     def queued(self, tid: str = "rt-hold") -> dict:
-        return {"id": tid, "status": "queued", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "do it",
+        return {"id": tid, "status": "queued", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "do it",
                 "attempt": 1, "attempt_id": f"{tid}.a1.aaa", "created_at": iso(datetime.now(timezone.utc))}
 
     def release(self, create=None, *rows: dict) -> list[list[str]]:
@@ -6942,7 +6942,7 @@ class StaleRefHealTests(HermeticRepo):
         return self.worker_row(agent="claude", thread_id="T-live", session_id="T-live", **extra)
 
     def test_steer_heals_a_stale_ref_from_the_tab_description(self) -> None:
-        self.workspaces = [{"ref": "workspace:90", "id": "w-90", "title": "x", "description": "PM OS worker rt-wt"}]
+        self.workspaces = [{"ref": "workspace:90", "id": "w-90", "title": "x", "description": "switchboard worker rt-wt"}]
         write_ledger(self.live_row(workspace_ref="workspace:11"))
         sent: list[str] = []
         result = self.steer(sent)
@@ -6952,8 +6952,8 @@ class StaleRefHealTests(HermeticRepo):
         self.assertEqual((row["workspace_ref"], row["workspace_ref_healed_from"]), ("workspace:90", "workspace:11"))
 
     def test_a_ref_that_names_another_workers_tab_is_corrected_before_the_send(self) -> None:
-        self.workspaces = [{"ref": "workspace:76", "id": "w-76", "title": "y", "description": "PM OS worker rt-sibling"},
-                           {"ref": "workspace:73", "id": "w-73", "title": "x", "description": "PM OS worker rt-wt"}]
+        self.workspaces = [{"ref": "workspace:76", "id": "w-76", "title": "y", "description": "switchboard worker rt-sibling"},
+                           {"ref": "workspace:73", "id": "w-73", "title": "x", "description": "switchboard worker rt-wt"}]
         write_ledger(self.live_row(workspace_ref="workspace:76"))
         sent: list[str] = []
         self.steer(sent)
@@ -6979,7 +6979,7 @@ class StaleRefHealTests(HermeticRepo):
             return real_run(cmd, **kw)
 
         by_dir = [{"ref": "workspace:90", "id": "w-90", "title": "x", "description": "",
-                   "current_directory": r"C:\Users\x\AppData\Local\pm-os\worktrees\rt-wt\workstreams\pm-os-maintenance"}]
+                   "current_directory": r"C:\Users\x\AppData\Local\switchboard\worktrees\rt-wt\workstreams\switchboard-maintenance"}]
         write_ledger(self.live_row(id="rt-wt", workspace_ref="workspace:11"))
         task = self.row()
         with patch.object(dispatch, "run", fake_run):
@@ -6989,11 +6989,11 @@ class StaleRefHealTests(HermeticRepo):
             healed = dispatch.heal_row_ref(task, [{"ref": "workspace:90", "id": "W-90", "title": "x", "description": ""}], self.agents)
         self.assertEqual(healed["workspace_ref"], "workspace:90")
         restore = next(c for c in calls if "set-description" in c)
-        self.assertEqual(restore[restore.index("--description") + 1], "PM OS worker rt-wt")
+        self.assertEqual(restore[restore.index("--description") + 1], "switchboard worker rt-wt")
 
     def test_heal_never_takes_a_tab_by_its_slot_title(self) -> None:
-        tab = {"ref": "workspace:74", "id": "w-74", "title": "📊 PM OS Maintenance 2", "description": ""}
-        task = self.live_row(workspace_ref="workspace:11", tab_title="📊 PM OS Maintenance 2")
+        tab = {"ref": "workspace:74", "id": "w-74", "title": "📊 Switchboard Maintenance 2", "description": ""}
+        task = self.live_row(workspace_ref="workspace:11", tab_title="📊 Switchboard Maintenance 2")
         self.assertIsNone(dispatch.resolve_live_tab(task, [tab], {}))
 
     def test_an_unreadable_tab_list_changes_nothing(self) -> None:
@@ -7001,7 +7001,7 @@ class StaleRefHealTests(HermeticRepo):
         self.assertEqual(dispatch.heal_row_ref(task, [], self.agents), task)
 
     def test_the_sweep_step_reports_each_healed_row(self) -> None:
-        self.workspaces = [{"ref": "workspace:90", "id": "w-90", "title": "x", "description": "PM OS worker rt-wt"}]
+        self.workspaces = [{"ref": "workspace:90", "id": "w-90", "title": "x", "description": "switchboard worker rt-wt"}]
         write_ledger(self.live_row(workspace_ref="workspace:11"))
         self.assertEqual(dispatch.heal_live_refs(self.workspaces, self.agents),
                          [{"task_id": "rt-wt", "from": "workspace:11", "to": "workspace:90"}])
@@ -7112,10 +7112,10 @@ class DeadWorkerRedispatchTests(HermeticRepo):
         # description, the old directory, and nothing running in them.
         (self.path / "a.md").write_text("half-done\n")
         task_id = "rt-000000000007"
-        restored = {"ref": "workspace:68", "id": "w-68", "title": "📊 PM OS Maintenance 2", "description": "",
-                    "current_directory": rf"C:\x\worktrees\{task_id}\workstreams\pm-os-maintenance"}
+        restored = {"ref": "workspace:68", "id": "w-68", "title": "📊 Switchboard Maintenance 2", "description": "",
+                    "current_directory": rf"C:\x\worktrees\{task_id}\workstreams\switchboard-maintenance"}
         self.workspaces.append(restored)
-        row = self.dead_row(id=task_id, attempt_id=f"{task_id}.a1.aaa", workspace_ref="workspace:66", tab_title="📊 PM OS Maintenance 2")
+        row = self.dead_row(id=task_id, attempt_id=f"{task_id}.a1.aaa", workspace_ref="workspace:66", tab_title="📊 Switchboard Maintenance 2")
         write_ledger(row)
         with patch.object(dispatch, "tab_is_bare_shell", lambda ref, agent: ref == "workspace:68"):
             result = dispatch.fail_abandoned_rows(dispatch.config())
@@ -7126,7 +7126,7 @@ class DeadWorkerRedispatchTests(HermeticRepo):
     def test_a_quiet_open_tab_holding_work_is_blocked_never_closed_or_relaunched(self) -> None:
         # It may be one long tool call under a mismatched thread id.
         (self.path / "a.md").write_text("half-done\n")
-        self.workspaces.append({"ref": "workspace:40", "id": "w-40", "title": "x", "description": "PM OS worker rt-wt"})
+        self.workspaces.append({"ref": "workspace:40", "id": "w-40", "title": "x", "description": "switchboard worker rt-wt"})
         write_ledger(self.worker_row())
         result = dispatch.fail_abandoned_rows(dispatch.config())
         self.assertEqual(result["relaunched"], [])
@@ -7136,7 +7136,7 @@ class DeadWorkerRedispatchTests(HermeticRepo):
     def test_a_close_that_fails_relaunches_nothing(self) -> None:
         # Two workers on one checkout is worse than a late relaunch.
         (self.path / "a.md").write_text("half-done\n")
-        self.workspaces.append({"ref": "workspace:40", "id": "w-40", "title": "x", "description": "PM OS worker rt-wt"})
+        self.workspaces.append({"ref": "workspace:40", "id": "w-40", "title": "x", "description": "switchboard worker rt-wt"})
         write_ledger(self.dead_row())
         with patch.object(dispatch, "tab_is_bare_shell", lambda ref, agent: True), \
                 patch.object(dispatch, "cmux_close_result", lambda ref, wid, *why: (False, "timed out")):
@@ -7182,7 +7182,7 @@ class DeadWorkerRedispatchTests(HermeticRepo):
             self.assertTrue(dispatch.worktree_dirty(self.path))
 
     def test_a_tab_running_or_unreadable_waits_for_the_stale_window(self) -> None:
-        self.workspaces.append({"ref": "workspace:40", "id": "w-40", "title": "x", "description": "PM OS worker rt-wt"})
+        self.workspaces.append({"ref": "workspace:40", "id": "w-40", "title": "x", "description": "switchboard worker rt-wt"})
         write_ledger(self.dead_row())
         with patch.object(dispatch, "tab_is_bare_shell", lambda ref, agent: False):
             self.assertEqual(dispatch.fail_abandoned_rows(dispatch.config()), {"relaunched": [], "blocked": []})
@@ -7194,7 +7194,7 @@ class DeadWorkerRedispatchTests(HermeticRepo):
         self.assertEqual(dispatch.fail_abandoned_rows(dispatch.config()), {"relaunched": [], "blocked": []})
 
     def test_a_worker_whose_tab_is_open_is_left_alone(self) -> None:
-        self.workspaces.append({"ref": "workspace:40", "id": "w-40", "title": "x", "description": "PM OS worker rt-wt"})
+        self.workspaces.append({"ref": "workspace:40", "id": "w-40", "title": "x", "description": "switchboard worker rt-wt"})
         write_ledger(self.dead_row())
         self.assertEqual(dispatch.fail_abandoned_rows(dispatch.config()), {"relaunched": [], "blocked": []})
 
@@ -7211,7 +7211,7 @@ class DeadWorkerRedispatchTests(HermeticRepo):
         self.agents = {}
         write_ledger(self.dead_row())
         self.assertEqual(len(dispatch.fail_abandoned_rows(dispatch.config())["relaunched"]), 1)
-        self.workspaces.append({"ref": "workspace:41", "id": "w-41", "title": "x", "description": "PM OS worker rt-wt"})
+        self.workspaces.append({"ref": "workspace:41", "id": "w-41", "title": "x", "description": "switchboard worker rt-wt"})
         write_ledger(self.worker_row(workspace_ref="workspace:41"))
         self.assertEqual(dispatch.fail_abandoned_rows(dispatch.config()), {"relaunched": [], "blocked": []})
 
@@ -7236,7 +7236,7 @@ class ContinuationFixture(HermeticRepo):
         return self.worker_row(**{"started_at": self.recent, "heartbeat_at": self.recent, "updated_at": self.recent, **extra})
 
     def heir(self, tid: str = "rt-heir", status: str = "active", parent: str = "rt-wt", **extra) -> dict:
-        return {"id": tid, "status": status, "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "carry on",
+        return {"id": tid, "status": status, "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "carry on",
                 "attempt": 1, "attempt_id": f"{tid}.a1.bbb", "continuation_of": parent,
                 "created_at": ledger.now_iso(), "updated_at": ledger.now_iso(), **extra}
 
@@ -7283,7 +7283,7 @@ class ContinuationOwnsWorkTests(ContinuationFixture):
 
     def test_a_routing_row_with_no_worker_is_retired_not_requeued(self) -> None:
         stale = iso(datetime.now(timezone.utc) - dispatch.NOT_STARTED_AFTER - timedelta(minutes=1))
-        write_ledger({"id": "rt-wt", "status": "routing", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "x",
+        write_ledger({"id": "rt-wt", "status": "routing", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "x",
                       "attempt": 1, "attempt_id": "rt-wt.a1.aaa", "created_at": stale, "updated_at": stale}, self.heir())
         self.assertEqual(dispatch.requeue_orphaned_routes(), [])
         self.assertEqual(self.row()["status"], "cancelled")
@@ -7366,13 +7366,13 @@ class LaunchTabLostTests(ContinuationFixture):
     def test_a_finished_row_never_closes_a_new_tab_with_its_slot_title(self) -> None:
         # Same title, a different ref, with the description written (attempt 1) and not yet written (attempt 2).
         finished = iso(datetime.now(timezone.utc) - timedelta(hours=3))
-        for description in ("PM OS worker rt-new", ""):
+        for description in ("switchboard worker rt-new", ""):
             with self.subTest(description=description):
                 self.closed.clear()
-                self.workspaces = [{"ref": "workspace:127", "id": "w-127", "title": "📊 PM OS Maintenance 7",
+                self.workspaces = [{"ref": "workspace:127", "id": "w-127", "title": "📊 Switchboard Maintenance 7",
                                     "description": description}]
                 write_ledger(self.worker_row(status="done", finished_at=finished, report_delivered=True, thread_id="",
-                                             tab_title="📊 PM OS Maintenance 7", workspace_ref="workspace:113"))
+                                             tab_title="📊 Switchboard Maintenance 7", workspace_ref="workspace:113"))
                 dispatch.reap_all(dispatch.DEFAULTS)
                 self.assertEqual(self.closed, [], "a slot title alone never proves a tab")
 
@@ -7383,7 +7383,7 @@ class PrerequisiteFollowsReplacementTests(ContinuationFixture):
     blocked dependent blocked once a replacement appears, or revive it with nothing to wait on."""
 
     def waiting(self, **extra) -> dict:
-        return {"id": "rt-dep", "status": "queued", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "after it",
+        return {"id": "rt-dep", "status": "queued", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "after it",
                 "attempt": 1, "attempt_id": "rt-dep.a1.ccc", "depends_on": ["rt-pre"], **extra}
 
     def pre(self, status: str = "blocked") -> dict:
@@ -7443,12 +7443,12 @@ class SecondaryPrimaryLivenessTests(HermeticRepo):
     replaces, or say "already live" with no agent to prove it."""
 
     def other(self, **extra) -> dict:
-        return {"id": "rt-other", "status": "active", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "other work",
+        return {"id": "rt-other", "status": "active", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "other work",
                 "attempt": 1, "attempt_id": "rt-other.a1", "worker_id": "worker-b", "worktree": "/tmp/other", "thread_id": "T-other",
-                "tab_title": "📊 PM OS Maintenance 2", "created_at": self.stale, "updated_at": self.stale, **extra}
+                "tab_title": "📊 Switchboard Maintenance 2", "created_at": self.stale, "updated_at": self.stale, **extra}
 
     def me(self, **extra) -> dict:
-        return {"id": "rt-me", "status": "routing", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "mine",
+        return {"id": "rt-me", "status": "routing", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "mine",
                 "attempt": 1, "attempt_id": "rt-me.a1", "created_at": ledger.now_iso(), **extra}
 
     def clause(self, primary: dict) -> str:
@@ -7457,27 +7457,27 @@ class SecondaryPrimaryLivenessTests(HermeticRepo):
 
     def test_a_dead_worker_is_not_a_primary(self) -> None:
         write_ledger(self.other(), self.me())
-        self.assertIsNone(dispatch.secondary_primary("pm-os-maintenance", "rt-me"))
+        self.assertIsNone(dispatch.secondary_primary("switchboard-maintenance", "rt-me"))
 
     def test_the_row_this_task_continues_is_never_its_primary(self) -> None:
         self.agents["T-other"] = {"state": "Idle", "state_ts": 1.0, "workspace_id": "w-2", "title": "x"}   # even with an agent
         write_ledger(self.other(), self.me(continuation_of="rt-other"))
-        self.assertIsNone(dispatch.secondary_primary("pm-os-maintenance", "rt-me"))
+        self.assertIsNone(dispatch.secondary_primary("switchboard-maintenance", "rt-me"))
         write_ledger(self.other(), self.other(id="rt-mid", status="blocked", continuation_of="rt-other"),
                      self.me(continuation_of="rt-mid"))
-        self.assertIsNone(dispatch.secondary_primary("pm-os-maintenance", "rt-me"), "through a chain too")
+        self.assertIsNone(dispatch.secondary_primary("switchboard-maintenance", "rt-me"), "through a chain too")
 
     def test_another_live_worker_is_still_the_primary_and_really_is_live(self) -> None:
         self.agents["T-live"] = {"state": "Running", "state_ts": 1.0, "workspace_id": "w-3", "title": "x"}
         write_ledger(self.other(), self.other(id="rt-live", thread_id="T-live", created_at=ledger.now_iso()),
                      self.me(continuation_of="rt-other"))
-        primary = dispatch.secondary_primary("pm-os-maintenance", "rt-me")
+        primary = dispatch.secondary_primary("switchboard-maintenance", "rt-me")
         self.assertEqual((primary["id"], primary["proven_live"]), ("rt-live", True))
         self.assertIn("(rt-live) is already live in this workstream", self.clause(primary))
 
     def test_a_worker_with_no_agent_yet_is_not_called_live(self) -> None:
         write_ledger(self.other(id="rt-new", thread_id="", created_at=ledger.now_iso(), updated_at=ledger.now_iso()), self.me())
-        primary = dispatch.secondary_primary("pm-os-maintenance", "rt-me")
+        primary = dispatch.secondary_primary("switchboard-maintenance", "rt-me")
         self.assertIs(primary["proven_live"], False)
         clause = self.clause(primary)
         self.assertNotIn("already live", clause)
@@ -7536,14 +7536,14 @@ class LimitResumeTests(HermeticRepo):
                               **extra)
         self.agents[session] = {"state": "Idle", "state_ts": (self.now - timedelta(hours=2)).timestamp(),
                                 "workspace_id": f"w-{tid}", "title": "worker"}
-        self.workspaces.append({"ref": ref, "id": f"w-{tid}", "title": "📊 PM OS Maintenance 1",
-                                "description": f"PM OS worker {tid}"})
+        self.workspaces.append({"ref": ref, "id": f"w-{tid}", "title": "📊 Switchboard Maintenance 1",
+                                "description": f"switchboard worker {tid}"})
         return row
 
     def test_a_usage_limited_worker_is_paused_once_and_new_claude_launches_wait(self) -> None:
         resets = self.now + timedelta(hours=1)
         self.transcript(self.S1, self.usage_error(self.now - timedelta(minutes=5), resets))
-        queued = {"id": "rt-next", "status": "queued", "origin": "cos", "workstream": "pm-os-maintenance",
+        queued = {"id": "rt-next", "status": "queued", "origin": "cos", "workstream": "switchboard-maintenance",
                   "prompt": "next", "agent": "claude", "created_at": iso(self.now), "attempt": 1, "attempt_id": "rt-next.a1.q"}
         write_ledger(self.limited_row("rt-wt", self.S1, self.now - timedelta(hours=3), "workspace:40"), queued)
         result = dispatch.handle_limits(dispatch.DEFAULTS)
@@ -7630,7 +7630,7 @@ class LimitResumeTests(HermeticRepo):
     def test_cos_on_the_limit_is_resumed_through_the_inject_guard_and_retried_over_a_draft(self) -> None:
         resets = self.now - timedelta(minutes=5)
         self.transcript(self.S1, self.usage_error(self.now - timedelta(hours=2), resets), folder="C--a")
-        self.transcript(self.COS, self.usage_error(self.now - timedelta(hours=2), resets), folder="C--pm-os")
+        self.transcript(self.COS, self.usage_error(self.now - timedelta(hours=2), resets), folder="C--switchboard")
         self.agents[self.COS] = {"agent": "claude", "thread_id": self.COS, "state": "Idle", "state_ts": 1.0,
                                  "workspace_id": "w-cos", "title": "🧭 CoS"}
         write_ledger(self.limited_row("rt-wt", self.S1, self.now - timedelta(hours=3), "workspace:40"))
@@ -7733,7 +7733,7 @@ class LimitResumeTests(HermeticRepo):
         self.transcript(self.S1, self.usage_error(self.now - timedelta(hours=2), resets), folder="C--a")
         self.transcript(self.S2, self.usage_error(self.now - timedelta(hours=2), resets), folder="C--b")
         brief = "PRECONDITIONS: no active workers."
-        queued = {"id": "rt-next", "status": "queued", "origin": "cos", "workstream": "pm-os-maintenance",
+        queued = {"id": "rt-next", "status": "queued", "origin": "cos", "workstream": "switchboard-maintenance",
                   "prompt": "next", "agent": "claude", "created_at": iso(self.now), "attempt": 1, "attempt_id": "rt-next.a1.q"}
         write_ledger(self.limited_row("rt-q1", self.S1, self.now - timedelta(hours=4), "workspace:41", prompt=brief),
                      self.limited_row("rt-q2", self.S2, self.now - timedelta(hours=3), "workspace:42", prompt=brief), queued)
@@ -7747,7 +7747,7 @@ class LimitResumeTests(HermeticRepo):
 
     def test_a_paused_row_with_a_continuation_is_left_alone(self) -> None:
         self.transcript(self.S1, self.usage_error(self.now - timedelta(hours=2), self.now - timedelta(minutes=5)))
-        heir = {"id": "rt-heir", "status": "active", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "go on",
+        heir = {"id": "rt-heir", "status": "active", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "go on",
                 "continuation_of": "rt-wt", "created_at": iso(self.now), "attempt": 1, "attempt_id": "rt-heir.a1.h"}
         write_ledger(self.limited_row("rt-wt", self.S1, self.now - timedelta(hours=3), "workspace:40"), heir)
         dispatch.handle_limits(dispatch.DEFAULTS)
@@ -7756,7 +7756,7 @@ class LimitResumeTests(HermeticRepo):
     def test_the_kill_switch_turns_it_off(self) -> None:
         self.transcript(self.S1, self.usage_error(self.now, self.now + timedelta(hours=1)))
         write_ledger(self.limited_row("rt-wt", self.S1, self.now - timedelta(hours=3), "workspace:40"))
-        with patch.dict(os.environ, {"PM_OS_LIMIT_RESUME": "off"}):
+        with patch.dict(os.environ, {"SWITCHBOARD_LIMIT_RESUME": "off"}):
             self.assertIn("skipped", dispatch.handle_limits(dispatch.DEFAULTS))
         self.assertNotIn("usage_limit", self.row())
 
@@ -7786,7 +7786,7 @@ NETWORK_SCREEN = """● Reading the dispatch ledger next.
 │ >                                                            │
 ╰──────────────────────────────────────────────────────────────╯
   ⏵⏵ bypass permissions on (shift+tab to cycle)
-  Opus 5.5 · pm-os · 41% context
+  Opus 5.5 · switchboard · 41% context
 """
 OVERLOADED_SCREEN = """● Running the test suite.
   ⎿  API Error: 529 {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}
@@ -7864,8 +7864,8 @@ class NetworkStopTests(HermeticRepo):
         # The stamp stuck on "Running" that night: no Stop hook fires on an API error.
         self.agents[self.S1] = {"state": "Running", "state_ts": (self.now - timedelta(hours=3)).timestamp(),
                                 "workspace_id": "w-40", "title": "worker"}
-        self.workspaces.append({"ref": "workspace:40", "id": "w-40", "title": "📊 PM OS Maintenance 1",
-                                "description": "PM OS worker rt-wt"})
+        self.workspaces.append({"ref": "workspace:40", "id": "w-40", "title": "📊 Switchboard Maintenance 1",
+                                "description": "switchboard worker rt-wt"})
         return row
 
     def run_once(self) -> dict:
@@ -7994,7 +7994,7 @@ class NetworkStopTests(HermeticRepo):
     def test_cos_on_a_network_error_is_resumed_through_the_inject_guard(self) -> None:
         self.api["up"] = True
         self.transcript(self.S1, self.error_record(self.now - timedelta(minutes=10)), folder="C--a")
-        self.transcript(self.COS, self.error_record(self.now - timedelta(minutes=10)), folder="C--pm-os")
+        self.transcript(self.COS, self.error_record(self.now - timedelta(minutes=10)), folder="C--switchboard")
         write_ledger(self.stopped_row())
         self.send_ok = False   # a draft in the CoS box: the guard refuses
         with patch.object(dispatch.owner_tabs, "agents_by_workspace",
@@ -8019,7 +8019,7 @@ class NetworkStopTests(HermeticRepo):
         self.api["up"] = True
         self.transcript(self.S1, self.error_record(self.now - timedelta(minutes=10)))
         write_ledger(self.stopped_row())
-        for env in ({"PM_OS_NETWORK_RESUME": "off"}, {"PM_OS_LIMIT_RESUME": "off"}):
+        for env in ({"SWITCHBOARD_NETWORK_RESUME": "off"}, {"SWITCHBOARD_LIMIT_RESUME": "off"}):
             with patch.dict(os.environ, env):
                 self.assertIn("skipped", self.run_once())
         self.assertEqual(self.messages, [])
@@ -8036,7 +8036,7 @@ class NetworkStopTests(HermeticRepo):
         was still up; a continue line to the parent would put two workers on one job."""
         self.api["up"] = True
         self.transcript(self.S1, self.error_record(self.now - timedelta(minutes=10)))
-        heir = {"id": "rt-heir", "status": "active", "origin": "cos", "workstream": "pm-os-maintenance", "prompt": "go on",
+        heir = {"id": "rt-heir", "status": "active", "origin": "cos", "workstream": "switchboard-maintenance", "prompt": "go on",
                 "continuation_of": "rt-wt", "created_at": iso(self.now), "attempt": 1, "attempt_id": "rt-heir.a1.h"}
         write_ledger(self.stopped_row(), heir)
         self.run_once()
@@ -8047,7 +8047,7 @@ class NetworkStopTests(HermeticRepo):
         stop = {"error_at": "2026-11-10T00:51:34+00:00", "text": "API Error", "code": "ENOTFOUND"}
         row = self.stopped_row(network_stop=stop)
         self.assertTrue(dispatch.network_owned(row))
-        with patch.dict(os.environ, {"PM_OS_NETWORK_RESUME": "off"}):
+        with patch.dict(os.environ, {"SWITCHBOARD_NETWORK_RESUME": "off"}):
             self.assertFalse(dispatch.network_owned(row))
         self.assertIn("network_stop", ledger.ATTEMPT_SCOPED, "a new attempt never inherits the mark")
 
@@ -8076,23 +8076,23 @@ class NetworkStopTests(HermeticRepo):
         self.assertEqual(self.messages, [])
 
     def test_a_bad_settle_value_does_not_break_the_import(self) -> None:
-        with patch.dict(os.environ, {"PM_OS_NETWORK_SETTLE_SECONDS": "ninety"}):
-            self.assertEqual(dispatch._env_seconds("PM_OS_NETWORK_SETTLE_SECONDS", 90), 90)
+        with patch.dict(os.environ, {"SWITCHBOARD_NETWORK_SETTLE_SECONDS": "ninety"}):
+            self.assertEqual(dispatch._env_seconds("SWITCHBOARD_NETWORK_SETTLE_SECONDS", 90), 90)
 
     def test_the_probe_reads_any_answer_below_500_as_up_and_never_leaves_the_sandbox(self) -> None:
         import urllib.error
         import urllib.request
         # setUp patches dispatch.api_reachable; REAL_API_REACHABLE is the function itself.
-        with patch.dict(os.environ, {"PM_OS_TEST_SANDBOX": "1"}):
+        with patch.dict(os.environ, {"SWITCHBOARD_TEST_SANDBOX": "1"}):
             with patch.object(urllib.request, "urlopen", side_effect=AssertionError("network reached")):
                 self.assertFalse(REAL_API_REACHABLE())
-                with patch.dict(os.environ, {"PM_OS_API_PROBE": "up"}):
+                with patch.dict(os.environ, {"SWITCHBOARD_API_PROBE": "up"}):
                     self.assertTrue(REAL_API_REACHABLE())
 
         def http(code):
             return urllib.error.HTTPError("https://api.anthropic.com/v1/models", code, "x", {}, None)
 
-        with patch.dict(os.environ, {"PM_OS_TEST_SANDBOX": "0"}):
+        with patch.dict(os.environ, {"SWITCHBOARD_TEST_SANDBOX": "0"}):
             for side, up in ((http(401), True), (http(404), True), (http(503), False), (http(529), False),
                              (urllib.error.URLError("getaddrinfo ENOTFOUND"), False), (TimeoutError("timed out"), False)):
                 with patch.object(urllib.request, "urlopen", side_effect=side):

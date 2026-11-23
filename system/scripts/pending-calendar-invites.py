@@ -186,7 +186,7 @@ def fetch_live_events(start: datetime, end: datetime, timezone: str) -> tuple[An
     )
     payload = run_json(
         [
-            "pmos",
+            "switchboard",
             "calendar",
             "events",
             "--time-period",

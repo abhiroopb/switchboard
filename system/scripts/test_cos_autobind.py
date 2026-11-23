@@ -4,7 +4,7 @@
 The owner opens a wmux tab, types `claude`, then "start of day", "CoS" or "chief of staff".
 The first prompt must leave a registered, titled, pinned CoS tab bound to the Claude session,
 with any older CoS renamed and never closed. These tests never reach a live tab:
-PM_OS_TEST_SANDBOX=1 and a stateful stub CMUX_BIN that records every call.
+SWITCHBOARD_TEST_SANDBOX=1 and a stateful stub CMUX_BIN that records every call.
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-HOOK = ROOT / "system" / "claude-marketplace" / "plugins" / "pm-os" / "hooks" / "surface-context.py"
+HOOK = ROOT / "system" / "claude-marketplace" / "plugins" / "switchboard" / "hooks" / "surface-context.py"
 sys.path.insert(0, str(HERE))
 import cos_autobind  # noqa: E402
 
@@ -67,8 +67,8 @@ else:
 
 OLD_COS = {"ref": "workspace:236", "id": "ws-old", "title": "🧭 CoS", "description": "", "pinned": True}
 NEW_TAB = {"ref": "workspace:260", "id": "ws-new", "title": "Workspace 7", "description": "", "pinned": False}
-WORKER = {"ref": "workspace:252", "id": "ws-worker", "title": "📊 PM OS Maintenance 1",
-          "description": "PM OS worker rt-abc", "pinned": False}
+WORKER = {"ref": "workspace:252", "id": "ws-worker", "title": "📊 Switchboard Maintenance 1",
+          "description": "switchboard worker rt-abc", "pinned": False}
 
 
 class Harness(unittest.TestCase):
@@ -102,23 +102,23 @@ class Harness(unittest.TestCase):
 
     def env(self, wmux: bool = True, **extra: str) -> dict:
         env = {k: v for k, v in os.environ.items()
-               if not (k.startswith(("PM_OS_WORKER", "CMUX", "WMUX", "CLAUDE_")) or k in
-                       ("PM_OS_WORKTREE", "PM_OS_SURFACE", "CC_CMUX_SESSION_JSON"))}
+               if not (k.startswith(("SWITCHBOARD_WORKER", "CMUX", "WMUX", "CLAUDE_")) or k in
+                       ("SWITCHBOARD_WORKTREE", "SWITCHBOARD_SURFACE", "CC_CMUX_SESSION_JSON"))}
         env.update({
-            "PM_OS_TEST_SANDBOX": "1", "CMUX_BIN": str(self.stub), "STUB_STATE": str(self.state),
+            "SWITCHBOARD_TEST_SANDBOX": "1", "CMUX_BIN": str(self.stub), "STUB_STATE": str(self.state),
             "STUB_LOG": str(self.log), "COS_SURFACE_FILE": str(self.registration),
             "COS_AUTOBIND_STATE_DIR": str(self.tmp / "autobind"),
             "SURFACE_CONTEXT_STATE_DIR": str(self.tmp / "surface-context"),
             "CC_CMUX_SESSION_JSON": str(self.tmp / "no-session-store.json"),
             "RUNNING_TASKS_FILE": str(self.tmp / "running-tasks.json"),
-            "PM_OS_STATE_DIR": str(self.tmp / "state"),
-            "PM_OS_PLUGIN_CONFIG": str(self.tmp / "plugin-config.json"),
-            "PM_OS_ROOT": str(ROOT), "PYTHONIOENCODING": "utf-8",
+            "SWITCHBOARD_STATE_DIR": str(self.tmp / "state"),
+            "SWITCHBOARD_PLUGIN_CONFIG": str(self.tmp / "plugin-config.json"),
+            "SWITCHBOARD_ROOT": str(ROOT), "PYTHONIOENCODING": "utf-8",
         })
         if wmux:
-            env.update({"PM_OS_MUX": "wmux", "WMUX": "1", "WMUX_SURFACE_ID": "surf-new"})
+            env.update({"SWITCHBOARD_MUX": "wmux", "WMUX": "1", "WMUX_SURFACE_ID": "surf-new"})
         else:
-            env.update({"PM_OS_MUX": "cmux", "CMUX_WORKSPACE_ID": "ws-new", "CMUX_SURFACE_ID": "surface:1"})
+            env.update({"SWITCHBOARD_MUX": "cmux", "CMUX_WORKSPACE_ID": "ws-new", "CMUX_SURFACE_ID": "surface:1"})
         env.update(extra)
         return env
 
@@ -137,7 +137,7 @@ class Harness(unittest.TestCase):
 class TriggerTests(unittest.TestCase):
     def test_phrases_match_whole_prompt_only(self) -> None:
         for prompt in ("start of day", "Start of day.", "  start my day ", "SOD", "good morning",
-                       "/pm-os:start-day", "ok, start of day please"):
+                       "/switchboard:start-day", "ok, start of day please"):
             self.assertEqual(cos_autobind.trigger(prompt), "start-of-day", prompt)
         for prompt in ("CoS", "cos", "Chief of Staff", "chief of staff!", "/chief-of-staff", "hey CoS"):
             self.assertEqual(cos_autobind.trigger(prompt), "cos", prompt)
@@ -149,13 +149,13 @@ class TriggerTests(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp(prefix="cos-autobind-wt-"))
         self.addCleanup(shutil.rmtree, tmp, True)
         pane = {"WMUX_SURFACE_ID": "surf"}
-        self.assertEqual(cos_autobind.refusal({**pane, "PM_OS_WORKER_ID": "w"}, str(tmp)), "worker session")
-        self.assertEqual(cos_autobind.refusal({**pane, "PM_OS_WORKTREE": "x"}, str(tmp)), "worker session")
-        self.assertEqual(cos_autobind.refusal({**pane, "PM_OS_SURFACE": "launchpad"}, str(tmp)), "PM_OS_SURFACE=launchpad")
+        self.assertEqual(cos_autobind.refusal({**pane, "SWITCHBOARD_WORKER_ID": "w"}, str(tmp)), "worker session")
+        self.assertEqual(cos_autobind.refusal({**pane, "SWITCHBOARD_WORKTREE": "x"}, str(tmp)), "worker session")
+        self.assertEqual(cos_autobind.refusal({**pane, "SWITCHBOARD_SURFACE": "launchpad"}, str(tmp)), "SWITCHBOARD_SURFACE=launchpad")
         self.assertEqual(cos_autobind.refusal({}, str(tmp)), "not in a cmux or wmux pane")
         (tmp / ".git").write_text("gitdir: elsewhere\n", encoding="utf-8")
         self.assertEqual(cos_autobind.refusal(pane, str(tmp)), "task worktree")
-        self.assertEqual(cos_autobind.refusal({**pane, "PM_OS_SURFACE": "cos"}, str(tmp / "..")), "")
+        self.assertEqual(cos_autobind.refusal({**pane, "SWITCHBOARD_SURFACE": "cos"}, str(tmp / "..")), "")
 
 
 class BindTests(Harness):
@@ -248,7 +248,7 @@ class BindTests(Harness):
         self.assertFalse(self.registration.exists())
 
     def test_worker_session_is_refused(self) -> None:
-        context, result = self.observe("start of day", PM_OS_WORKER_ID="worker-1")
+        context, result = self.observe("start of day", SWITCHBOARD_WORKER_ID="worker-1")
         self.assertEqual((context, result["reason"]), ("", "worker session"))
         self.assertEqual(self.calls(), [])
 
@@ -327,7 +327,7 @@ class HealTests(Harness):
 class HookTests(Harness):
     def run_hook(self, kind: str, event: dict, **env_kw) -> subprocess.CompletedProcess:
         env = self.env(**env_kw)
-        env["PM_OS_REPO"] = str(ROOT)
+        env["SWITCHBOARD_REPO"] = str(ROOT)
         proc = subprocess.run([sys.executable, str(HOOK), kind], input=json.dumps(event), capture_output=True,
                               text=True, encoding="utf-8", env=env, cwd=str(self.cwd), timeout=120)
         self.assertEqual(proc.returncode, 0, proc.stderr)
@@ -349,7 +349,7 @@ class HookTests(Harness):
         proc = self.run_hook("user-prompt-submit", {"session_id": "s-2", "prompt": "what's next?",
                                                      "cwd": str(self.cwd)})
         context = json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("PM OS CoS reminder", context)
+        self.assertIn("switchboard CoS reminder", context)
         self.assertNotIn("registered this tab", context)
 
     def test_plain_prompt_in_plain_tab_prints_nothing(self) -> None:
@@ -381,7 +381,7 @@ class HookTests(Harness):
     def test_session_start_skips_workers(self) -> None:
         env_file = self.tmp / "claude-env.sh"
         env_file.write_text("", encoding="utf-8")
-        self.run_hook("session-start", {"session_id": "s-5"}, CLAUDE_ENV_FILE=str(env_file), PM_OS_WORKER_ID="w-1")
+        self.run_hook("session-start", {"session_id": "s-5"}, CLAUDE_ENV_FILE=str(env_file), SWITCHBOARD_WORKER_ID="w-1")
         self.assertEqual(env_file.read_text(encoding="utf-8"), "")
 
 
@@ -416,7 +416,7 @@ class RemoteControlReminderTests(Harness):
         self.assertLess(context.index("router-dispatch.sh"), context.index("type /rc"))
 
     def test_scripted_launch_hears_nothing(self) -> None:
-        context = self.context("CoS", self.transcript({"type": "mode"}), PM_OS_COS_REMOTE_CONTROL_LAUNCH="1")
+        context = self.context("CoS", self.transcript({"type": "mode"}), SWITCHBOARD_COS_REMOTE_CONTROL_LAUNCH="1")
         self.assertIn("registered this tab as the CoS", context)
         self.assertNotIn("/rc", context)
 
@@ -432,7 +432,7 @@ class RemoteControlReminderTests(Harness):
         self.assertNotIn("/rc", self.context("CoS", ""))
 
     def test_remote_control_switched_off_hears_nothing(self) -> None:
-        context = self.context("CoS", self.transcript({"type": "mode"}), PM_OS_COS_REMOTE_CONTROL="off")
+        context = self.context("CoS", self.transcript({"type": "mode"}), SWITCHBOARD_COS_REMOTE_CONTROL="off")
         self.assertIn("registered this tab as the CoS", context)
         self.assertNotIn("/rc", context)
 

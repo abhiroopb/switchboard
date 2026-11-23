@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""json_get.py: the few jq reads PM OS shell scripts make on every tick, in Python.
+"""json_get.py: the few jq reads switchboard shell scripts make on every tick, in Python.
 
-jq is not installed on a fresh Windows install (without it publish-megadesk-status.sh
+jq is not installed on a fresh Windows install (without it publish-switchboard-status.sh
 exits 127 every tick and the CoS sidebar tile goes stale), and Python is a hard
-PM OS dependency everywhere. Usage, JSON on stdin:
+switchboard dependency everywhere. Usage, JSON on stdin:
 
   json_get.py <path> [<default>]          one value; dotted path, e.g. caller.workspace_ref
   json_get.py --lines <path=default>...   one value per line, in order

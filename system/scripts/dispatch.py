@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PM OS task dispatch: one worker per task, one git worktree per worker.
+"""switchboard task dispatch: one worker per task, one git worktree per worker.
 
     dispatch.py dispatch --origin launchpad|cos [--workstream SLUG] [--task-id ID]
                 [--depends-on ID]... [--continuation-of ID] [--request-id R]
@@ -75,12 +75,12 @@ sys.path.insert(0, str(SCRIPTS))
 from repo_paths import main_checkout  # noqa: E402  (shared with running-task-state.py / triage_ledger.py)
 
 REPO_ROOT = main_checkout(Path(os.environ.get("REPO_ROOT") or SCRIPTS.parents[1]))
-STATE_DIR = Path(os.environ.get("PM_OS_STATE_DIR") or REPO_ROOT / "system" / "state")
-WORKTREES = Path(os.environ.get("PM_OS_WORKTREES_DIR") or REPO_ROOT / ".amp" / "worktrees")
-LOCKS = Path(os.environ.get("PM_OS_LOCKS_DIR") or REPO_ROOT / ".amp" / "locks")
+STATE_DIR = Path(os.environ.get("SWITCHBOARD_STATE_DIR") or REPO_ROOT / "system" / "state")
+WORKTREES = Path(os.environ.get("SWITCHBOARD_WORKTREES_DIR") or REPO_ROOT / ".amp" / "worktrees")
+LOCKS = Path(os.environ.get("SWITCHBOARD_LOCKS_DIR") or REPO_ROOT / ".amp" / "locks")
 from lib.mux import cmux_bin as _cmux_bin, runnable as _runnable, backend as _mux_backend  # noqa: E402  (cmux on macOS, the wmux shim on Windows/WSL)
 from lib import winlink  # noqa: E402  (junction/hard-link fallback for shared-state links without Developer Mode)
-import pm_os_agent  # noqa: E402  (the one agent resolver)
+import switchboard_agent  # noqa: E402  (the one agent resolver)
 import link_titles  # noqa: E402  (titles of linked Docs, Slack threads, issues, PRs)
 import owner_tabs  # noqa: E402  (open owner tabs, the live CoS tab, cmux agent message)
 import private_identifiers  # noqa: E402  (finish and auto-push refuse a commit adding a listed identifier)
@@ -96,12 +96,12 @@ LAUNCH_PROMPTS = STATE_DIR / "launch-prompts"
 CMUX_SKIP_RECORD = Path(os.environ.get("CMUX_SKIP_RECORD") or REPO_ROOT / ".state" / "cmux-skip-record")
 # Worker tab identity. A worker tab is titled like
 # its owner tab plus a slot number, "<emoji> <Workstream Name> <n>" (for example
-# "🛠️ PM OS Maintenance 2"), and carries the cmux workspace description
-# "PM OS worker <task-id>". The description is the primary identifier (a title
+# "🛠️ Switchboard Maintenance 2"), and carries the cmux workspace description
+# "switchboard worker <task-id>". The description is the primary identifier (a title
 # can be renamed; the description is set once at creation and is never shown in
 # the tab strip); the title is the secondary check. Tabs opened before this
 # change ("<slug> · worker-<12 hex>") stay recognisable so they can be reaped.
-WORKER_DESCRIPTION_PREFIX = "PM OS worker "
+WORKER_DESCRIPTION_PREFIX = "switchboard worker "
 LEGACY_WORKER_TITLE = re.compile(r"· worker-[0-9a-f]{12}$")
 WORKER_SLOT_TITLE = re.compile(r"^(?P<owner>.+?) (?P<n>[1-9]\d*)$")
 # Amp Neo always renders a bordered prompt box or the welcome banner; a bare
@@ -115,9 +115,9 @@ AMP_SCREEN_MARKER = re.compile(r"(╭──|╰──|Welcome to Amp|Ctrl\+O for
 # end in `Enter to confirm · Esc to cancel` and must read as unknown, never
 # typed into. The bare `❯ ` would also match a starship shell prompt.
 CLAUDE_SCREEN_MARKER = re.compile(r"(shift\+tab to cycle|\? for shortcuts)")
-# Which agent a worker tab starts comes from pm_os_agent.py (PM_OS_AGENT env,
+# Which agent a worker tab starts comes from switchboard_agent.py (SWITCHBOARD_AGENT env,
 # then router.yaml `agent:`, then claude). cmux-helpers.sh
-# pm_os_agent calls the same resolver. Amp modes map to a Claude model and
+# switchboard_agent calls the same resolver. Amp modes map to a Claude model and
 # effort; keep this table in step with CLAUDE_MODE_FLAGS in cmux-helpers.sh.
 CLAUDE_MODE_FLAGS = {
     "ultra": ("opus", "high"),
@@ -167,9 +167,9 @@ def _unlink_retry(path: Path) -> bool:
 
 
 def agent_kind() -> str:
-    """`claude` or `amp`: PM_OS_AGENT env, then router.yaml `agent:`, then claude (pm_os_agent.py)."""
+    """`claude` or `amp`: SWITCHBOARD_AGENT env, then router.yaml `agent:`, then claude (switchboard_agent.py)."""
     config_path = Path(os.environ.get("ROUTER_CONFIG") or REPO_ROOT / "system" / "config" / "router.yaml")
-    return pm_os_agent.agent(config_path=config_path)
+    return switchboard_agent.agent(config_path=config_path)
 
 
 def claude_mode_flags(mode: str) -> tuple[str, str]:
@@ -179,7 +179,7 @@ def claude_mode_flags(mode: str) -> tuple[str, str]:
 
 # zsh `host dir % `, bash `bash-5.2$ `, starship `❯ `, root `# `, oh-my-zsh `➜  dir git:(b) `,
 # and a zsh PROMPT `%~ $(__git_ps1 " %s") ` which renders as the bare
-# path plus branch with no trailing glyph at all: `~/pm-os/.amp/worktrees/
+# path plus branch with no trailing glyph at all: `~/switchboard/.amp/worktrees/
 # rt-x/workstreams/slug task/rt-x `. `%` needs a space before it so a progress line
 # ("Loading 100%") is not a prompt; the path form allows at most one word after the
 # path so a command echo (`~/dir task/rt-x cat prompt.md | amp`) never counts.
@@ -195,15 +195,15 @@ AMP_VERIFY_POLL_SECONDS = 2
 # ECONNRESET at startup usually clears in seconds). Beyond these, the sweep retypes
 # once per tick (retype_stalled_launches) up to MAX_LAUNCH_RETYPES in all, so an
 # outage of hours is ridden out without a relaunch or a blocked row.
-LAUNCH_RETYPE_PAUSES_SECONDS = tuple(float(s) for s in (os.environ.get("PM_OS_LAUNCH_RETYPE_PAUSES") or "0,20").split(","))
-MAX_LAUNCH_RETYPES = int(os.environ.get("PM_OS_MAX_LAUNCH_RETYPES") or 8)
-SWEEP_RETYPE_MIN_AGE = timedelta(seconds=int(os.environ.get("PM_OS_SWEEP_RETYPE_MIN_AGE_SECONDS") or 120))
+LAUNCH_RETYPE_PAUSES_SECONDS = tuple(float(s) for s in (os.environ.get("SWITCHBOARD_LAUNCH_RETYPE_PAUSES") or "0,20").split(","))
+MAX_LAUNCH_RETYPES = int(os.environ.get("SWITCHBOARD_MAX_LAUNCH_RETYPES") or 8)
+SWEEP_RETYPE_MIN_AGE = timedelta(seconds=int(os.environ.get("SWITCHBOARD_SWEEP_RETYPE_MIN_AGE_SECONDS") or 120))
 
 _spec = importlib.util.spec_from_file_location("running_task_state", SCRIPTS / "running-task-state.py")
 ledger = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(ledger)  # type: ignore[union-attr]
 
-IDLE_RESUME_MINUTES = int(os.environ.get("PM_OS_IDLE_RESUME_MINUTES") or 10)  # idle this long with branch unmerged -> one resume message; idle again this long -> one line to the origin
+IDLE_RESUME_MINUTES = int(os.environ.get("SWITCHBOARD_IDLE_RESUME_MINUTES") or 10)  # idle this long with branch unmerged -> one resume message; idle again this long -> one line to the origin
 FF_RETRIES = 3  # finish: re-rebase and retry when main moved between the rebase and the fast-forward
 
 DEFAULTS = {
@@ -227,9 +227,9 @@ DEFAULTS = {
     # from a browser alone, so a low value would fire every working day; 16 sits
     # above that baseline and below what a worker burst reaches.
     "swap_alert_gb": 16,
-    "default_workstream": "pm-os-maintenance",
+    "default_workstream": "switchboard-maintenance",
     # Owner of system routines (start of day, closing day, chief of staff), since
-    # pm-os-maintenance is kept for PM OS itself. Missing folder: default_workstream.
+    # switchboard-maintenance is kept for switchboard itself. Missing folder: default_workstream.
     "system_routine_workstream": "daily-routines",
     "min_match_score": 20,
     "reap_grace_seconds": 120,
@@ -260,7 +260,7 @@ DEFAULTS = {
     # `dispatch.py launch --task-id` process that the row records as launcher_pid.
     # A launch failure still reaches the origin through notify() (report-to-cos.sh);
     # a crashed launcher is caught by requeue_orphaned_routes / flag_stuck_routes.
-    # false, --sync, or PM_OS_DISPATCH_SYNC=1 keeps the inline launch.
+    # false, --sync, or SWITCHBOARD_DISPATCH_SYNC=1 keeps the inline launch.
     "async_launch": True,
     # Queued steers. A steer to a row that has not started (routing,
     # queued, or launched with no ack yet) waits on the row in `pending_steers` and is
@@ -270,7 +270,7 @@ DEFAULTS = {
     "steer_queue_timeout_minutes": 10,
     # Queue order. A free slot goes to the queued row that
     # ranks first, and a fresh dispatch launches at once only when no eligible queued row
-    # ranks ahead of it. Owner asks rank before pm-os-maintenance rows, each class oldest
+    # ranks ahead of it. Owner asks rank before switchboard-maintenance rows, each class oldest
     # first; a maintenance row that has waited this many minutes ranks with the owner asks
     # by its age, so a run of owner asks never starves a fix. queue_owner_first false is
     # strict FIFO; aging 0 means a maintenance row never moves up.
@@ -371,8 +371,8 @@ def _int_tuple(env: str, default: tuple[int, ...]) -> tuple[int, ...]:
 # load cmux can time out repeatedly at 10 s, and two tries with no pause give it no
 # room to recover. Three tries over ~75 s plus pauses is the bound before a
 # launcher gives up and records why (CmuxUnreachable).
-CMUX_LIST_TIMEOUTS = _int_tuple("PM_OS_CMUX_LIST_TIMEOUTS", (10, 25, 40))
-CMUX_LIST_BACKOFF = _int_tuple("PM_OS_CMUX_LIST_BACKOFF_SECONDS", (0, 5, 15))
+CMUX_LIST_TIMEOUTS = _int_tuple("SWITCHBOARD_CMUX_LIST_TIMEOUTS", (10, 25, 40))
+CMUX_LIST_BACKOFF = _int_tuple("SWITCHBOARD_CMUX_LIST_BACKOFF_SECONDS", (0, 5, 15))
 
 
 class CmuxUnreachable(RuntimeError):
@@ -450,7 +450,7 @@ def worker_tab(task_id: str, workspaces: list[dict[str, Any]] | None = None) -> 
 
 
 def note_tab_close(ref: str, workspace_id: str, why: str) -> None:
-    """One line per close PM OS asks for, so a vanished tab can be traced to its closer."""
+    """One line per close switchboard asks for, so a vanished tab can be traced to its closer."""
     try:
         with CMUX_SKIP_RECORD.with_name("tab-closes.jsonl").open("a", encoding="utf-8") as handle:
             handle.write(json.dumps({"at": ledger.now_iso(), "ref": ref, "workspace_id": workspace_id, "why": why,
@@ -465,7 +465,7 @@ def cmux_close_result(ref: str, workspace_id: str, why: str = "") -> tuple[bool,
 
     cmux 0.65 made `close-workspace` refuse a workspace
     with a running process ("confirmation_required: Workspace has a running
-    process; retry with --force") unless `--force` is passed. Every PM OS tab
+    process; retry with --force") unless `--force` is passed. Every switchboard tab
     runs an agent CLI, so without the flag every close fails. The guards that decide a tab may close (reap, the idle
     owner wrap-up, command-center-action.sh) have already run by the time this
     is called, so the running process is exactly what the policy wants to end:
@@ -595,7 +595,7 @@ def tab_title(ws: dict[str, Any]) -> str:
 
 def worker_tab_reason(ws: dict[str, Any], task: dict[str, Any] | None = None) -> str:
     """"" when `ws` is a worker tab (of `task` when given), else why not. The
-    description "PM OS worker <task-id>" decides first; then the title recorded
+    description "switchboard worker <task-id>" decides first; then the title recorded
     on the row; then the "<owner title> <n>" shape for a known workstream; then
     the legacy "<slug> · worker-<12 hex>" form. A renamed owner tab, CoS,
     Launchpad and the fixed surfaces match none of these."""
@@ -643,7 +643,7 @@ def directory_proves_tab(ws: dict[str, Any], task: dict[str, Any], agents: dict[
 def _undescribed_tab_reason(ws: dict[str, Any], task: dict[str, Any], title: str) -> str:
     """Whether a tab with no worker description can still be proven to be this row's.
 
-    Slot titles are reused: "📊 PM OS Maintenance 2" is a new tab every time a slot frees,
+    Slot titles are reused: "📊 Switchboard Maintenance 2" is a new tab every time a slot frees,
     so a title alone proves nothing: a row finished hours earlier can carry the same slot
     title as a live tab whose description is missing from the wmux sidecar. Proof is
     the row's own ref plus its title, a stored ref that equals a legacy worker title (its
@@ -672,7 +672,7 @@ def is_worker_tab(ws: dict[str, Any] | None, task: dict[str, Any] | None = None)
 
 def worker_tab_for(task: dict[str, Any], workspaces: list[dict[str, Any]]) -> dict[str, Any] | None:
     """The open cmux tab that belongs to `task`: the one whose description is
-    "PM OS worker <task-id>" or whose id equals the ref, else an undescribed tab
+    "switchboard worker <task-id>" or whose id equals the ref, else an undescribed tab
     whose directory proves it, else the one at its workspace_ref unless that tab
     is described for another worker, else the one whose title is the
     title the row recorded, the legacy "<slug> · <worker-id>" title, or the
@@ -785,7 +785,7 @@ STRONG_EVIDENCE_PREFIXES = ("explicit directive", "exact priority-channel owner"
                             # Without these, asks that named their owner one of these
                             # ways scaffolded stray workstreams.
                             "subject names this workstream", "workstream path named", "note named",
-                            "abbreviated workstream name", "all name words in the ask", "PM OS system named")
+                            "abbreviated workstream name", "all name words in the ask", "switchboard system named")
 # Evidence that names the ask's subject (the owner's quoted words or the first sentence).
 SUBJECT_EVIDENCE = "subject names this workstream"
 # Pointers precise enough to name an owner from anywhere in the ranking, not just
@@ -1139,7 +1139,7 @@ def commit_scaffold(slug: str, why: str) -> dict[str, Any]:
     if git("diff", "--cached", "--quiet", check=False).returncode == 0:
         return {"committed": False, "reason": "nothing staged for the scaffold paths"}
     message = f"{slug}: scaffold workstream ({why}); committed on main by dispatch.py before the worker branch is cut"
-    commit = git("-c", "user.name=PM OS worker", "-c", "user.email=pm-os-worker@local", "commit", "-q",
+    commit = git("-c", "user.name=switchboard worker", "-c", "user.email=switchboard-worker@local", "commit", "-q",
                  "-m", message, check=False)
     if commit.returncode:
         git("reset", "-q", "--", *touched, check=False)
@@ -1163,20 +1163,20 @@ def workstream_untracked(slug: str) -> bool:
     return tracked.returncode == 0 and not tracked.stdout.strip()
 
 
-# pm-os-maintenance is only for PM OS itself: an owner task such as organizing downloads or a
-# DNS change gets its own workstream. CoS had written `Workstream: pm-os-maintenance` on
+# switchboard-maintenance is only for switchboard itself: an owner task such as organizing downloads or a
+# DNS change gets its own workstream. CoS had written `Workstream: switchboard-maintenance` on
 # owner-topic briefs, and a directive wins over routing. The check below warns on such a brief
 # and never blocks it. Owner topics are the owner's files, domains, accounts
-# and money, even when the work runs a script or a skill; system terms are PM OS internals, so
-# a real PM OS fix that mentions Downloads (a guardrail, a backup) stays quiet.
-MAINTENANCE_SLUG = "pm-os-maintenance"
+# and money, even when the work runs a script or a skill; system terms are switchboard internals, so
+# a real switchboard fix that mentions Downloads (a guardrail, a backup) stays quiet.
+MAINTENANCE_SLUG = "switchboard-maintenance"
 MAINTENANCE_SYSTEM_TERMS = re.compile(
     r"\b(?:dispatch(?:\.py)?|router|ledger|worktrees?|worker tabs?|cmux|wmux|guardrails?|hooks?|"
     r"agents\.md|dispatch-core|command[- ]center|auto-push|report-to-cos|ask-cos|launchpad|digest|"
     r"start-day|closing-day|sweep|reap|kit|installer|nightly backup|backup job|process leak|"
-    r"test suites?|test_\w+|regression tests?|pm os (?:bug|fix|code|tooling|internals?)|"
+    r"test suites?|test_\w+|regression tests?|switchboard (?:bug|fix|code|tooling|internals?)|"
     r"private identifier guard|identifier guard|connector|mcp|doctor|"
-    # PM OS's own meta work (routing, the to-do system, review notes) names many owner
+    # switchboard's own meta work (routing, the to-do system, review notes) names many owner
     # topics in one brief without being about any of them.
     r"to-dos?|todos?|to-do list|workstreams?|routing|review notes?|morning review|action review|"
     r"owner[- ]actions?)\b", re.IGNORECASE)
@@ -1189,10 +1189,10 @@ MAINTENANCE_OWNER_TERMS = re.compile(
 
 
 def maintenance_misfile_warning(prompt: str, slug: str) -> str:
-    """One line when a brief sent to pm-os-maintenance reads as an owner topic, empty otherwise.
+    """One line when a brief sent to switchboard-maintenance reads as an owner topic, empty otherwise.
     A warning only: the dispatch proceeds. Owner topic means at least two distinct owner-topic
-    terms that outweigh the PM OS system terms by half again: long briefs name a system term or
-    two in passing (ask-cos, a kit zip in Downloads), and a real PM OS fix names several. It
+    terms that outweigh the switchboard system terms by half again: long briefs name a system term or
+    two in passing (ask-cos, a kit zip in Downloads), and a real switchboard fix names several. It
     flags file, domain and account briefs, and stays quiet on guardrail, backup and scaffold
     fixes."""
     if slug != MAINTENANCE_SLUG:
@@ -1203,8 +1203,8 @@ def maintenance_misfile_warning(prompt: str, slug: str) -> str:
     system_hits = len(MAINTENANCE_SYSTEM_TERMS.findall(text))
     if len(found) < 2 or len(owner_hits) <= 1.5 * system_hits:
         return ""
-    return (f"warning: this brief reads as an owner topic ({', '.join(found[:3])}), not PM OS itself; "
-            f"pm-os-maintenance is only for PM OS, so name a topic workstream next time")
+    return (f"warning: this brief reads as an owner topic ({', '.join(found[:3])}), not switchboard itself; "
+            f"switchboard-maintenance is only for switchboard, so name a topic workstream next time")
 
 
 def first_line_directive(prompt: str) -> str:
@@ -1900,7 +1900,7 @@ def symlink_points_inside_repo(rel: str, target: str, cwd: Path) -> bool:
     This is the self-loop: link_shared_state() symlinks the
     worktree's ignored dirs (people/, .state/, …) at main's copies; if a
     .gitignore change un-ignores them they can be committed as absolute links to
-    /…/pm-os/<same path>, and fast-forwarding main then replaces each real
+    /…/switchboard/<same path>, and fast-forwarding main then replaces each real
     directory with a link to itself, deleting its contents. Absolute links into
     the repo are always machine-specific and never belong in a commit. Relative
     links that resolve to their own path are the same loop spelled differently.
@@ -2071,7 +2071,7 @@ def finish_branch(task: dict[str, Any], allow_mass_delete: bool = False, accept_
         staged = git("diff", "--cached", "--quiet", cwd=path, check=False).returncode == 1
         if staged:
             subject = (task.get("prompt") or task["id"]).strip().splitlines()[0][:72]
-            git("-c", "user.name=PM OS worker", "-c", "user.email=pm-os-worker@local", "commit", "-q",
+            git("-c", "user.name=switchboard worker", "-c", "user.email=switchboard-worker@local", "commit", "-q",
                 "-m", f"{task['id']}: {subject}", cwd=path)
     else:
         rejected = []
@@ -2346,7 +2346,7 @@ def commit_main_overlap(task: dict[str, Any], paths: list[str]) -> dict[str, Any
         return {"error": "nothing to commit for the overlapping paths"}
     message = (f"main: uncommitted edits to {', '.join(paths[:8])}{'…' if len(paths) > 8 else ''} left by direct-to-main "
                f"workers; committed by dispatch.py finish before landing {task['id']}")
-    commit = git("-c", "user.name=PM OS worker", "-c", "user.email=pm-os-worker@local", "commit", "-q",
+    commit = git("-c", "user.name=switchboard worker", "-c", "user.email=switchboard-worker@local", "commit", "-q",
                  "-m", message, check=False)
     if commit.returncode:
         git("reset", "-q", "--", *paths, check=False)
@@ -2362,12 +2362,12 @@ CLOSEOUT_HEADING = "## Worker close-outs"
 def closeout_line(task: dict[str, Any], status: str, result: str, thread_id: str) -> str:
     """One durable line per finished worker in the owning workstream's CONTEXT.md:
     date, task id, tab title, status and the one-line result, then the thread link
-    for an Amp row or the resume command for a Claude row (pm_os_agent.thread_pointer)."""
+    for an Amp row or the resume command for a Claude row (switchboard_agent.thread_pointer)."""
     title = task.get("tab_title") or task.get("worker_id") or "worker"
-    result = pm_os_agent.fix_thread_links(re.sub(r"\s+", " ", result).strip())
+    result = switchboard_agent.fix_thread_links(re.sub(r"\s+", " ", result).strip())
     if result.lower().startswith(f"{status}:"):
         result = result[len(status) + 1:].strip()
-    pointer = pm_os_agent.thread_pointer(thread_id, task.get("agent"))
+    pointer = switchboard_agent.thread_pointer(thread_id, task.get("agent"))
     link = f" · {pointer}" if pointer and pointer not in result else ""
     return f"- {now().date().isoformat()} · `{task['id']}` · {title} · {status}: {result}{link}"
 
@@ -2485,7 +2485,7 @@ def command_decide(args: argparse.Namespace) -> int:
     was_dirty = rel in dirty_main_paths()
     context = record_decision(task, text, REPO_ROOT, args.by)
     if context.get("recorded") and not was_dirty:
-        commit = git("-c", "user.name=PM OS worker", "-c", "user.email=pm-os-worker@local", "commit", "-q",
+        commit = git("-c", "user.name=switchboard worker", "-c", "user.email=switchboard-worker@local", "commit", "-q",
                      "-m", f"{task['id']}: the owner's decision recorded in {rel}", "--", rel, check=False)
         context["committed"] = commit.returncode == 0
     elif context.get("recorded"):
@@ -2615,7 +2615,7 @@ def notify(task_id: str, text: str, status: str = "active", urgent: bool = False
     if urgent:
         cmd.append("--urgent")
     cmd.append(text)
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
     env["REPORT_TO_COS_NO_HOOKS"] = "1"
     result = run(cmd, env=env, timeout=180)
     try:
@@ -2649,7 +2649,7 @@ def _on_windows() -> bool:
     """True on a live Windows machine. The test sandbox reads as not Windows so
     the suite never queues on the machine's real memory or Windows cap; the
     Windows capacity tests patch this."""
-    return os.name == "nt" and os.environ.get("PM_OS_TEST_SANDBOX") != "1"
+    return os.name == "nt" and os.environ.get("SWITCHBOARD_TEST_SANDBOX") != "1"
 
 
 def worker_cap(cfg: dict[str, Any]) -> int | None:
@@ -2746,7 +2746,7 @@ def at_capacity(live: int, cfg: dict[str, Any], memory: dict[str, Any] | None = 
     return (cap is not None and live >= cap) or bool(commit_hold_reason(cfg, memory, live=live))
 
 
-NOT_STARTED_AFTER = timedelta(seconds=int(os.environ.get("PM_OS_NOT_STARTED_SECONDS") or 600))
+NOT_STARTED_AFTER = timedelta(seconds=int(os.environ.get("SWITCHBOARD_NOT_STARTED_SECONDS") or 600))
 
 
 def not_started_evidence(task: dict[str, Any]) -> dict[str, Any] | None:
@@ -2889,12 +2889,12 @@ def failed_dependency(task: dict[str, Any], payload: dict[str, Any]) -> tuple[st
 # dispatch path asks queued_ahead() first and release_queued() walks rows in queue_rank()
 # order.
 
-MAINTENANCE_WORKSTREAM = "pm-os-maintenance"
+MAINTENANCE_WORKSTREAM = "switchboard-maintenance"
 
 
 def queue_rank(task: dict[str, Any], cfg: dict[str, Any], at: datetime | None = None) -> tuple[int, float]:
     """Sort key for who gets a free slot: (class, created). Class 0 is the owner's own asks
-    (every workstream but pm-os-maintenance) and class 1 is PM OS fixing itself, which CoS
+    (every workstream but switchboard-maintenance) and class 1 is switchboard fixing itself, which CoS
     mostly starts on its own ("fix without asking"). The owner waits on an ask; a fix
     usually has nobody waiting on it. A maintenance row moves to class 0 once it has waited
     queue_maintenance_aging_minutes, so it is never starved. A row with no created_at sorts
@@ -2993,7 +2993,7 @@ def release_now(args: argparse.Namespace, cfg: dict[str, Any]) -> str:
             command_release(argparse.Namespace())
         return "inline"
     log_path = STATE_DIR / "worker-dispatch" / "hooks.log"
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
     try:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         with log_path.open("ab") as out:
@@ -3010,7 +3010,7 @@ def launch_prompt(task: dict[str, Any], worktree: Path, worker_id: str) -> str:
     repo, tid, aid, slug = REPO_ROOT, task["id"], task["attempt_id"], task["workstream"]
     ws_dir = worktree / "workstreams" / slug
     # A Claude worker's session id is fixed before launch, so the prompt can name it. Only
-    # an Amp thread has a web link (pm_os_agent.thread_pointer).
+    # an Amp thread has a web link (switchboard_agent.thread_pointer).
     claude = str(task.get("agent") or agent_kind()) == "claude"
     thread_arg = (str(task.get("session_id") or "") or "<your Claude session id>") if claude else "<your Amp thread id>"
     pointer = f"claude --resume {thread_arg}" if claude else "your https://ampcode.com/threads/T-... link"
@@ -3018,7 +3018,7 @@ def launch_prompt(task: dict[str, Any], worktree: Path, worker_id: str) -> str:
               f"--workstream {slug} --thread-id {thread_arg} --workspace-ref <workspace:N>")
     where = "Work only on this machine in this cmux tab: no remote machines, SSH, nested workers, or extra threads."
     lines = [
-        f"You are PM OS worker {worker_id} for task {tid} (attempt {aid}), workstream {slug}, origin {task.get('origin') or 'cos'}. "
+        f"You are switchboard worker {worker_id} for task {tid} (attempt {aid}), workstream {slug}, origin {task.get('origin') or 'cos'}. "
         f"{where}",
         f"Your checkout is the git worktree {worktree} on branch task/{tid}, created from main just now. Edit files there with "
         f"their {worktree}/... paths; nothing else writes to it, so no claims, leases, or admission checks exist. Do not edit the "
@@ -3049,9 +3049,9 @@ def launch_prompt(task: dict[str, Any], worktree: Path, worker_id: str) -> str:
         "own files, use a short command with literal paths and no $(...), sudo, or eval, so the permission relay can show CoS they are "
         "this task's files and CoS can allow it without the owner. After a denied prompt, take the alternative; never retry the same command.",
         "Tool routing: the Chrome DevTools lease is one scarce browser, only for surfaces with no CLI/MCP. Figma: the Figma web app; "
-        "Docs/Sheets/Slides/Drive use `pmos drive`; Slack uses `pmos slack`. "
+        "Docs/Sheets/Slides/Drive use `switchboard drive`; Slack uses `switchboard slack`. "
         "Fall back to the browser only after that call fails, and say which call failed.",
-        "Email drafts: every email you draft for the owner is created with `pmos mail draft` from the owner's "
+        "Email drafts: every email you draft for the owner is created with `switchboard mail draft` from the owner's "
         "own account and is never sent. Report To, Subject, the draft id, and the full text in your callback. Reply-To stays "
         "unset unless the owner says otherwise; email keeps its exemption from the :robot_face: prefix.",
         f"Slack native lists (true bullets, proper wrap, words unchanged): any list in a Slack message you post is a rich_text_list block, never •, -, *, or 1. text bullets in --text or a "
@@ -3070,7 +3070,7 @@ def launch_prompt(task: dict[str, Any], worktree: Path, worker_id: str) -> str:
         f"session recordings, the web). List the workstreams you searched in your review note.",
         f"Knowledge graph: when {repo}/graphify-out/graph.json exists (one graph per repo, built on main "
         f"by the build-knowledge-graph background task with `python3 system/scripts/build-knowledge-graph.py`, structural only, no LLM; "
-        f"a worktree has no copy) and the task asks where a rule, script, note, or workstream lives in pm-os or what links to it, run "
+        f"a worktree has no copy) and the task asks where a rule, script, note, or workstream lives in switchboard or what links to it, run "
         f"`graphify query \"<terms>\" --graph {repo}/graphify-out/graph.json --budget 600` before your first rg or directory search, then "
         f"open and quote the file at the returned src/loc line under {worktree}/ (src paths are root-relative). The graph is a pointer, "
         f"never the citation; the Grounding rule still needs the source line. A graph miss (exit 4 or nothing relevant) is never evidence "
@@ -3091,7 +3091,7 @@ def launch_prompt(task: dict[str, Any], worktree: Path, worker_id: str) -> str:
         f"full draft text verbatim in its body as a ``` fenced code block, line breaks as real newlines or \" ⏎ \" (report_text keeps "
         f"the block whole and outside the prose budget), so CoS prints it to the owner with any ask; a pointer to the note, a summary, or "
         f"\"draft parked\" is never enough. File before you promise (Rule 9 of that "
-        f"file): whenever a draft, reply, or report says PM OS is filing, tracking, or logging something (Linear issue, Jira ticket, "
+        f"file): whenever a draft, reply, or report says switchboard is filing, tracking, or logging something (Linear issue, Jira ticket, "
         f"GitHub issue), create the record before or with the draft through your tracker's CLI or API "
         f"or gh issue create, and put the record ids and URLs verbatim (for example EX-123 "
         f"https://linear.app/...) in the draft text, the note section, and your report body; a draft that promises a filing with no "
@@ -3101,14 +3101,14 @@ def launch_prompt(task: dict[str, Any], worktree: Path, worker_id: str) -> str:
         f"the owner, on any surface including email, links inline to every thread, message, PR, issue, doc, or session it refers to (Slack "
         f"permalink as <https://url|anchor>, GitHub PR URL, Linear or Jira URL, session link, Google Doc URL; never \"the draft PR\" "
         f"or \"yesterday's message\" without the link; look the link up before drafting), and writes every person it names as the "
-        f"surface's native mention (Slack <@Uxxxx> looked up via pmos slack people, GitHub @handle, the tool's @mention in "
+        f"surface's native mention (Slack <@Uxxxx> looked up via switchboard slack people, GitHub @handle, the tool's @mention in "
         f"Linear, Jira, Confluence, or a Doc comment) with who they are in two or three words on first mention when the recipient may "
         f"not know them; drop names the recipient would not recognise. Email uses full names with no @mention but still links. Any "
         f"file, reference, section, step, or shorthand it names (ref 05, SKILL.md, the Sandbox doc, step 7, the size test) links to the "
         f"actual artifact (GitHub file URL at the PR head or the PR files anchor, Google Doc heading URL, Confluence anchor) and spells "
         f"out the full file or section name on first mention; shorthand with no link never ships. The slack-people-links guardrail warns, never "
         f"rejects, on a Slack send that names a person from people/ without <@U…> or a PR number without a link.",
-        "Code review comments (Rule 10 of {{PM_OS_ROOT}}/system/prompts/external-replies.md): every GitHub review you "
+        "Code review comments (Rule 10 of {{SWITCHBOARD_ROOT}}/system/prompts/external-replies.md): every GitHub review you "
         "draft or post (gh pr review, gh pr comment, a review reply, a parked draft) follows four rules. (1) Never cite, count, or refer "
         "to a bot comment (Copilot, Dependabot, or any other review bot) or whether the author replied to one; a bot finding worth "
         "raising becomes your own observation with file:line and a link. (2) Code only: behavior, correctness, security, naming, "
@@ -3187,7 +3187,7 @@ def launch_prompt(task: dict[str, Any], worktree: Path, worker_id: str) -> str:
         "todo is its title, never its id prefix; a deploy version or commit hash appears only inside a parenthesis after the name "
         "when rollback needs it. The number or id may follow the name in parentheses or sit inside the link; it never stands in for "
         "the name and never appears in a question or ask (\"pause the settings copy PR?\", not \"pause 10001?\"). When a state "
-        "file gives you only a number, fetch the title before you write the line (gh pr view <url> --json title, pmos "
+        "file gives you only a number, fetch the title before you write the line (gh pr view <url> --json title, switchboard "
         "linear issue --id <KEY>) or run python3 system/scripts/named_refs.py name \"<text>\", which rewrites repo#N, bare PR "
         "URLs, and Linear keys to title (repo#N) with a link and caches the lookup in .state/named-refs-cache.json. report-to-cos.sh "
         "already leads your report with [<emoji> <Workstream Name> · rt-id], so the body you pass needs no task id of its own.",
@@ -3225,7 +3225,7 @@ def launch_prompt(task: dict[str, Any], worktree: Path, worker_id: str) -> str:
         "your report that you checked. Product shots, abstract brand textures, renders, and "
         "illustrations stay the default. When a brand mark cannot be fully removed, leave the photo out and never offer it as an "
         "option.",
-        "Agent-mode routing: ultra is the default for every PM OS worker thread. If this session is not already ultra and "
+        "Agent-mode routing: ultra is the default for every switchboard worker thread. If this session is not already ultra and "
         "the owner did not explicitly choose high for it, recommend once that the owner press Ctrl+S and select ultra; otherwise continue.",
         review_rule(),
         f"Done is observable, not self-reported: this task is done only when branch task/{tid} is merged to main AND your one-line "
@@ -3351,8 +3351,8 @@ def wait_for_screen(ref: str, wanted: set[str], seconds: float, agent: str | Non
 # "unknown" and nothing would press a lost Enter. On wmux the shim's
 # `launch-state` verb reports what the tab accepted instead: the shell prompt log,
 # the agent's session provider, and the agent's own prompts.
-WMUX_ENTER_GRACE_SECONDS = float(os.environ.get("PM_OS_WMUX_ENTER_GRACE_SECONDS") or 4)
-WMUX_MAX_LAUNCH_ENTERS = int(os.environ.get("PM_OS_WMUX_MAX_LAUNCH_ENTERS") or 3)
+WMUX_ENTER_GRACE_SECONDS = float(os.environ.get("SWITCHBOARD_WMUX_ENTER_GRACE_SECONDS") or 4)
+WMUX_MAX_LAUNCH_ENTERS = int(os.environ.get("SWITCHBOARD_WMUX_MAX_LAUNCH_ENTERS") or 3)
 
 
 def on_wmux() -> bool:
@@ -3522,10 +3522,10 @@ def launch_command_for(row: dict[str, Any]) -> str:
     One builder for launch() and for every later retype (the sweep, `dispatch.py
     retype`), so a retyped command can never drift from the original.
 
-    --dangerously-skip-permissions is the owner's deliberate default for PM OS workers,
+    --dangerously-skip-permissions is the owner's deliberate default for switchboard workers,
     an accepted risk.
 
-    A `claude` row (row["agent"], set by launch() from PM_OS_AGENT) runs
+    A `claude` row (row["agent"], set by launch() from SWITCHBOARD_AGENT) runs
     `<env> claude --dangerously-skip-permissions --model <m> --effort <e>
     --session-id <row session_id> "$(cat <launch prompt>)"`: Claude Code takes
     the seed prompt as a positional argument for an interactive session (stdin is
@@ -3539,22 +3539,22 @@ def launch_command_for(row: dict[str, Any]) -> str:
     # text as keys, so every path goes in with forward slashes.
     worktree = Path(str(row["worktree"])).as_posix() if windows else str(row["worktree"])
     env_vars: dict[str, Any] = {
-        "PM_OS_WORKSTREAM_SLUG": slug, "PM_OS_WORKER_ID": row["worker_id"], "PM_OS_WORKER_TASK_ID": row["id"],
-        "PM_OS_WORKER_ATTEMPT_ID": row["attempt_id"], "PM_OS_WORKTREE": worktree,
+        "SWITCHBOARD_WORKSTREAM_SLUG": slug, "SWITCHBOARD_WORKER_ID": row["worker_id"], "SWITCHBOARD_WORKER_TASK_ID": row["id"],
+        "SWITCHBOARD_WORKER_ATTEMPT_ID": row["attempt_id"], "SWITCHBOARD_WORKTREE": worktree,
     }
     if row.get("delivery") == "digest":
         # Automation fan-out, which nobody may be watching: owner_browser.py refuses it the owner's browser.
-        env_vars["PM_OS_SCHEDULED_JOB"] = "1"
+        env_vars["SWITCHBOARD_SCHEDULED_JOB"] = "1"
     if claude and row.get("session_id"):
         # task-liveness acks the env task only from this session, never from a
         # child `claude -p` that inherits the env.
-        env_vars["PM_OS_WORKER_SESSION_ID"] = row["session_id"]
-    env_vars["PM_OS_AGENT_MODE"] = mode
+        env_vars["SWITCHBOARD_WORKER_SESSION_ID"] = row["session_id"]
+    env_vars["SWITCHBOARD_AGENT_MODE"] = mode
     chrome = ""
     if claude:
         # Claude in Chrome (the owner's main browser): only a brief with a
         # `Browser: signed-in <reason>` line gets --chrome, and only where
-        # PM_OS_CLAUDE_IN_CHROME=on. The reason rides along for the claude_in_chrome_guard.py hook log.
+        # SWITCHBOARD_CLAUDE_IN_CHROME=on. The reason rides along for the claude_in_chrome_guard.py hook log.
         try:
             import claude_in_chrome_guard
             chrome_env, chrome = claude_in_chrome_guard.launch_parts(row)
@@ -3754,9 +3754,9 @@ LAUNCH_LOGS = STATE_DIR / "worker-dispatch" / "launches"
 
 def launch_in_background(args: argparse.Namespace, cfg: dict[str, Any]) -> bool:
     """True when `dispatch` should ack and leave the launch to a detached process.
-    `--sync`, PM_OS_DISPATCH_SYNC=1 (tests, debugging) or `async_launch: false`
+    `--sync`, SWITCHBOARD_DISPATCH_SYNC=1 (tests, debugging) or `async_launch: false`
     in router.yaml keep the inline launch."""
-    if getattr(args, "sync", False) or os.environ.get("PM_OS_DISPATCH_SYNC") == "1":
+    if getattr(args, "sync", False) or os.environ.get("SWITCHBOARD_DISPATCH_SYNC") == "1":
         return False
     return bool(cfg.get("async_launch", DEFAULTS["async_launch"]))
 
@@ -3768,7 +3768,7 @@ def spawn_launcher(task_id: str) -> dict[str, Any] | None:
     the caller falls back to the inline launch."""
     LAUNCH_LOGS.mkdir(parents=True, exist_ok=True)
     log_path = LAUNCH_LOGS / f"{task_id}.log"
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
     try:
         with log_path.open("ab") as out:
             out.write(f"{ledger.now_iso()} launcher spawned by dispatch\n".encode())
@@ -4103,7 +4103,7 @@ def launch(task: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any] | None:
         cwd = worktree
     mode = agent_mode(slug)
     command = launch_command_for({**task, "worker_id": worker_id, "worktree": str(worktree), "mode": mode})
-    # Titled like the owner tab plus a slot number ("🛠️ PM OS Maintenance 2"), so
+    # Titled like the owner tab plus a slot number ("🛠️ Switchboard Maintenance 2"), so
     # the owner can tell which owner tab a worker belongs to; the description is the
     # identifier the reaper and the sidebar trust (see worker_tab_reason).
     title = worker_title(slug, next_worker_slot(slug, ledger.load_payload(), open_tabs))
@@ -4426,7 +4426,7 @@ def owner_tab_prompt(task: dict[str, Any], slug: str, origin: str, ref: str, thr
     report = (f"bash system/scripts/report-to-cos.sh --task-id {task['id']} --attempt-id {task['attempt_id']} "
               f"--origin {origin} --workstream {slug} --thread-id {thread_id} --workspace-ref {ref} "
               f"--status done|blocked|failed '<one line result>'")
-    return (f"New PM OS task {task['id']} for this workstream, dispatched from {origin} to this open tab instead of a "
+    return (f"New switchboard task {task['id']} for this workstream, dispatched from {origin} to this open tab instead of a "
             f"new worker. Work it here, in this tab and the main checkout as usual: no worktree, "
             f"no new tab.\n\n"
             f"--- ask ---\n{task.get('prompt') or ''}\n--- end of ask ---\n\n"
@@ -4460,7 +4460,7 @@ def deliver_to_owner_tab(task: dict[str, Any], slug: str, origin: str,
         return {"delivered": False, "busy": True,
                 "reason": f"open owner tab {title} ({ref}) is busy ({why}); a parallel worker takes the ask"}
     sent = owner_tabs.agent_message(ref, owner_tab_prompt(task, slug, origin, ref, agent["thread_id"]),
-                                    sender=f"PM OS dispatch ({origin})")
+                                    sender=f"switchboard dispatch ({origin})")
     if not sent.get("ok"):
         return {"delivered": False, "reason": f"open owner tab {title} ({ref}) refused the message: {sent.get('reason')}"}
 
@@ -4622,7 +4622,7 @@ def tell_cos_direct(text: str) -> dict[str, Any]:
         return {"ok": False, "reason": f"cos target unreadable: {error}"}
     if not target.get("ref"):
         return {"ok": False, "reason": target.get("reason") or "no CoS tab open"}
-    return cmux_agent_message(target["ref"], text, sender="PM OS steer queue")
+    return cmux_agent_message(target["ref"], text, sender="switchboard steer queue")
 
 
 @contextmanager
@@ -4678,7 +4678,7 @@ def deliver_row_steers(task_id: str, cfg: dict[str, Any]) -> dict[str, list[dict
             origin = str(entry.get("origin") or row.get("origin") or "cos")
             text = str(entry.get("text") or "")
             if agent == "claude" and ref:
-                sent = cmux_agent_message(ref, steer_message(task_id, origin, text), sender=f"PM OS steer ({origin})")
+                sent = cmux_agent_message(ref, steer_message(task_id, origin, text), sender=f"switchboard steer ({origin})")
                 ambiguous = not sent.get("ok") and (bool(sent.get("ambiguous")) or "timed out" in str(sent.get("reason") or ""))
                 if not sent.get("ok") and not ambiguous:
                     log(f"{task_id}: queued steer {entry['id']} not delivered yet ({sent.get('reason')})")
@@ -4742,8 +4742,8 @@ def deliver_queued_steers(task_id: str | None = None, cfg: dict[str, Any] | None
 
 def spawn_steer_delivery(task_id: str) -> bool:
     """Detached `dispatch.py deliver-steers --task-id ID` (never waits on cmux).
-    PM_OS_NO_STEER_SPAWN=1 turns it off (tests; the sweep still delivers)."""
-    if os.environ.get("PM_OS_NO_STEER_SPAWN") == "1":
+    SWITCHBOARD_NO_STEER_SPAWN=1 turns it off (tests; the sweep still delivers)."""
+    if os.environ.get("SWITCHBOARD_NO_STEER_SPAWN") == "1":
         return False
     try:
         log_path = STATE_DIR / "logs" / "steer-queue.log"
@@ -4868,7 +4868,7 @@ def command_steer(args: argparse.Namespace) -> int:
         sent: dict[str, Any] = {}
         if decision.get("agent") == "claude" and decision["workspace_ref"] and not getattr(args, "no_deliver", False):
             sent = cmux_agent_message(decision["workspace_ref"], steer_message(args.task_id, args.origin, text),
-                                      sender=f"PM OS steer ({args.origin})")
+                                      sender=f"switchboard steer ({args.origin})")
             if sent.get("ok"):
                 log(f"steer on {args.task_id} delivered to {decision['workspace_ref']} by cmux agent message {sent.get('id')}")
                 mark_worker_question_answered(args.task_id, text)
@@ -4970,7 +4970,7 @@ def release_queued(cfg: dict[str, Any]) -> int:
     pass_memory: dict[str, Any] | None = None
     at = now()
     # First in line first (queue_rank): the ledger's file order is not creation order once
-    # rows are requeued, and owner asks rank before PM OS's own fixes.
+    # rows are requeued, and owner asks rank before switchboard's own fixes.
     queued = sorted((t for t in ledger.load_payload()["tasks"] if t.get("status") == "queued"),
                     key=lambda t: queue_rank(t, cfg, at))
     for task in queued:
@@ -5054,11 +5054,11 @@ def spawn_skill_sync() -> str:
     reaches ~/.claude/skills in seconds, and the command-center tick covers a miss. Never in
     a test sandbox or against a redirected state dir, which is a fixture."""
     script = REPO_ROOT / "system" / "scripts" / "sync-skills.py"
-    if (os.environ.get("PM_OS_TEST_SANDBOX") == "1" or os.environ.get("SKILL_SYNC_DISABLED") == "1"
+    if (os.environ.get("SWITCHBOARD_TEST_SANDBOX") == "1" or os.environ.get("SKILL_SYNC_DISABLED") == "1"
             or STATE_DIR != REPO_ROOT / "system" / "state" or not script.exists()):
         return "skipped"
     log_path = STATE_DIR / "logs" / "skill-sync.log"
-    child_env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
+    child_env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
     try:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         with log_path.open("ab") as out:
@@ -5322,7 +5322,7 @@ def _shared_state_link(worktree: Path, status_line: str) -> bool:
 
 
 _KILL_TASK_PROCESSES_PS = r"""
-$id = ([string]$env:PMOS_KILL_TASK).ToLowerInvariant()
+$id = ([string]$env:SWITCHBOARD_KILL_TASK).ToLowerInvariant()
 $markers = @('report-waiter.sh', 'report-to-cos.sh', "/worktrees/$id", 'launch-prompts/')
 $names = @('bash.exe', 'sh.exe', 'python.exe', 'python3.exe', 'claude.exe', 'node.exe', 'sleep.exe')
 $all = @{}; Get-CimInstance Win32_Process | ForEach-Object { $all[[int]$_.ProcessId] = $_ }
@@ -5356,7 +5356,7 @@ while ($stack.Count -gt 0) {
   if ($kids.ContainsKey($x)) { foreach ($k in $kids[$x]) { $stack.Push($k) } }
 }
 $killed = 0
-if ($env:PMOS_KILL_DRYRUN -eq '1') { "victims: " + (($victims.Keys | Sort-Object) -join ',') }
+if ($env:SWITCHBOARD_KILL_DRYRUN -eq '1') { "victims: " + (($victims.Keys | Sort-Object) -join ',') }
 else { foreach ($v in @($victims.Keys)) { try { Stop-Process -Id $v -Force -ErrorAction Stop; $killed++ } catch {} } }
 "{""matched"": $($roots.Count), ""killed"": $killed}"
 """
@@ -5384,7 +5384,7 @@ def kill_task_processes(task: dict[str, Any]) -> dict[str, Any]:
         return {"matched": 0, "killed": 0, "skipped": "not a worker task id"}
     try:
         out = run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", _KILL_TASK_PROCESSES_PS],
-                  timeout=120, env={**os.environ, "PMOS_KILL_TASK": task_id})
+                  timeout=120, env={**os.environ, "SWITCHBOARD_KILL_TASK": task_id})
         return json.loads((out.stdout or "").strip().splitlines()[-1])
     except (OSError, subprocess.SubprocessError, ValueError, IndexError) as error:
         return {"matched": 0, "killed": 0, "error": str(error)[:200]}
@@ -6202,7 +6202,7 @@ def requeue_orphaned_routes() -> list[dict[str, Any]]:
     return requeued
 
 
-UNKNOWN_REPORT_SETTLES_AFTER = timedelta(hours=int(os.environ.get("PM_OS_UNKNOWN_REPORT_HOURS") or 24))
+UNKNOWN_REPORT_SETTLES_AFTER = timedelta(hours=int(os.environ.get("SWITCHBOARD_UNKNOWN_REPORT_HOURS") or 24))
 
 
 def settle_unknown_reports() -> list[dict[str, Any]]:
@@ -6239,9 +6239,9 @@ def settle_unknown_reports() -> list[dict[str, Any]]:
 
 # A worker runs inside its tab, so a tab no identity can find means the worker is dead. The short
 # wait only guards against a tab list read mid-launch.
-DEAD_WORKER_AFTER = timedelta(seconds=int(os.environ.get("PM_OS_DEAD_WORKER_SECONDS") or 180))
+DEAD_WORKER_AFTER = timedelta(seconds=int(os.environ.get("SWITCHBOARD_DEAD_WORKER_SECONDS") or 180))
 MAX_DEAD_WORKER_RELAUNCHES = 2   # a reboot or lost tab is not the worker's fault; a checkout with work also gets this many
-ABANDONED_AFTER = timedelta(seconds=int(os.environ.get("PM_OS_ABANDONED_SECONDS") or 7200))  # no checkout to judge by: a dead thread this old is abandoned
+ABANDONED_AFTER = timedelta(seconds=int(os.environ.get("SWITCHBOARD_ABANDONED_SECONDS") or 7200))  # no checkout to judge by: a dead thread this old is abandoned
 MAX_SWEEP_RELAUNCHES = 1  # a clean abandoned checkout is relaunched this many times before the origin hears a blocker
 
 
@@ -6656,10 +6656,10 @@ def reconcile_receipts(payload: dict[str, Any]) -> list[dict[str, Any]]:
 #   4. A context-limit stop (auto-compaction normally prevents it) restarts the worker once in
 #      the same checkout with a RESUME prompt that names the old session; a second one tells
 #      CoS and leaves the row for the owner.
-# Kill switch: PM_OS_LIMIT_RESUME=off. Amp rows have no Claude session id and are untouched.
+# Kill switch: SWITCHBOARD_LIMIT_RESUME=off. Amp rows have no Claude session id and are untouched.
 
 USAGE_LIMIT_STAMP = STATE_DIR / "usage-limit.json"
-LIMIT_RESUME_GRACE = timedelta(seconds=int(os.environ.get("PM_OS_LIMIT_RESUME_GRACE_SECONDS") or 120))
+LIMIT_RESUME_GRACE = timedelta(seconds=int(os.environ.get("SWITCHBOARD_LIMIT_RESUME_GRACE_SECONDS") or 120))
 MAX_CONTEXT_RESTARTS = 1
 MAX_LIMIT_RESUMES = 2   # automatic resumes per streak of limit stops; the next stop is left for the owner
 CONTEXT_SETTLE = timedelta(minutes=3)   # a fresh context error may still be compacting or retrying
@@ -6667,7 +6667,7 @@ QUIET_BRIEF = re.compile(r"preconditions?:?[^\n]{0,40}\bno (other )?(active|live
 
 
 def limits_disabled() -> bool:
-    return os.environ.get("PM_OS_LIMIT_RESUME", "").strip().lower() in {"off", "0", "false"}
+    return os.environ.get("SWITCHBOARD_LIMIT_RESUME", "").strip().lower() in {"off", "0", "false"}
 
 
 def usage_limit_stamp() -> dict[str, Any]:
@@ -6755,7 +6755,7 @@ def _update_row(task_id: str, attempt_id: Any, change: Any) -> dict[str, Any] | 
 
 def handle_limits(cfg: dict[str, Any]) -> dict[str, Any]:
     if limits_disabled():
-        return {"skipped": "PM_OS_LIMIT_RESUME=off"}
+        return {"skipped": "SWITCHBOARD_LIMIT_RESUME=off"}
     agents = ledger.live_agents()
     listing = cmux_workspaces()
     if not agents or not listing:
@@ -6985,7 +6985,7 @@ def handle_limits(cfg: dict[str, Any]) -> dict[str, Any]:
 #      resumed anyone, and one line when a worker reaches the cap.
 #   3. CoS's own session: when it stopped on the same kind of error, the summary goes in through
 #      the inject guard (tab_send, never over a draft) as its continue line instead.
-# Kill switches: PM_OS_NETWORK_RESUME=off, and PM_OS_LIMIT_RESUME=off turns this off too.
+# Kill switches: SWITCHBOARD_NETWORK_RESUME=off, and SWITCHBOARD_LIMIT_RESUME=off turns this off too.
 
 def _env_seconds(name: str, default: int) -> int:
     try:
@@ -6994,7 +6994,7 @@ def _env_seconds(name: str, default: int) -> int:
         return default
 
 
-NETWORK_SETTLE = timedelta(seconds=_env_seconds("PM_OS_NETWORK_SETTLE_SECONDS", 90))
+NETWORK_SETTLE = timedelta(seconds=_env_seconds("SWITCHBOARD_NETWORK_SETTLE_SECONDS", 90))
 MAX_NETWORK_RESUMES = 4
 # Wait after resume n (index n-1) before resume n+1. A sweep tick is 10 to 15 minutes, so the
 # first retry comes on the next tick at the earliest.
@@ -7004,7 +7004,7 @@ API_PROBE_TIMEOUT = 8.0
 
 
 def network_resume_disabled() -> bool:
-    return limits_disabled() or os.environ.get("PM_OS_NETWORK_RESUME", "").strip().lower() in {"off", "0", "false"}
+    return limits_disabled() or os.environ.get("SWITCHBOARD_NETWORK_RESUME", "").strip().lower() in {"off", "0", "false"}
 
 
 def api_reachable() -> bool:
@@ -7012,13 +7012,13 @@ def api_reachable() -> bool:
     when set). Any HTTP answer below 500 means the network and the API are back (a 401 or
     404 for an unauthenticated probe is expected); a DNS failure, a refused or timed-out
     connection, or a 5xx means not yet. The request carries no credentials or user data.
-    Never reaches the network under PM_OS_TEST_SANDBOX=1 (tests patch this)."""
-    if os.environ.get("PM_OS_TEST_SANDBOX") == "1":
-        return os.environ.get("PM_OS_API_PROBE", "").strip().lower() == "up"
+    Never reaches the network under SWITCHBOARD_TEST_SANDBOX=1 (tests patch this)."""
+    if os.environ.get("SWITCHBOARD_TEST_SANDBOX") == "1":
+        return os.environ.get("SWITCHBOARD_API_PROBE", "").strip().lower() == "up"
     import urllib.error
     import urllib.request
     base = (os.environ.get("ANTHROPIC_BASE_URL") or "https://api.anthropic.com").rstrip("/")
-    request = urllib.request.Request(base + "/v1/models", method="HEAD", headers={"User-Agent": "pm-os-dispatch"})
+    request = urllib.request.Request(base + "/v1/models", method="HEAD", headers={"User-Agent": "switchboard-dispatch"})
     try:
         with urllib.request.urlopen(request, timeout=API_PROBE_TIMEOUT):
             return True
@@ -7091,7 +7091,7 @@ def network_owned(task: dict[str, Any]) -> bool:
 
 def handle_network_stops(cfg: dict[str, Any], probe: Any = None) -> dict[str, Any]:
     if network_resume_disabled():
-        return {"skipped": "PM_OS_NETWORK_RESUME=off or PM_OS_LIMIT_RESUME=off"}
+        return {"skipped": "SWITCHBOARD_NETWORK_RESUME=off or SWITCHBOARD_LIMIT_RESUME=off"}
     agents = ledger.live_agents()
     listing = cmux_workspaces()
     if not agents or not listing:
@@ -7154,7 +7154,7 @@ def handle_network_stops(cfg: dict[str, Any], probe: Any = None) -> dict[str, An
         if ws is None:
             continue   # no tab holds it: the dead-worker rule relaunches it on its checkout
         sent = cmux_agent_message(str(ws.get("ref") or ""), network_resume_text(task["id"], stop),
-                                  sender="PM OS network resume")
+                                  sender="switchboard network resume")
         # A timeout may come after cmux queued the line: count it as sent, never type it twice.
         if not (sent.get("ok") or sent.get("ambiguous") or "timed out" in str(sent.get("reason") or "")):
             log(f"{task['id']}: network resume refused by {ws.get('ref')} ({sent.get('reason')}); next tick")
@@ -7288,9 +7288,9 @@ def command_sweep(args: argparse.Namespace) -> int:
 
 AUTO_PUSH_STAMP = STATE_DIR / "auto-push.json"
 AUTO_PUSH_LOG = STATE_DIR / "logs" / "auto-push.log"
-AUTO_PUSH_INTERVAL = timedelta(minutes=int(os.environ.get("PM_OS_AUTO_PUSH_MINUTES") or 60))
+AUTO_PUSH_INTERVAL = timedelta(minutes=int(os.environ.get("SWITCHBOARD_AUTO_PUSH_MINUTES") or 60))
 AUTO_PUSH_REMOTE, AUTO_PUSH_BRANCH = "origin", "main"
-AUTO_PUSH_GIT_TIMEOUT = int(os.environ.get("PM_OS_AUTO_PUSH_GIT_TIMEOUT") or 300)
+AUTO_PUSH_GIT_TIMEOUT = int(os.environ.get("SWITCHBOARD_AUTO_PUSH_GIT_TIMEOUT") or 300)
 SENSITIVE_PREFIXES = ("local", "people", "notes/sensitive", "notes/chrome-tabs", ".state", "system/state")
 # The one negated pattern in .gitignore under `system/state/**`. The to-do list,
 # its archive and its backups live only on this machine (.gitignore).
@@ -7412,8 +7412,8 @@ def cos_alert(task_prefix: str, text: str, status: str) -> bool:
     same path as check-state-inventory.py (direct, priority)."""
     stamp = now().strftime("%Y%m%d-%H%M")
     cmd = ["bash", str(SCRIPTS / "report-to-cos.sh"), "--task-id", f"{task_prefix}-{stamp}", "--origin", "cos",
-           "--workstream", "pm-os-maintenance", "--status", status, "--urgent", "--create-if-missing", text]
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
+           "--workstream", "switchboard-maintenance", "--status", status, "--urgent", "--create-if-missing", text]
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
     env["REPORT_TO_COS_NO_HOOKS"] = "1"
     try:
         result = run(cmd, env=env, timeout=180)
@@ -7427,8 +7427,8 @@ def cos_digest_line(task_prefix: str, text: str) -> bool:
     (--delivery digest: never pasted directly, even after hours)."""
     stamp = now().strftime("%Y%m%d-%H%M")
     cmd = ["bash", str(SCRIPTS / "report-to-cos.sh"), "--task-id", f"{task_prefix}-{stamp}", "--origin", "cos",
-           "--workstream", "pm-os-maintenance", "--status", "done", "--delivery", "digest", "--create-if-missing", text]
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
+           "--workstream", "switchboard-maintenance", "--status", "done", "--delivery", "digest", "--create-if-missing", text]
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
     env["REPORT_TO_COS_NO_HOOKS"] = "1"
     try:
         result = run(cmd, env=env, timeout=180)
@@ -7552,14 +7552,14 @@ def _auto_push_under_lock(stamp: dict[str, Any]) -> dict[str, Any]:
 
 
 def auto_push_enabled() -> bool:
-    """Off unless PM_OS_AUTO_PUSH=on. PM OS stays on this machine with
+    """Off unless SWITCHBOARD_AUTO_PUSH=on. switchboard stays on this machine with
     no origin remote; a shareable copy is built and pushed from its own folder (system/kit/build_tier.py)."""
-    return os.environ.get("PM_OS_AUTO_PUSH", "").strip().lower() == "on"
+    return os.environ.get("SWITCHBOARD_AUTO_PUSH", "").strip().lower() == "on"
 
 
 def command_auto_push(args: argparse.Namespace) -> int:
     if not auto_push_enabled():
-        print(json.dumps({"action": "disabled", "reason": "PM_OS_AUTO_PUSH is not on; PM OS stays local"}))
+        print(json.dumps({"action": "disabled", "reason": "SWITCHBOARD_AUTO_PUSH is not on; switchboard stays local"}))
         return 0
     # Unattended: a credential prompt (terminal or Git Credential Manager's window) has nobody to answer it.
     os.environ.update(GIT_TERMINAL_PROMPT="0", GCM_INTERACTIVE="never")
@@ -7774,7 +7774,7 @@ def _strip_once(branch: str, upstream: str, rev_range: str, paths: list[str],
     # whose compare-and-swap then fails is pruned (prune_unapplied) before the retry.
     main_rewrites.append(STATE_DIR, {"at": ledger.now_iso(), "upstream": git("rev-parse", upstream).stdout.strip(),
                                      "old_tip": old_tip, "new_tip": new_tip, "paths": paths, "redacted": redact, "map": mapping})
-    moved = git("update-ref", "-m", f"pm-os strip-unpushed: {', '.join(paths + redact)[:200]}", f"refs/heads/{branch}",
+    moved = git("update-ref", "-m", f"switchboard strip-unpushed: {', '.join(paths + redact)[:200]}", f"refs/heads/{branch}",
                 new_tip, old_tip, check=False)
     if moved.returncode:
         return {**outcome, "action": "moved", "reason": f"main moved meanwhile ({moved.stderr.strip()[:160]})"}
@@ -7804,7 +7804,7 @@ def command_strip_unpushed(args: argparse.Namespace) -> int:
 
 CAPACITY_STAMP = STATE_DIR / "worker-dispatch" / "capacity.json"
 CMUX_TIMEOUT_LOG = STATE_DIR / "worker-dispatch" / "cmux-timeouts.jsonl"
-CAPACITY_ALERT_INTERVAL = timedelta(minutes=int(os.environ.get("PM_OS_CAPACITY_ALERT_MINUTES") or 60))
+CAPACITY_ALERT_INTERVAL = timedelta(minutes=int(os.environ.get("SWITCHBOARD_CAPACITY_ALERT_MINUTES") or 60))
 _SIZE_UNITS = {"": 1, "B": 1, "K": 1024, "M": 1024 ** 2, "G": 1024 ** 3, "T": 1024 ** 4}
 
 
@@ -8187,7 +8187,7 @@ def command_verify_amp(args: argparse.Namespace) -> int:
 def command_check_symlinks(args: argparse.Namespace) -> int:
     """Pre-commit guard (.lefthook.yaml): fail when the staged index contains a
     symlink pointing inside the repo. Runs in whichever checkout git invoked it from."""
-    cwd = Path(os.environ.get("PM_OS_CHECKOUT") or os.getcwd())
+    cwd = Path(os.environ.get("SWITCHBOARD_CHECKOUT") or os.getcwd())
     found = loop_symlinks(cwd, staged_paths(cwd))
     for entry in found:
         print(f"symlink-guard: {entry['path']} -> {entry['target']} points inside the repo; "

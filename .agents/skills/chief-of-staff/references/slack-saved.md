@@ -1,6 +1,6 @@
 # Slack saved items and reminders
 
-Use the `slack` skill and `pmos slack` for supported Slack operations.
+Use the `slack` skill and `switchboard slack` for supported Slack operations.
 The extension does not currently expose saved items or reminders.
 
 - Report this section as **unavailable**, not empty or complete.

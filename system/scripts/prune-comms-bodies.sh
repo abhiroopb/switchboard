@@ -13,8 +13,8 @@
 #   bash system/scripts/prune-comms-bodies.sh --apply --days 7
 set -euo pipefail
 
-PM_OS_DIR="${PM_OS_DIR:-${PM_OS_ROOT:-$HOME/Development/pm-os}}"
-LOG="$PM_OS_DIR/system/logs/prune-comms-bodies.log"
+SWITCHBOARD_DIR="${SWITCHBOARD_DIR:-${SWITCHBOARD_ROOT:-$HOME/Development/switchboard}}"
+LOG="$SWITCHBOARD_DIR/system/logs/prune-comms-bodies.log"
 
 DAYS=14
 APPLY=0
@@ -34,13 +34,13 @@ done
 # every other scheduled deleter under .state; check-state-inventory.py reads the
 # same file and leaves it out of its .state count, so a prune never trips
 # "state inventory shrank". No row, no prune.
-STATE_PRUNED_FILE="$PM_OS_DIR/system/config/state-pruned.txt"
+STATE_PRUNED_FILE="$SWITCHBOARD_DIR/system/config/state-pruned.txt"
 declared=$(awk -v me="prune-comms-bodies.sh" '$1 == me && $2 ~ /\/$/ {print $2}' "$STATE_PRUNED_FILE" 2>/dev/null || true)
 if [ "$(printf '%s' "$declared" | grep -c .)" -ne 1 ]; then
   echo "prune-comms-bodies: $STATE_PRUNED_FILE must list exactly one dir row for prune-comms-bodies.sh; nothing pruned" >&2
   exit 1
 fi
-BODIES_DIR="${COMMS_BODIES_DIR:-$PM_OS_DIR/.state/${declared%/}}"
+BODIES_DIR="${COMMS_BODIES_DIR:-$SWITCHBOARD_DIR/.state/${declared%/}}"
 
 mkdir -p "$(dirname "$LOG")"
 ts() { date -u '+%Y-%m-%dT%H:%M:%SZ'; }

@@ -4,7 +4,7 @@ set -euo pipefail
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 export REPO_ROOT
 ROUTER_CONFIG_FILE="${ROUTER_CONFIG_FILE:-$REPO_ROOT/system/config/router.yaml}"
-ROUTER_LOCK_DIR="${ROUTER_LOCK_DIR:-${TMPDIR:-/tmp}/pm-os-router-dispatch.lock}"
+ROUTER_LOCK_DIR="${ROUTER_LOCK_DIR:-${TMPDIR:-/tmp}/switchboard-router-dispatch.lock}"
 CMUX_BIN="${CMUX_BIN:-${CMUX:-/Applications/cmux.app/Contents/Resources/bin/cmux}}"
 AMP_READY_TIMEOUT="${ROUTER_AMP_READY_TIMEOUT:-25}"
 
@@ -42,7 +42,7 @@ if (( $# == 0 )) || [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     echo "                     that worker's terminal tab (fresh Amp thread) and inherits its declared write targets"
     exit $(( $# == 0 ? 2 : 0 ))
 fi
-ORIGIN="${PM_OS_DISPATCH_ORIGIN:-cos}"
+ORIGIN="${SWITCHBOARD_DISPATCH_ORIGIN:-cos}"
 REUSE_TASK_ID=""
 REQUEST_ID=""
 MAX_ATTEMPTS=""
@@ -52,7 +52,7 @@ DEPENDS_ON=()
 CONTINUATION_OF=""
 STEER_TASK_ID=""
 STEER_NO_FALLBACK=""
-WORKSTREAM="${PM_OS_DISPATCH_WORKSTREAM:-}"
+WORKSTREAM="${SWITCHBOARD_DISPATCH_WORKSTREAM:-}"
 PARALLEL_WORKER=""
 while (( $# > 0 )); do
     case "$1" in
@@ -250,7 +250,7 @@ fi
 # (16 to 30 s) are built in the background and a launch failure reaches the
 # origin as one failed line through the usual callback. The status publish
 # below is detached too (it costs ~0.5 to 1 s and the launcher republishes).
-# `PM_OS_DISPATCH_SYNC=1` (or `dispatch.py dispatch --sync`) restores the old
+# `SWITCHBOARD_DISPATCH_SYNC=1` (or `dispatch.py dispatch --sync`) restores the old
 # inline launch, which is what the test suites use.
 dispatch_args=(dispatch --origin "$ORIGIN")
 [[ -n "$REUSE_TASK_ID" ]] && dispatch_args+=(--task-id "$REUSE_TASK_ID")
@@ -265,7 +265,7 @@ for _d in ${DEPENDS_ON[@]+"${DEPENDS_ON[@]}"}; do dispatch_args+=(--depends-on "
 rc=0
 result="$(python3 "$REPO_ROOT/system/scripts/dispatch.py" "${dispatch_args[@]}" -- "$PROMPT")" || rc=$?
 printf '%s\n' "$result"
-if [[ "${PM_OS_DISPATCH_SYNC:-}" == "1" ]]; then
+if [[ "${SWITCHBOARD_DISPATCH_SYNC:-}" == "1" ]]; then
     bash "$REPO_ROOT/system/scripts/publish-running-tasks-status.sh" >/dev/null 2>&1 || true
 else
     # Detached with a hidden console on Windows (no_window.py), so nothing it runs opens a window.

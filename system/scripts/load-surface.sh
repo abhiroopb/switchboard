@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# load-surface.sh: open one fixed PM OS surface on demand, as if it had been open all day.
+# load-surface.sh: open one fixed switchboard surface on demand, as if it had been open all day.
 #
 # When the owner says "load Meetings", "load Scheduled Tasks", or "load Launchpad", the
 # surface opens and runs as though it had always been meant to run. CoS runs this in one tool call on
-# `load <surface>`. On a personal machine (PM_OS_MACHINE_ROLE=personal,
+# `load <surface>`. On a personal machine (SWITCHBOARD_MACHINE_ROLE=personal,
 # system/scripts/machine_role.py) Launchpad, Meetings, and Scheduled Jobs open only this
 # way; on a work machine they are already open and this reports where.
 #
@@ -50,7 +50,7 @@ if [[ -z "$surface" ]]; then
     exit 2
 fi
 case "$surface" in
-    megadesk) label="CoS" ;;
+    switchboard) label="CoS" ;;
     todo) label="To Do" ;;
     launchpad) label="Launchpad" ;;
     comms-triage) label="Comms Triage" ;;
@@ -62,11 +62,11 @@ esac
 source "$SCRIPT_DIR/lib/comms-triage.sh"
 # shellcheck source=lib/machine-role.sh
 source "$SCRIPT_DIR/lib/machine-role.sh"
-role="$(pm_os_machine_role)"
+role="$(switchboard_machine_role)"
 
-if [[ "$surface" == "comms-triage" ]] && ! pm_os_comms_triage_enabled; then
+if [[ "$surface" == "comms-triage" ]] && ! switchboard_comms_triage_enabled; then
     json status off surface "$surface" label "$label" role "$role" \
-        message "Comms Triage is off on this machine (PM_OS_COMMS_TRIAGE=off), so it was not loaded."
+        message "Comms Triage is off on this machine (SWITCHBOARD_COMMS_TRIAGE=off), so it was not loaded."
     exit 3
 fi
 
@@ -94,10 +94,10 @@ if [[ "$role" == "personal" ]]; then
 fi
 
 # Fresh state for the surface's startup prompt: meetings.json and scheduled-jobs.json come
-# from the megadesk rebuild, which the command-center tick also runs.
+# from the switchboard rebuild, which the command-center tick also runs.
 case "$surface" in
-    meetings|scheduled-jobs|launchpad|megadesk)
-        python3 "$SCRIPT_DIR/rebuild-megadesk-state.py" --write --event-source load-surface >/dev/null 2>&1 || true
+    meetings|scheduled-jobs|launchpad|switchboard)
+        python3 "$SCRIPT_DIR/rebuild-switchboard-state.py" --write --event-source load-surface >/dev/null 2>&1 || true
         ;;
 esac
 
@@ -106,7 +106,7 @@ case "$surface" in
     scheduled-jobs)
         handoff="Loaded on demand by the owner today ($today PT). Run as if this tab had been open since start of day: catch up every job in system/scheduled-jobs.yaml that is due or missed its slot today, and any [AUTOMATION] work queued while the tab was closed, under the usual confirm rules." ;;
     meetings)
-        handoff="Loaded on demand by the owner today ($today PT). Run as if this tab had been open since start of day: load today's meetings first (pmos calendar for today in Pacific Time, plus system/state/sources/meetings.json), prep the next one, and list follow-ups from meetings that already ended." ;;
+        handoff="Loaded on demand by the owner today ($today PT). Run as if this tab had been open since start of day: load today's meetings first (switchboard calendar for today in Pacific Time, plus system/state/sources/meetings.json), prep the next one, and list follow-ups from meetings that already ended." ;;
     launchpad)
         handoff="Loaded on demand by the owner today ($today PT). This tab is a dispatch origin from now on, exactly as if it had opened at start of day." ;;
     *)

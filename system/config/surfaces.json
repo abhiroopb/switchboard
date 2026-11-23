@@ -5,7 +5,7 @@
     "cos": {
       "title": "\ud83e\udded CoS",
       "source_type": "routine",
-      "source_key": "megadesk",
+      "source_key": "switchboard",
       "dispatch_origin": true,
       "reporting_hub": true,
       "callback_target": true,

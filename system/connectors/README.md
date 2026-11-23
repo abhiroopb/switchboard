@@ -1,26 +1,26 @@
-# pmos-shim: the PM OS connector CLI
+# switchboard-shim: the switchboard connector CLI
 
 ## What this is
 
-PM OS scripts and skills reach Gmail, Google Calendar, Google Drive, Slack and (optionally) Dropbox through one command, `pmos <tool> <subcommand> [--flag value ...]`. `pmos-shim.py` is that command: a standard-library Python program that serves the subcommands listed below from the Google, Slack and Dropbox REST APIs with the owner's own OAuth client and tokens, and prints output in the shapes the repo parsers read. Any other tool or verb exits 2 with a one-line "not available" message, so a caller falls through the same way it does for any missing verb.
+switchboard scripts and skills reach Gmail, Google Calendar, Google Drive, Slack and (optionally) Dropbox through one command, `switchboard <tool> <subcommand> [--flag value ...]`. `switchboard-shim.py` is that command: a standard-library Python program that serves the subcommands listed below from the Google, Slack and Dropbox REST APIs with the owner's own OAuth client and tokens, and prints output in the shapes the repo parsers read. Any other tool or verb exits 2 with a one-line "not available" message, so a caller falls through the same way it does for any missing verb.
 
 ## When it installs
 
-The kit puts `system/connectors` on `PATH` unless an existing CLI with the same name is already on `PATH`; in that case the existing CLI is left in front and the shim stays unused (`company_cli.py` makes that call for every installer). The launchers are `pmos` (bash, macOS, Linux and WSL2) and `pmos.cmd` (native Windows). Both run `pmos-shim.py` with `PM_OS_PYTHON` when set; otherwise `pmos` falls back to `python3` and `pmos.cmd` to `py -3`, then `python`. Python 3.11 or newer is required. No third-party packages.
+The kit puts `system/connectors` on `PATH` unless an existing CLI with the same name is already on `PATH`; in that case the existing CLI is left in front and the shim stays unused (`company_cli.py` makes that call for every installer). The launchers are `switchboard` (bash, macOS, Linux and WSL2) and `switchboard.cmd` (native Windows). Both run `switchboard-shim.py` with `SWITCHBOARD_PYTHON` when set; otherwise `switchboard` falls back to `python3` and `switchboard.cmd` to `py -3`, then `python`. Python 3.11 or newer is required. No third-party packages.
 
 Files and settings the shim reads:
 
 | Item | Default | Purpose |
 |------|---------|---------|
-| `PM_OS_CONNECTORS_DIR` | `~/.pm-os/connectors` | Directory for the files below |
+| `SWITCHBOARD_CONNECTORS_DIR` | `~/.switchboard/connectors` | Directory for the files below |
 | `google-oauth-client.json` | in that directory | OAuth client the owner downloads from Google Cloud Console |
 | `google-token.json` | in that directory | Refresh token plus cached access token, written with mode 0600 |
 | `slack-token.json` | in that directory | Slack user (`xoxp-`) or bot (`xoxb-`) token |
 | `dropbox-token.json` | in that directory | Dropbox refresh token and app key, written with mode 0600. Left out of the nightly backup |
-| `PM_OS_DROPBOX_ROOT` | the desktop app's `info.json` | Local Dropbox folder, used to turn a local path into a Dropbox path |
-| `SLACK_USER_TOKEN` | unset | Read once by `pmos login slack` instead of the prompt |
-| `PM_OS_CONNECTOR_TIMEOUT` | `60` | HTTP timeout in seconds. `--timeout <SECONDS>` overrides it |
-| `PM_OS_SHIM_TRACE` | unset | `1` prints each HTTP method and URL to stderr without query strings or bodies |
+| `SWITCHBOARD_DROPBOX_ROOT` | the desktop app's `info.json` | Local Dropbox folder, used to turn a local path into a Dropbox path |
+| `SLACK_USER_TOKEN` | unset | Read once by `switchboard login slack` instead of the prompt |
+| `SWITCHBOARD_CONNECTOR_TIMEOUT` | `60` | HTTP timeout in seconds. `--timeout <SECONDS>` overrides it |
+| `SWITCHBOARD_SHIM_TRACE` | unset | `1` prints each HTTP method and URL to stderr without query strings or bodies |
 
 The shim never prints a token and never logs a request body.
 
@@ -30,11 +30,11 @@ The shim never prints a token and never logs a request body.
 2. Enable three APIs under "APIs & Services": Gmail API, Google Drive API and Google Calendar API.
 3. Configure the OAuth consent screen. Choose "External" for a personal account. Add the owner's address as a test user while the app stays in testing.
 4. Create credentials of type "OAuth client ID" with application type "Desktop app".
-5. Download the client JSON and save it as `~/.pm-os/connectors/google-oauth-client.json`.
-6. Run `pmos login google`. The shim opens the browser to the Google consent page and prints the URL as well. It listens on `http://127.0.0.1:<random port>/` for the redirect and uses PKCE.
+5. Download the client JSON and save it as `~/.switchboard/connectors/google-oauth-client.json`.
+6. Run `switchboard login google`. The shim opens the browser to the Google consent page and prints the URL as well. It listens on `http://127.0.0.1:<random port>/` for the redirect and uses PKCE.
 7. Approve the scopes. The shim stores `google-token.json` and refreshes the access token on its own.
 
-Use `pmos login google --scopes readonly` for a read-only token. The default `--scopes full` requests `gmail.modify`, `drive` and `calendar`. Pass `--client-file PATH` when the client JSON lives elsewhere.
+Use `switchboard login google --scopes readonly` for a read-only token. The default `--scopes full` requests `gmail.modify`, `drive` and `calendar`. Pass `--client-file PATH` when the client JSON lives elsewhere.
 
 A Google Workspace admin may block third-party OAuth clients. Personal Google accounts work without that restriction.
 
@@ -43,7 +43,7 @@ A Google Workspace admin may block third-party OAuth clients. Personal Google ac
 1. Open `https://api.slack.com/apps` and create an app from scratch in the target workspace.
 2. Under "OAuth & Permissions" add these user token scopes: `search:read`, `channels:history`, `groups:history`, `im:history`, `mpim:history`, `channels:read`, `groups:read`, `users:read`, `users:read.email`, `chat:write`, `reactions:write`, `users.profile:read`.
 3. Install the app to the workspace and copy the user OAuth token. It starts with `xoxp-`.
-4. Run `pmos login slack` and paste the token at the hidden prompt. Set `SLACK_USER_TOKEN` in the environment to skip the prompt. The shim never accepts the token as a command-line argument.
+4. Run `switchboard login slack` and paste the token at the hidden prompt. Set `SLACK_USER_TOKEN` in the environment to skip the prompt. The shim never accepts the token as a command-line argument.
 5. The shim calls `auth.test`, stores `slack-token.json` and reports the team and user.
 
 A bot token (`xoxb-`) also works for posting and reading channels the bot joined. Search needs a user token because `search.messages` is user-scoped. A workspace admin may restrict app installs.
@@ -58,9 +58,9 @@ Dropbox gives no shared client, so the owner creates one small app. Do this in a
 2. Choose "Scoped access", then "Full Dropbox". An App folder app cannot reach files outside its own folder. Give the app any unique name without the word "Dropbox", then click "Create app".
 3. On the "Permissions" tab tick `sharing.read` and `sharing.write`, then save at the bottom or top of the page. Leave any box Dropbox ticks by itself. The shim asks only for these two plus `account_info.read`, which every app has.
 4. On the "Settings" tab, under "OAuth 2", paste `http://localhost:7473/` into "Redirect URIs" and click "Add". Leave "Allow public clients" on "Allow". Copy the "App key". It is an identifier that also appears in the sign-in address, so it is not a secret.
-5. Run `pmos login dropbox --app-key <KEY>`. The default browser opens the consent page, and clicking "Allow" within 15 minutes finishes it. Add `--no-browser` to get the address on stderr instead.
+5. Run `switchboard login dropbox --app-key <KEY>`. The default browser opens the consent page, and clicking "Allow" within 15 minutes finishes it. Add `--no-browser` to get the address on stderr instead.
 
-The token can list, create and remove shared links anywhere in the Dropbox. It has no file read or write permission, but anyone holding it could make a link to any file and open that link, so treat it as sensitive. It lives in `~/.pm-os/connectors/`, outside Dropbox, git and the backup, because that folder is the credential rule for every connector. To cut access, run `pmos logout dropbox` and delete the app in the App Console.
+The token can list, create and remove shared links anywhere in the Dropbox. It has no file read or write permission, but anyone holding it could make a link to any file and open that link, so treat it as sensitive. It lives in `~/.switchboard/connectors/`, outside Dropbox, git and the backup, because that folder is the credential rule for every connector. To cut access, run `switchboard logout dropbox` and delete the app in the App Console.
 
 ## Supported verbs
 
@@ -134,13 +134,13 @@ Plain `@user` and `#channel` mentions inside `--text` are not rewritten. Use `<@
 
 | Verb | Purpose |
 |------|---------|
-| `pmos login google [--client-file PATH] [--scopes readonly\|full]` | Run the loopback OAuth flow and store `google-token.json` |
-| `pmos login slack` | Store the Slack token from `SLACK_USER_TOKEN` or a hidden prompt |
-| `pmos login dropbox --app-key KEY [--no-browser]` | Run the loopback OAuth flow with PKCE on port 7473 and store `dropbox-token.json`. There is no app secret. Later runs may omit `--app-key` while the token file exists |
-| `pmos status` | Print `mail: ready (token expires ...)`, `slack: not configured`, and so on. Reads only the token files |
-| `pmos doctor [dropbox]` | Make one read call per configured tool (Gmail profile, Drive about, Calendar list, Slack `auth.test`, Dropbox account) and print `ok` or `FAIL` per tool. Exit 0 when every configured tool answers, 1 when any probe fails, 3 when nothing is configured. Dropbox is optional, so a failed Dropbox probe prints `FAIL` without changing the exit code. `doctor dropbox` probes only that tool and exits 1 when it fails, and `check-windows-install.py` uses it |
-| `pmos logout <google\|slack\|dropbox>` | Delete the stored token |
-| `pmos --version` | Print `pmos-shim <version> (connector CLI)` |
+| `switchboard login google [--client-file PATH] [--scopes readonly\|full]` | Run the loopback OAuth flow and store `google-token.json` |
+| `switchboard login slack` | Store the Slack token from `SLACK_USER_TOKEN` or a hidden prompt |
+| `switchboard login dropbox --app-key KEY [--no-browser]` | Run the loopback OAuth flow with PKCE on port 7473 and store `dropbox-token.json`. There is no app secret. Later runs may omit `--app-key` while the token file exists |
+| `switchboard status` | Print `mail: ready (token expires ...)`, `slack: not configured`, and so on. Reads only the token files |
+| `switchboard doctor [dropbox]` | Make one read call per configured tool (Gmail profile, Drive about, Calendar list, Slack `auth.test`, Dropbox account) and print `ok` or `FAIL` per tool. Exit 0 when every configured tool answers, 1 when any probe fails, 3 when nothing is configured. Dropbox is optional, so a failed Dropbox probe prints `FAIL` without changing the exit code. `doctor dropbox` probes only that tool and exits 1 when it fails, and `check-windows-install.py` uses it |
+| `switchboard logout <google\|slack\|dropbox>` | Delete the stored token |
+| `switchboard --version` | Print `switchboard-shim <version> (connector CLI)` |
 
 ### Errors and exit codes
 
@@ -151,8 +151,8 @@ Plain `@user` and `#channel` mentions inside `--text` are not rewritten. Use `<@
 | Usage error or unknown flag | `error: ...` message on stderr | 2 |
 | `mail send` refused, nothing went out | `refused: <reason>. Nothing was sent.` | 4 |
 | `mail send` outcome unknown (a timeout, a dropped connection, a 5xx) | `unknown: ...` It is never retried, and a rerun checks Sent first | 5 |
-| Unsupported verb | `pmos-shim: '<verb>' is not available in the connector shim (it covers mail, calendar, drive, slack, dropbox). See system/connectors/README.md.` | 2 |
-| Missing auth | `error: <tool>: not configured. Run: pmos login google` (or `slack`) | 3 |
+| Unsupported verb | `switchboard-shim: '<verb>' is not available in the connector shim (it covers mail, calendar, drive, slack, dropbox). See system/connectors/README.md.` | 2 |
+| Missing auth | `error: <tool>: not configured. Run: switchboard login google` (or `slack`) | 3 |
 
 ## Other services
 
@@ -168,25 +168,25 @@ The shim covers only the tools above. Use each service's own client for anything
 
 ## Sending email
 
-`mail send` is off by default. `python3 system/scripts/gmail_send_guard.py --set on` writes `PM_OS_GMAIL_SEND=on` to `local/machines/<MACHINE>.env` for this machine only, and the process environment can only turn it off. `gmail.modify`, which the default `--scopes full` token holds, covers `users.drafts.send`, so no new sign-in is needed. `pmos doctor` prints the state and fails when the flag is on and the token cannot send.
+`mail send` is off by default. `python3 system/scripts/gmail_send_guard.py --set on` writes `SWITCHBOARD_GMAIL_SEND=on` to `local/machines/<MACHINE>.env` for this machine only, and the process environment can only turn it off. `gmail.modify`, which the default `--scopes full` token holds, covers `users.drafts.send`, so no new sign-in is needed. `switchboard doctor` prints the state and fails when the flag is on and the token cannot send.
 
-`system/scripts/gmail_send_guard.py` refuses before any network call unless the process is an attended Claude Code session in the CoS or Launchpad tab, outside a worktree, with no worker markers. It then refuses unless the newest owner turn says send, an assistant message since the owner's previous turn showed this draft's recipients, subject, body, and link targets, and that turn has not already approved a send. A draft with attachments is refused, so send those from Gmail. Lines the mux typed into the pane never count as the owner: `cmux-shim.py` keeps a hash ledger of them at `~/.pm-os/injected-prompts.jsonl`. `--expect-hash` must match `show`'s `Send check`, which covers the headers and every MIME part, so an edited draft is refused. This gates the sanctioned path and is not a sandbox: an agent runs as the owner, so one that sets out to defeat it (raw `wmux send` into the CoS pane, a forged session id and transcript file, its own HTTP call with the token) is outside it.
+`system/scripts/gmail_send_guard.py` refuses before any network call unless the process is an attended Claude Code session in the CoS or Launchpad tab, outside a worktree, with no worker markers. It then refuses unless the newest owner turn says send, an assistant message since the owner's previous turn showed this draft's recipients, subject, body, and link targets, and that turn has not already approved a send. A draft with attachments is refused, so send those from Gmail. Lines the mux typed into the pane never count as the owner: `cmux-shim.py` keeps a hash ledger of them at `~/.switchboard/injected-prompts.jsonl`. `--expect-hash` must match `show`'s `Send check`, which covers the headers and every MIME part, so an edited draft is refused. This gates the sanctioned path and is not a sandbox: an agent runs as the owner, so one that sets out to defeat it (raw `wmux send` into the CoS pane, a forged session id and transcript file, its own HTTP call with the token) is outside it.
 
 Each attempt and outcome is appended to the gitignored `.state/gmail-sends.jsonl` with time, To, Cc, Subject, and message id, never a body. There is no `send-message` verb, because a saved draft is what ties the send to the text the owner saw.
 
 ## Verify
 
 ```sh
-pmos --version
-pmos status
-pmos doctor
-pmos mail search --max-results 1
-pmos calendar list
-pmos drive query --raw-query "name contains 'notes'" --page-size 1
-pmos slack people --query owner
+switchboard --version
+switchboard status
+switchboard doctor
+switchboard mail search --max-results 1
+switchboard calendar list
+switchboard drive query --raw-query "name contains 'notes'" --page-size 1
+switchboard slack people --query owner
 ```
 
-Set `PMOS_SHIM_TRACE=1` to see each HTTP call on stderr while debugging.
+Set `SWITCHBOARD_SHIM_TRACE=1` to see each HTTP call on stderr while debugging.
 
 ## Tests
 
@@ -195,7 +195,7 @@ The tests replace `Http.send`, the shim's single network seam, with a fake trans
 ```sh
 python3 system/scripts/test_gmail_send_guard.py
 cd system/connectors
-python3 -m unittest test_pmos_shim
+python3 -m unittest test_switchboard_shim
 ```
 
 They cover flag parsing, query construction, output shaping for the repo parsers, auth file handling with token refresh, and the "not available" and "not configured" paths.

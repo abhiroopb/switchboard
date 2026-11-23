@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bounded, process-scoped advisory locks for PM OS scripts."""
+"""Bounded, process-scoped advisory locks for switchboard scripts."""
 from __future__ import annotations
 
 try:
@@ -18,7 +18,7 @@ class LockBusyError(RuntimeError):
 
 
 def _lock_dir() -> Path:
-    override = os.environ.get("PM_OS_LOCK_DIR")
+    override = os.environ.get("SWITCHBOARD_LOCK_DIR")
     if override:
         return Path(override)
     return Path(__file__).resolve().parents[1] / "state" / "locks"
@@ -30,7 +30,7 @@ def single_instance(name: str, timeout: float | None = None) -> Iterator[Path]:
     if not name or Path(name).name != name:
         raise ValueError("lock name must be one path component")
     if timeout is None:
-        timeout = float(os.environ.get("PM_OS_LOCK_TIMEOUT_SECONDS", "30"))
+        timeout = float(os.environ.get("SWITCHBOARD_LOCK_TIMEOUT_SECONDS", "30"))
     if timeout < 0:
         raise ValueError("lock timeout must be non-negative")
 

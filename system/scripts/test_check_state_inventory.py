@@ -341,13 +341,13 @@ class PrunerScriptTests(unittest.TestCase):
 
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self.tmp.name) / "pm-os"
+        self.root = Path(self.tmp.name) / "switchboard"
         (self.root / "system" / "config").mkdir(parents=True)
         (self.root / "system" / "logs").mkdir(parents=True)
         (self.root / ".state").mkdir()
         self.declaration = self.root / "system" / "config" / "state-pruned.txt"
         self.declaration.write_text((SCRIPTS.parent / "config" / "state-pruned.txt").read_text())
-        self.env = {**os.environ, "PM_OS_DIR": str(self.root), "HOME": str(Path(self.tmp.name) / "home")}
+        self.env = {**os.environ, "SWITCHBOARD_DIR": str(self.root), "HOME": str(Path(self.tmp.name) / "home")}
         self.env.pop("COMMS_BODIES_DIR", None)
 
     def tearDown(self) -> None:

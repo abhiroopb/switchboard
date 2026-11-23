@@ -12,9 +12,9 @@ One check per source kind, all read-only:
   slack  -> check-thread-resolution.py (its cache, the collectors' shared
             Slack backoff and the hourly gate budget; nothing here calls the
             Slack CLI directly)
-  gmail  -> `pmos mail read` (thread message ids, then the
+  gmail  -> `switchboard mail read` (thread message ids, then the
             headers of the messages newer than the source message)
-  gdoc   -> `pmos drive comment` (comment + replies)
+  gdoc   -> `switchboard drive comment` (comment + replies)
   github -> `gh api graphql` for PRs (state, mergeQueueEntry, autoMergeRequest,
             latest reviews, merge-queue timeline) / `gh issue view --json`
             (live state: a MERGED or CLOSED PR/issue, or a PR in the merge
@@ -79,8 +79,8 @@ SURFACE_BACKOFF_BASE_SECONDS = 5 * 60
 SURFACE_BACKOFF_MAX_SECONDS = 30 * 60
 OFFLINE = os.environ.get("REPLY_CHECK_OFFLINE", "") == "1" or os.environ.get("THREAD_GATE_OFFLINE", "") == "1"
 CLI_TIMEOUT_SECONDS = float(os.environ.get("REPLY_CHECK_CLI_TIMEOUT", "40"))
-GMAIL_CMD = ["pmos", "mail", "read"]
-DRIVE_CMD = ["pmos", "drive", "comment"]
+GMAIL_CMD = ["switchboard", "mail", "read"]
+DRIVE_CMD = ["switchboard", "drive", "comment"]
 GH_CMD = ["gh"]
 # PR state is read over GraphQL: `gh pr view --json` has no mergeQueueEntry, so
 # the REST field set could not tell a PR sitting in the merge queue from one
@@ -96,7 +96,7 @@ GH_PR_QUERY = """query($owner:String!,$name:String!,$number:Int!) { repository(o
     ... on RemovedFromMergeQueueEvent { createdAt actor { login } } ... on MergedEvent { createdAt actor { login } } } }
 } } }"""
 GH_ISSUE_FIELDS = "state,closedAt,stateReason,title,url,author"
-TODO_PATH = Path(os.environ.get("PM_OS_TODO_JSON") or REPO_ROOT / "system" / "state" / "todo.json")
+TODO_PATH = Path(os.environ.get("SWITCHBOARD_TODO_JSON") or REPO_ROOT / "system" / "state" / "todo.json")
 OPEN_TODO_STATUSES = frozenset({"open", "actionable", "waiting", "scheduled"})
 PT = ZoneInfo("America/Los_Angeles")
 
@@ -116,7 +116,7 @@ OWNER_GITHUB_LOGINS = {u.strip().lower() for u in os.environ.get("OWNER_GITHUB_L
 # are status lines. Unverifiable (no live read) is never an ask.
 REVIEW_ROLE_ASK = "requested-reviewer"
 REVIEW_ROLES = (REVIEW_ROLE_ASK, "team-fanout", "author", "none")
-PRIORITY_CHANNELS_PATH = Path(os.environ.get("PM_OS_PRIORITY_CHANNELS") or REPO_ROOT / "system" / "config" / "priority-channels.yaml")
+PRIORITY_CHANNELS_PATH = Path(os.environ.get("SWITCHBOARD_PRIORITY_CHANNELS") or REPO_ROOT / "system" / "config" / "priority-channels.yaml")
 
 def _os_replace(src, dst):
     """os.replace, retried for up to 5 s on Windows while another process has dst open."""
@@ -237,21 +237,21 @@ def _load_script(path: Path, name: str) -> Any | None:
 def slack_gate() -> Any | None:
     global _slack_gate
     if _slack_gate is None:
-        _slack_gate = _load_script(SLACK_GATE_SCRIPT, "pm_os_reply_check_slack_gate")
+        _slack_gate = _load_script(SLACK_GATE_SCRIPT, "switchboard_reply_check_slack_gate")
     return _slack_gate
 
 
 def ledger() -> Any:
     global _ledger
     if _ledger is None:
-        _ledger = _load_script(LEDGER_SCRIPT, "pm_os_reply_check_ledger")
+        _ledger = _load_script(LEDGER_SCRIPT, "switchboard_reply_check_ledger")
     return _ledger
 
 
 def gmail_search() -> Any:
     global _gmail_search
     if _gmail_search is None:
-        _gmail_search = _load_script(GMAIL_SEARCH_SCRIPT, "pm_os_reply_check_gmail_search")
+        _gmail_search = _load_script(GMAIL_SEARCH_SCRIPT, "switchboard_reply_check_gmail_search")
     return _gmail_search
 
 
@@ -537,7 +537,7 @@ def github_target(item: dict[str, Any]) -> dict[str, str] | None:
 
 
 def source_seen_at(item: dict[str, Any]) -> datetime | None:
-    """When PM OS first saw the source message (the floor for 'after')."""
+    """When switchboard first saw the source message (the floor for 'after')."""
     inbound = item.get("inbound") or {}
     for value in (inbound.get("received_at"), item.get("received_at"), item.get("first_seen"), item.get("draft_held_at")):
         parsed = parse_iso(value)
@@ -844,7 +844,7 @@ def _check_gdoc(item: dict[str, Any], ref: str, *, now: float | None) -> dict[st
             },
             now=now,
         )
-    # The source message is the newest non-the owner entry PM OS had seen when the
+    # The source message is the newest non-the owner entry switchboard had seen when the
     # item was captured; everything after it is "after the source message".
     floor_candidates = [e for e in others if seen is None or e["at"] <= seen] or others
     floor = max((e["at"] for e in floor_candidates), default=entries[0]["at"])
@@ -1910,7 +1910,7 @@ def reconcile(
     kwargs: dict[str, Any] = {"by": "already-answered-reconcile"}
     if ledger_path is not None:
         kwargs["path"] = ledger_path
-    todo_cli = todo_cli or Path(os.environ.get("PM_OS_TODO_CLI") or REPO_ROOT / "system" / "skill-overrides" / "todo" / "scripts" / "todo_cli.py")
+    todo_cli = todo_cli or Path(os.environ.get("SWITCHBOARD_TODO_CLI") or REPO_ROOT / "system" / "skill-overrides" / "todo" / "scripts" / "todo_cli.py")
     run = runner or _runner or _default_runner
 
     def complete_todos(plan: dict[str, Any]) -> None:

@@ -3,7 +3,7 @@
 
 The owner opens a tab in wmux, types claude, and then types start of day, CoS, or chief
 of staff, with no other setup to remember. So the binding cannot depend on the model remembering Phase 0 of the
-chief-of-staff skill. The pm-os plugin hook surface-context.py calls `observe()` on every
+chief-of-staff skill. The switchboard plugin hook surface-context.py calls `observe()` on every
 UserPromptSubmit. When the first prompt of a session is one of the trigger phrases, this
 module, before the model sees the prompt:
 
@@ -21,8 +21,8 @@ module, before the model sees the prompt:
   5. returns the context line the hook injects: what was bound, then what to do with the
      ask ("start of day" dispatches start of day; "CoS" or "chief of staff" replies Ready.).
 
-Never in a worker (PM_OS_WORKER*, PM_OS_WORKTREE, a "PM OS worker" tab, a task worktree),
-never with PM_OS_SURFACE set to another surface, never outside a multiplexer, and only on a
+Never in a worker (SWITCHBOARD_WORKER*, SWITCHBOARD_WORKTREE, a "switchboard worker" tab, a task worktree),
+never with SWITCHBOARD_SURFACE set to another surface, never outside a multiplexer, and only on a
 session's first prompt, so "CoS" typed mid-conversation in some other tab claims nothing.
 
 CLI (tests and by hand; prints one JSON line):
@@ -30,7 +30,7 @@ CLI (tests and by hand; prints one JSON line):
   cos_autobind.py bind --session-id <id> "<prompt>"   run the binding now (ignores first-prompt)
 
 Env: COS_AUTOBIND_STATE_DIR (first-prompt markers, default <repo>/.state/cos-autobind),
-COS_AUTOBIND_DISABLED=1 (kill switch; also ~/.claude/pm-os-plugin-config.json
+COS_AUTOBIND_DISABLED=1 (kill switch; also ~/.claude/switchboard-plugin-config.json
 {"cos-autobind.disabled": true}). Tests: system/scripts/test_cos_autobind.py.
 """
 from __future__ import annotations
@@ -52,15 +52,15 @@ for _p in (HERE, HERE / "lib"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-REPO_ROOT = Path(os.environ.get("PM_OS_ROOT") or os.environ.get("PM_OS_REPO") or HERE.parents[1])
+REPO_ROOT = Path(os.environ.get("SWITCHBOARD_ROOT") or os.environ.get("SWITCHBOARD_REPO") or HERE.parents[1])
 COS_TITLE = "🧭 CoS"
 
 START_OF_DAY = "start-of-day"
 COS = "cos"
 _TRIGGERS = {
     START_OF_DAY: ("start of day", "start my day", "start the day", "sod", "good morning",
-                   "/start-day", "/pm-os:start-day"),
-    COS: ("cos", "chief of staff", "chief-of-staff", "/chief-of-staff", "megadesk"),
+                   "/start-day", "/switchboard:start-day"),
+    COS: ("cos", "chief of staff", "chief-of-staff", "/chief-of-staff"),
 }
 _PHRASE_TO_KIND = {phrase: kind for kind, phrases in _TRIGGERS.items() for phrase in phrases}
 
@@ -72,7 +72,7 @@ def state_dir() -> Path:
 def disabled() -> bool:
     if os.environ.get("COS_AUTOBIND_DISABLED") == "1":
         return True
-    config = Path(os.environ.get("PM_OS_PLUGIN_CONFIG") or Path.home() / ".claude" / "pm-os-plugin-config.json")
+    config = Path(os.environ.get("SWITCHBOARD_PLUGIN_CONFIG") or Path.home() / ".claude" / "switchboard-plugin-config.json")
     try:
         return bool(json.loads(config.read_text(encoding="utf-8")).get("cos-autobind.disabled"))
     except (OSError, ValueError, AttributeError):
@@ -108,11 +108,11 @@ def in_task_worktree(cwd: str) -> bool:
 
 def refusal(env: Mapping[str, str], cwd: str) -> str:
     """Why this session may not become CoS, or ""."""
-    if any(value and (key.startswith("PM_OS_WORKER") or key == "PM_OS_WORKTREE") for key, value in env.items()):
+    if any(value and (key.startswith("SWITCHBOARD_WORKER") or key == "SWITCHBOARD_WORKTREE") for key, value in env.items()):
         return "worker session"
-    forced = (env.get("PM_OS_SURFACE") or "").strip().lower()
+    forced = (env.get("SWITCHBOARD_SURFACE") or "").strip().lower()
     if forced and forced != "cos":
-        return f"PM_OS_SURFACE={forced}"
+        return f"SWITCHBOARD_SURFACE={forced}"
     if in_task_worktree(cwd):
         return "task worktree"
     if not (env.get("WMUX_SURFACE_ID") or env.get("CMUX_WORKSPACE_ID") or env.get("CMUX_SURFACE_ID")):
@@ -297,7 +297,7 @@ def bind(session_id: str, env: Mapping[str, str] | None = None, cwd: str | None 
 # --- Remote Control ----------------------------------------------------------------------
 # CoS only. Every scripted CoS launch runs with --remote-control; a hand-typed claude CoS
 # reminds the owner once to type /rc. The global Claude Code setting stays unchanged. Scripted launches (cmux-helpers.sh cos_remote_control_args)
-# set PM_OS_COS_REMOTE_CONTROL_LAUNCH=1. Otherwise the transcript decides: Claude Code writes
+# set SWITCHBOARD_COS_REMOTE_CONTROL_LAUNCH=1. Otherwise the transcript decides: Claude Code writes
 # a "bridge-session" record (and a "bridge_status" line) once Remote Control is on, and a
 # plain `claude --resume` of such a session turns it back on, so its records stay valid.
 
@@ -309,13 +309,13 @@ RC_REMINDER = ("Remote Control is off in this CoS session, so the owner's phone 
 def remote_control_on(transcript_path: str, env: Mapping[str, str]) -> bool | None:
     """True when this session has Remote Control on, False when it plainly does not, None
     when that cannot be read (no reminder then: a wrong nag is worse than none)."""
-    if env.get("PM_OS_COS_REMOTE_CONTROL_LAUNCH") == "1":
+    if env.get("SWITCHBOARD_COS_REMOTE_CONTROL_LAUNCH") == "1":
         return True
     try:  # the owner turned CoS Remote Control off: no /rc reminder either
         import machine_role
-        switch = machine_role.value("PM_OS_COS_REMOTE_CONTROL", env)
+        switch = machine_role.value("SWITCHBOARD_COS_REMOTE_CONTROL", env)
     except Exception:
-        switch = str(env.get("PM_OS_COS_REMOTE_CONTROL") or "")
+        switch = str(env.get("SWITCHBOARD_COS_REMOTE_CONTROL") or "")
     if switch.strip().lower() in ("off", "0", "false", "no"):
         return None
     if not transcript_path:
@@ -338,13 +338,13 @@ def context_line(kind: str, result: dict[str, Any], prompt: str, remote_control:
     root = str(REPO_ROOT)
     if result.get("bound"):
         demoted = result.get("demoted") or []
-        head = (f"PM OS: the cos-autobind hook registered this tab as the CoS Claude tab before this turn "
+        head = (f"switchboard: the cos-autobind hook registered this tab as the CoS Claude tab before this turn "
                 f"({result.get('ref')}, titled \"{COS_TITLE}\", pinned{', moved to the top' if 'move-top' in (result.get('steps') or []) else ''}, session {result.get('session_id')}"
                 + (f"; the previous CoS tab {', '.join(demoted)} was renamed \"{COS_TITLE} (old …)\", not closed" if demoted else "")
                 + "). Phase 0 tab chrome is done; do not repeat it. Work from the repo root: "
                 f"`cd {root}`. Origin is cos (DISPATCH_ORIGIN=cos).")
     else:
-        head = (f"PM OS: the cos-autobind hook could not register this tab as CoS ({result.get('reason') or 'unknown'}). "
+        head = (f"switchboard: the cos-autobind hook could not register this tab as CoS ({result.get('reason') or 'unknown'}). "
                 f"Run `cd {root} && bash system/scripts/cos-phase0.sh chrome --claim` once, report its line in one "
                 "clause, then continue.")
     if kind == START_OF_DAY:

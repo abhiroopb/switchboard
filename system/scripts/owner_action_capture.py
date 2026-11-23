@@ -57,7 +57,7 @@ Never blocks a report or a question: every entry point swallows its own failure.
 add waits in worker-dispatch/owner-action-pending/, already scrubbed, and each tick retries.
 
 Kill switch: OWNER_ACTION_CAPTURE_DISABLED=1. Test seam: OWNER_ACTION_TODO_CLI names the
-CLI. Under PM_OS_TEST_SANDBOX=1 nothing runs unless that seam names one, the same rule
+CLI. Under SWITCHBOARD_TEST_SANDBOX=1 nothing runs unless that seam names one, the same rule
 that keeps a test from reaching a live tab.
 """
 from __future__ import annotations
@@ -84,12 +84,12 @@ import private_identifiers  # noqa: E402
 import private_workstreams  # noqa: E402
 
 # The owner's first name, as workers write it in reports. Default {{OWNER_FIRST}}, so the
-# source machine reads reports as before; a kit install sets PM_OS_OWNER_FIRST, and empty means workers say only
+# source machine reads reports as before; a kit install sets SWITCHBOARD_OWNER_FIRST, and empty means workers say only
 # "the owner". It also keeps the kit scrub from collapsing the name into "the owner|the owner".
-OWNER_FIRST = os.environ.get("PM_OS_OWNER_FIRST", "{{OWNER_FIRST}}").strip()
+OWNER_FIRST = os.environ.get("SWITCHBOARD_OWNER_FIRST", "{{OWNER_FIRST}}").strip()
 OWNER_FIRST_RE = re.escape(OWNER_FIRST) if OWNER_FIRST else r"(?!)"
 
-REF_PREFIX = "pm-os://owner-action/"
+REF_PREFIX = "switchboard://owner-action/"
 TAG = "owner-action"
 PT = ZoneInfo("America/Los_Angeles")
 TITLE_LIMIT = 110
@@ -212,7 +212,7 @@ def cli_path() -> Path | None:
     forced = os.environ.get("OWNER_ACTION_TODO_CLI")
     if forced:
         return Path(forced)
-    if os.environ.get("PM_OS_TEST_SANDBOX") == "1":
+    if os.environ.get("SWITCHBOARD_TEST_SANDBOX") == "1":
         return None
     for candidate in (Path.home() / ".agents" / "skills" / "todo" / "scripts" / "todo_cli.py",
                       repo_root() / "system" / "skill-overrides" / "todo" / "scripts" / "todo_cli.py"):
@@ -225,7 +225,7 @@ def run_cli(*args: str) -> dict[str, Any]:
     cli = cli_path()
     if cli is None:
         return {"skipped": "no to-do CLI in this environment"}
-    env = {**os.environ, "PM_OS_ROOT": str(repo_root()), "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+    env = {**os.environ, "SWITCHBOARD_ROOT": str(repo_root()), "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
     try:
         done = subprocess.run([sys.executable, str(cli), "--path", str(todo_path()), *args], env=env, capture_output=True,
                               text=True, encoding="utf-8", errors="replace", timeout=CLI_TIMEOUT, stdin=subprocess.DEVNULL)
@@ -428,7 +428,7 @@ def title_of(action: Action) -> str:
 
 
 def worker_name(workstream: str) -> str:
-    return owner_tabs.owner_name(workstream) if workstream else "PM OS"
+    return owner_tabs.owner_name(workstream) if workstream else "switchboard"
 
 
 def is_private(workstream: str) -> bool:

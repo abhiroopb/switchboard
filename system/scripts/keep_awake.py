@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep a Windows machine awake while PM OS work is live, and let it sleep when none is.
+"""Keep a Windows machine awake while switchboard work is live, and let it sleep when none is.
 
 Keep the machine awake while work runs. On a Modern Standby laptop the display
 turning off starts standby, so workers can stall overnight. `system/windows/keep-awake.ps1` holds SYSTEM_REQUIRED and
@@ -29,7 +29,7 @@ Long jobs that are not workers (a suite run, an overnight script) take a lease:
     python3 system/scripts/keep_awake.py unlease --name suite-rerun
 
 Other commands: `sync` (the same pass the tick runs), `status`.
-Kill switch: PM_OS_KEEP_AWAKE=off (the next sync releases a dispatch-owned hold).
+Kill switch: SWITCHBOARD_KEEP_AWAKE=off (the next sync releases a dispatch-owned hold).
 Log: .state/keep-awake.log (written by keep-awake.ps1).
 """
 from __future__ import annotations
@@ -63,7 +63,7 @@ def repo_root() -> Path:
 
 
 def state_dir() -> Path:
-    return Path(os.environ.get("PM_OS_KEEP_AWAKE_STATE_DIR") or repo_root() / ".state")
+    return Path(os.environ.get("SWITCHBOARD_KEEP_AWAKE_STATE_DIR") or repo_root() / ".state")
 
 
 def lease_dir_default() -> Path:
@@ -75,10 +75,10 @@ PS1 = SCRIPTS.parent / "windows" / "keep-awake.ps1"
 OWNER = "dispatch"
 # Longer than the 15-minute Windows tick, so one late tick never drops the hold,
 # and short enough that a dead tick lets the laptop sleep within the hour.
-HOLD_MINUTES = int(os.environ.get("PM_OS_KEEP_AWAKE_MINUTES") or 60)
+HOLD_MINUTES = int(os.environ.get("SWITCHBOARD_KEEP_AWAKE_MINUTES") or 60)
 # A worker quiet this long is parked or idle, not working. Longer than the 10-minute
 # foreground tool timeout, so one long command never reads as idle.
-QUIET_MINUTES = int(os.environ.get("PM_OS_KEEP_AWAKE_QUIET_MINUTES") or 20)
+QUIET_MINUTES = int(os.environ.get("SWITCHBOARD_KEEP_AWAKE_QUIET_MINUTES") or 20)
 _NAME = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 
 Runner = Callable[[list[str]], dict[str, Any]]
@@ -89,13 +89,13 @@ def _now() -> datetime:
 
 
 def enabled() -> bool:
-    return (os.environ.get("PM_OS_KEEP_AWAKE") or "on").strip().lower() not in {"off", "0", "false", "no"}
+    return (os.environ.get("SWITCHBOARD_KEEP_AWAKE") or "on").strip().lower() not in {"off", "0", "false", "no"}
 
 
 def on_windows() -> bool:
     """Live Windows only. The test sandbox reads as not Windows, like dispatch._on_windows,
     so no suite ever starts a real hold on this laptop."""
-    return os.name == "nt" and os.environ.get("PM_OS_TEST_SANDBOX") != "1"
+    return os.name == "nt" and os.environ.get("SWITCHBOARD_TEST_SANDBOX") != "1"
 
 
 # --- long-job leases -------------------------------------------------------------------
@@ -246,7 +246,7 @@ def sync(live: list[str], *, runner: Runner | None = None, windows: bool | None 
 def claude_temp_dir() -> Path:
     """Claude Code keeps each session's tool and background-task output under
     %TEMP%/claude/<project hash>/<session id>/tasks/."""
-    return Path(os.environ.get("PM_OS_CLAUDE_TEMP_DIR") or Path(tempfile.gettempdir()) / "claude")
+    return Path(os.environ.get("SWITCHBOARD_CLAUDE_TEMP_DIR") or Path(tempfile.gettempdir()) / "claude")
 
 
 def _parse(stamp: Any) -> datetime | None:

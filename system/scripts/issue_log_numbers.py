@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Next entry numbers for a numbered PM OS issue log, so parallel workers never reuse one.
+"""Next entry numbers for a numbered switchboard issue log, so parallel workers never reuse one.
 
 Two workers that each read their own worktree copy of a log cannot see each
 other's unlanded entry, so both could write the same number. This script reads every copy of the log (main's and each live task
@@ -78,7 +78,7 @@ def log_copies(rel: Path) -> list[Path]:
 
 
 def claims_dir(rel: Path) -> Path:
-    override = os.environ.get("PM_OS_ISSUE_LOG_CLAIMS_DIR", "").strip()
+    override = os.environ.get("SWITCHBOARD_ISSUE_LOG_CLAIMS_DIR", "").strip()
     base = Path(override).expanduser() if override else review_surface.vault_root() / ".state" / "issue-log-claims"
     return base / rel.as_posix().replace("/", "__")
 
@@ -153,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
     nxt.add_argument("--log", required=True)
     nxt.add_argument("--kind", choices=sorted(KINDS), required=True)
     nxt.add_argument("--claim", action="store_true", help="reserve the number so no other worker takes it")
-    nxt.add_argument("--task-id", default=os.environ.get("PM_OS_WORKER_TASK_ID", ""))
+    nxt.add_argument("--task-id", default=os.environ.get("SWITCHBOARD_WORKER_TASK_ID", ""))
     chk = sub.add_parser("check", help="exit 1 when two entries share a number")
     chk.add_argument("--log", required=True)
     args = parser.parse_args(argv)

@@ -3,7 +3,7 @@
 
 Rule: a PR is marked ready for review before the owner hears about it or reviewers are added.
 A PR named in a report to the owner is ready for review, or the report says why it stays a draft.
-pm-os-guardrails Rule 19 guards the reviewer request itself; this script guards the report.
+switchboard-guardrails Rule 19 guards the reviewer request itself; this script guards the report.
 
 `report-to-cos.sh` runs `check --text "<summary>"`. It prints one warning line when a named PR is
 still a draft, and nothing otherwise. A failed lookup is skipped (fail open). Kill switch:

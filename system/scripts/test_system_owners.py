@@ -55,7 +55,7 @@ class IdentifierTests(unittest.TestCase):
         ids = so.identifiers(text)
         for expected in ("acme-report-site", "acme-reports-repo", "CXXXXXXXXXX".lower(), "team-reports-all"):
             self.assertIn(expected, ids)
-        self.assertNotIn("pmos-example", so.identifiers("https://example.slack.com/archives/DXXXXXXXXXX/p1"))
+        self.assertNotIn("switchboard-example", so.identifiers("https://example.slack.com/archives/DXXXXXXXXXX/p1"))
 
 
 class ResolveTests(unittest.TestCase):
@@ -66,7 +66,7 @@ class ResolveTests(unittest.TestCase):
         self.tree = Tree(self.root)
         self.tree.add(INFRA, f"VM {BOX} failed. " * 12, f"infra_only: true\ntodo_match_terms:\n- {INFRA}\n")
         self.tree.add("photo-book-kit", "Windows install report.\n")
-        self.tree.add("pm-os-maintenance", f"{BOX} once.\n")
+        self.tree.add("switchboard-maintenance", f"{BOX} once.\n")
 
     def payload(self, *rows: dict) -> dict:
         return {"tasks": [dict(PRIMARY), dict(MISROUTED), *rows]}

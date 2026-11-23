@@ -58,7 +58,7 @@ if (( ${#external[@]} )); then
     prompt+=$'\n\n'"Declared write targets outside the repo (take the path lock before writing: python3 $REPO_ROOT/system/scripts/dispatch.py lock --task-id <task> --path <path>): $(IFS=', '; printf '%s' "${external[*]}")"
 fi
 
-args=(dispatch --origin "${PM_OS_DISPATCH_ORIGIN:-cos}")
+args=(dispatch --origin "${SWITCHBOARD_DISPATCH_ORIGIN:-cos}")
 [[ -n "$NAME" ]] && args+=(--workstream "$NAME")
 [[ -n "$CONTINUATION_OF" ]] && args+=(--continuation-of "$CONTINUATION_OF")
 for _d in ${DEPENDS_ON[@]+"${DEPENDS_ON[@]}"}; do args+=(--depends-on "$_d"); done

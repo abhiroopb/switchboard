@@ -1,0 +1,9 @@
+{
+  "name": "switchboard",
+  "version": "0.1.0",
+  "description": "switchboard for Claude Code: guardrails, worker liveness, workspace reports, slash commands, reviewer agents, and MCP servers. Hooks run the existing Amp plugin modules through hooks/amp-bridge.ts.",
+  "author": {
+    "name": "switchboard"
+  },
+  "keywords": ["switchboard", "cmux", "guardrails"]
+}

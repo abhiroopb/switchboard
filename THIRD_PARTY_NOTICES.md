@@ -47,7 +47,7 @@ Two skills in `.agents/skills/` also come from third parties. Each keeps its ups
 
 ## Plugin agents and commands
 
-Six agents and four commands in the Claude Code plugin (`system/claude-marketplace/plugins/pm-os/`) come unchanged from [HumanLayer](https://github.com/humanlayer/humanlayer) under the Apache License 2.0. The plugin folder holds the license as `LICENSE.humanlayer` and lists each file in `THIRD_PARTY.md`.
+Six agents and four commands in the Claude Code plugin (`system/claude-marketplace/plugins/switchboard/`) come unchanged from [HumanLayer](https://github.com/humanlayer/humanlayer) under the Apache License 2.0. The plugin folder holds the license as `LICENSE.humanlayer` and lists each file in `THIRD_PARTY.md`.
 
 ## Summary
 

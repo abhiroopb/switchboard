@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Install or update PM OS from this kit checkout into your own PM OS repo.
+"""Install or update switchboard from this kit checkout into your own switchboard repo.
 
-The kit writes owner identity as placeholders ({{OWNER_NAME}}, {{OWNER_EMAIL}}, {{PM_OS_ROOT}},
+The kit writes owner identity as placeholders ({{OWNER_NAME}}, {{OWNER_EMAIL}}, {{SWITCHBOARD_ROOT}},
 ...). This installer verifies the kit against its manifest, renders the
 placeholders with your values, writes the tree to --destination, creates the
 personal folders the kit deliberately leaves out (people/, notes/, workstreams/),
@@ -43,17 +43,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 KIT_ROOT = Path(__file__).resolve().parent
-MANIFEST = KIT_ROOT / ".pm-os-kit" / "source-manifest.json"
-DEFAULT_DESTINATION = Path.home() / "Development" / "pm-os"
+MANIFEST = KIT_ROOT / ".switchboard-kit" / "source-manifest.json"
+DEFAULT_DESTINATION = Path.home() / "Development" / "switchboard"
 DESTINATION_PROMPT = (
-    "Where should PM OS live? This folder holds the repo, your notes, people profiles and\n"
+    "Where should switchboard live? This folder holds the repo, your notes, people profiles and\n"
     "workstreams. Suggested: {suggested}. Type another path to choose a different\n"
-    "folder or drive, or press Enter to accept. A synced folder such as Dropbox works; run PM OS\n"
+    "folder or drive, or press Enter to accept. A synced folder such as Dropbox works; run switchboard\n"
     "from one device at a time there, because git locks and the background jobs clash across devices."
 )
-INSTALL_RECORD = ".pm-os-kit/install.json"
+INSTALL_RECORD = ".switchboard-kit/install.json"
 
-# Kit-only files: they describe or drive the kit and are not part of a PM OS checkout.
+# Kit-only files: they describe or drive the kit and are not part of a switchboard checkout.
 KIT_ONLY = {"install.sh", "install.py", "README.md", "CONTRIBUTING.md", "NOTICE.md"}
 
 # Files a PM personalizes after the first install. --update never overwrites
@@ -76,14 +76,14 @@ SEED_FILES = {
 
 PLACEHOLDERS = (
     "OWNER_NAME", "OWNER_FIRST", "OWNER_NAME_LOWER", "OWNER_EMAIL", "OWNER_USER", "OWNER_ROLE",
-    "OWNER_GITHUB", "OWNER_SLACK_USER_ID", "PM_OS_SLACK_BOT_CHANNEL", "PM_OS_ROOT", "HOME",
+    "OWNER_GITHUB", "OWNER_SLACK_USER_ID", "SWITCHBOARD_SLACK_BOT_CHANNEL", "SWITCHBOARD_ROOT", "HOME",
 )
 PLACEHOLDER_RE = re.compile(r"\{\{(" + "|".join(PLACEHOLDERS) + r")\}\}")
 
 DECISIONS_DOC = "docs/install-decisions.md"
 
 # Owner data the installer and every cleanup must leave alone: local/backups holds
-# the only copy of ~/.claude, ~/.pm-os and the commit history (docs/backup-and-restore.md).
+# the only copy of ~/.claude, ~/.switchboard and the commit history (docs/backup-and-restore.md).
 # A restore the owner approves is the one exception: local_backup.py brings the owner
 # files back into <destination>/local, and never over a newer file.
 PROTECTED_DIRS = ("local",)
@@ -95,7 +95,7 @@ def is_protected(rel: str) -> bool:
     first = rel.replace("\\", "/").removeprefix("./").split("/", 1)[0]
     return first.lower() in PROTECTED_DIRS
 
-# Path segments that mark a sync client's folder. PM OS keeps git, worktrees,
+# Path segments that mark a sync client's folder. switchboard keeps git, worktrees,
 # symlinks, SQLite and fast-changing sidecar state; sync clients corrupt them.
 SYNCED_SEGMENTS = (
     "dropbox", "onedrive", "icloud", "com~apple~clouddocs", "mobile documents",
@@ -134,9 +134,9 @@ def log(message: str) -> None:
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--destination", type=Path, default=None,
-                    help="where your PM OS repo lives (any folder or drive, a synced one included). Omitted: "
-                         "asked on a terminal with a suggestion ($PM_OS_ROOT, else the folder recorded in "
-                         f"~/.pm-os/env, else {DEFAULT_DESTINATION}); non-interactive runs take the suggestion")
+                    help="where your switchboard repo lives (any folder or drive, a synced one included). Omitted: "
+                         "asked on a terminal with a suggestion ($SWITCHBOARD_ROOT, else the folder recorded in "
+                         f"~/.switchboard/env, else {DEFAULT_DESTINATION}); non-interactive runs take the suggestion")
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="print the plan and write nothing (default)")
     mode.add_argument("--apply", action="store_true", help="fresh install into an empty destination")
@@ -147,9 +147,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     ap.add_argument("--owner-user", help="your username (default: the local part of --owner-email)")
     ap.add_argument("--owner-github", help="your GitHub username (default: same as --owner-user)")
     ap.add_argument("--owner-slack-user-id", default="", help="your Slack member ID (U...); optional")
-    ap.add_argument("--slack-bot-channel", default="", help="Slack channel ID your PM OS bot posts to; optional")
+    ap.add_argument("--slack-bot-channel", default="", help="Slack channel ID your switchboard bot posts to; optional")
     ap.add_argument("--profile", choices=("auto", "company", "personal"), default="auto",
-                    help="organisation profile: company (an overlay your organization writes) or personal; auto picks company when an organization pmos CLI is on PATH")
+                    help="organisation profile: company (an overlay your organization writes) or personal; auto picks company when an organization switchboard CLI is on PATH")
     ap.add_argument("--force", action="store_true", help="with --update: also overwrite files you edited locally (personal files still kept)")
     ap.add_argument("--no-git", action="store_true", help="with --apply: skip git init and the first commit")
     ap.add_argument("--allow-synced-path", action="store_true",
@@ -165,17 +165,17 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def recorded_root(env: dict[str, str] | None = None) -> Path | None:
-    """PM_OS_ROOT from the env file a previous install wrote (PM_OS_STATE_HOME/env).
+    """SWITCHBOARD_ROOT from the env file a previous install wrote (SWITCHBOARD_STATE_HOME/env).
 
     Lets `--update` find the folder the owner chose at install time without
     the shell having sourced that file. Returns None when no record exists.
     """
     env = os.environ if env is None else env
-    env_file = Path(env.get("PM_OS_STATE_HOME") or Path.home() / ".pm-os") / "env"
+    env_file = Path(env.get("SWITCHBOARD_STATE_HOME") or Path.home() / ".switchboard") / "env"
     try:
         for line in env_file.read_text().splitlines():
             key, sep, value = line.partition("=")
-            if sep and key.strip() == "PM_OS_ROOT" and value.strip():
+            if sep and key.strip() == "SWITCHBOARD_ROOT" and value.strip():
                 return Path(value.strip())
     except OSError:
         pass
@@ -184,15 +184,15 @@ def recorded_root(env: dict[str, str] | None = None) -> Path | None:
 
 def default_destination(env: dict[str, str] | None = None) -> Path:
     env = os.environ if env is None else env
-    if env.get("PM_OS_ROOT"):
-        return Path(env["PM_OS_ROOT"])
+    if env.get("SWITCHBOARD_ROOT"):
+        return Path(env["SWITCHBOARD_ROOT"])
     return recorded_root(env) or DEFAULT_DESTINATION
 
 
 def ask_destination(suggested: Path, stdin=None, stdout=None) -> Path:
     """Owner choice 1 (docs/install-decisions.md, Owner choices): where the install folder goes.
 
-    Asked on a terminal whenever --destination is absent; PM_OS_ROOT and the
+    Asked on a terminal whenever --destination is absent; SWITCHBOARD_ROOT and the
     recorded folder only shape the suggestion. Empty answer takes the
     suggestion. install.ps1 asks the same question with the same suggestion.
     """
@@ -215,10 +215,10 @@ def clean_answer(raw: str) -> str:
 def destination_source(env: dict[str, str] | None = None) -> str:
     """Where the suggestion came from, for the non-interactive message."""
     env = os.environ if env is None else env
-    if env.get("PM_OS_ROOT"):
-        return "PM_OS_ROOT"
+    if env.get("SWITCHBOARD_ROOT"):
+        return "SWITCHBOARD_ROOT"
     if recorded_root(env):
-        return "the folder recorded in the PM OS env file"
+        return "the folder recorded in the switchboard env file"
     return "the default"
 
 
@@ -233,7 +233,7 @@ def owner_values(args: argparse.Namespace, destination: Path) -> dict[str, str]:
             args.owner_role = args.owner_role or saved.get("OWNER_ROLE")
             args.owner_github = args.owner_github or saved.get("OWNER_GITHUB")
             args.owner_slack_user_id = args.owner_slack_user_id or saved.get("OWNER_SLACK_USER_ID", "")
-            args.slack_bot_channel = args.slack_bot_channel or saved.get("PM_OS_SLACK_BOT_CHANNEL", "")
+            args.slack_bot_channel = args.slack_bot_channel or saved.get("SWITCHBOARD_SLACK_BOT_CHANNEL", "")
     if not args.owner_name or not args.owner_email:
         sys.exit("--owner-name and --owner-email are required")
     if "@" not in args.owner_email:
@@ -248,11 +248,11 @@ def owner_values(args: argparse.Namespace, destination: Path) -> dict[str, str]:
         "OWNER_ROLE": (args.owner_role or "Product Manager").strip(),
         "OWNER_GITHUB": args.owner_github or user_name,
         "OWNER_SLACK_USER_ID": args.owner_slack_user_id or "",
-        "PM_OS_SLACK_BOT_CHANNEL": args.slack_bot_channel or "",
+        "SWITCHBOARD_SLACK_BOT_CHANNEL": args.slack_bot_channel or "",
         # Forward slashes on every OS: a C:/... home reads the same in Python,
         # Node, Bun and Git Bash, while the backslash form turns "\U" and
         # friends into escape sequences inside a Python or TypeScript string.
-        "PM_OS_ROOT": destination.as_posix(),
+        "SWITCHBOARD_ROOT": destination.as_posix(),
         "HOME": Path.home().as_posix(),
     }
 
@@ -333,10 +333,10 @@ def synced_segment(path: Path) -> str | None:
 
 
 def detect_runtime(env: dict[str, str] | None = None, system: str | None = None) -> str:
-    """macos | wsl | windows-native | linux, honoring PM_OS_RUNTIME=wsl|native."""
+    """macos | wsl | windows-native | linux, honoring SWITCHBOARD_RUNTIME=wsl|native."""
     env = os.environ if env is None else env
     system = system or platform.system()
-    forced = env.get("PM_OS_RUNTIME", "").strip().lower()
+    forced = env.get("SWITCHBOARD_RUNTIME", "").strip().lower()
     if forced in ("wsl", "native"):
         return "wsl" if forced == "wsl" else "windows-native"
     if system == "Darwin":
@@ -355,7 +355,7 @@ def detect_runtime(env: dict[str, str] | None = None, system: str | None = None)
 
 def detect_mux(runtime: str, which=shutil.which) -> str:
     """cmux | wmux | none. Mirrors system/scripts/lib/mux.sh mux_detect without sourcing it."""
-    forced = os.environ.get("PM_OS_MUX", "").strip().lower()
+    forced = os.environ.get("SWITCHBOARD_MUX", "").strip().lower()
     if forced in ("cmux", "wmux", "none"):
         return forced
     if os.environ.get("WMUX") == "1":
@@ -370,43 +370,43 @@ def detect_mux(runtime: str, which=shutil.which) -> str:
 
 
 def state_home(runtime: str, env: dict[str, str] | None = None) -> Path:
-    """PM_OS_STATE_HOME: fast-changing state that never lives in a synced folder."""
+    """SWITCHBOARD_STATE_HOME: fast-changing state that never lives in a synced folder."""
     env = os.environ if env is None else env
-    if env.get("PM_OS_STATE_HOME"):
-        return Path(env["PM_OS_STATE_HOME"])
-    return Path.home() / ".pm-os"
+    if env.get("SWITCHBOARD_STATE_HOME"):
+        return Path(env["SWITCHBOARD_STATE_HOME"])
+    return Path.home() / ".switchboard"
 
 
 def worktrees_dir(runtime: str, env: dict[str, str] | None = None) -> Path:
-    """PM_OS_WORKTREES_DIR: task worktrees outside the checkout (decisions doc section 4)."""
+    """SWITCHBOARD_WORKTREES_DIR: task worktrees outside the checkout (decisions doc section 4)."""
     env = os.environ if env is None else env
-    if env.get("PM_OS_WORKTREES_DIR"):
-        return Path(env["PM_OS_WORKTREES_DIR"])
+    if env.get("SWITCHBOARD_WORKTREES_DIR"):
+        return Path(env["SWITCHBOARD_WORKTREES_DIR"])
     if runtime == "windows-native":
         base = env.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
-        return Path(base) / "pm-os" / "worktrees"
-    return Path.home() / ".local" / "state" / "pm-os" / "worktrees"
+        return Path(base) / "switchboard" / "worktrees"
+    return Path.home() / ".local" / "state" / "switchboard" / "worktrees"
 
 
-def pmos_kind(which=shutil.which) -> str:
+def switchboard_kind(which=shutil.which) -> str:
     """"real", "shim", or "absent": the one rule in system/connectors/company_cli.py, shared
     with install.ps1, verify-kit-install.sh, and install-amp-skills.sh, so the shim on
     PATH never reads as an organization CLI."""
     helper = KIT_ROOT / "system" / "connectors" / "company_cli.py"
     try:
-        spec = importlib.util.spec_from_file_location("pm_os_company_cli", helper)
+        spec = importlib.util.spec_from_file_location("switchboard_company_cli", helper)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        return module.pmos_kind(which=which)[0]
+        return module.switchboard_kind(which=which)[0]
     except (OSError, ImportError, AttributeError):
-        return "real" if which("pmos") else "absent"
+        return "real" if which("switchboard") else "absent"
 
 
 def connectors_decision(internal_tools: list[str]) -> str:
-    # docs/install-decisions.md section 6: an organization pmos CLI when present, else the kit's shim.
-    if "pmos" in internal_tools:
-        return "pmos (organization CLI)"
-    return "pmos shim (system/connectors; run pmos login)"
+    # docs/install-decisions.md section 6: an organization switchboard CLI when present, else the kit's shim.
+    if "switchboard" in internal_tools:
+        return "switchboard (organization CLI)"
+    return "switchboard shim (system/connectors; run switchboard login)"
 
 
 def detect_environment(destination: Path, allow_synced: bool = False, which=shutil.which) -> dict:
@@ -414,10 +414,10 @@ def detect_environment(destination: Path, allow_synced: bool = False, which=shut
     runtime = detect_runtime()
     mux = detect_mux(runtime, which)
     harnesses = [h for h in ("amp", "claude", "codex", "cursor") if which(h)]
-    internal_tools = [t for t in ("pmos", "gh") if which(t)]
-    if "pmos" in internal_tools and pmos_kind(which) != "real":
-        # The kit's connector shim (system/connectors/pmos) is not an organization CLI.
-        internal_tools.remove("pmos")
+    internal_tools = [t for t in ("switchboard", "gh") if which(t)]
+    if "switchboard" in internal_tools and switchboard_kind(which) != "real":
+        # The kit's connector shim (system/connectors/switchboard) is not an organization CLI.
+        internal_tools.remove("switchboard")
     synced = synced_segment(destination)
     scope = "full-loop" if "amp" in harnesses and mux in ("cmux", "wmux") else "policy-and-skills"
     if synced:
@@ -438,10 +438,10 @@ def detect_environment(destination: Path, allow_synced: bool = False, which=shut
             "state_home": str(state_home(runtime)),
         },
         "scope": scope,
-        "internal_tooling": "active" if "pmos" in internal_tools else "dormant",
+        "internal_tooling": "active" if "switchboard" in internal_tools else "dormant",
         "sidebar": sidebar_decision(scope, mux),
         "connectors": connectors_decision(internal_tools),
-        "profile": "company" if "pmos" in internal_tools else "personal",
+        "profile": "company" if "switchboard" in internal_tools else "personal",
     }
 
 
@@ -449,7 +449,7 @@ def sidebar_decision(scope: str, mux: str) -> str:
     # docs/install-decisions.md section 5: the native wmux sidebar carries the lanes through
     # set-status, blocked rows through report-agent, and unread through targeted notify.
     # Pins, colors, and order reach wmux only through seed-session.ps1 -Restart.
-    # The PM OS board page is opt-in (PM_OS_BOARD_AUTOSTART=1).
+    # The switchboard board page is opt-in (SWITCHBOARD_BOARD_AUTOSTART=1).
     if scope != "full-loop":
         return "none (no terminal backend)"
     if mux == "wmux":
@@ -460,15 +460,15 @@ def sidebar_decision(scope: str, mux: str) -> str:
 
 def decision_lines(d: dict) -> list[str]:
     harness = ",".join(d["harnesses"]) or "none"
-    pmos = "pmos on PATH" if d["internal_tooling"] == "active" else "pmos not on PATH"
+    switchboard = "switchboard on PATH" if d["internal_tooling"] == "active" else "switchboard not on PATH"
     return [
         f"decision: location   {d['location']['path']} ({d['location']['state']})",
         f"decision: scope      {d['scope']} (amp: {'yes' if 'amp' in d['harnesses'] else 'no'}, mux: {d['mux']}, harnesses: {harness})",
         f"decision: runtime    {d['runtime']}",
-        f"decision: internal-tooling  {d['internal_tooling']} ({pmos})",
+        f"decision: internal-tooling  {d['internal_tooling']} ({switchboard})",
         f"decision: sidebar    {d['sidebar']}",
         f"decision: connectors {d['connectors']}",
-        f"decision: profile    {d['profile']} (profiles/{d['profile']}; company only with an organization pmos CLI)",
+        f"decision: profile    {d['profile']} (profiles/{d['profile']}; company only with an organization switchboard CLI)",
         f"decisions are fixed in {d['doc']}; agents apply them and do not ask",
         f"owner choices (asked, never assumed): install folder, full loop, Claude Code memory; see {d['doc']}, Owner choices",
     ]
@@ -504,7 +504,7 @@ def next_steps(d: dict) -> list[str]:
     elif d["scope"] != "full-loop":
         out.append("Claude Code (optional): install it, then bash system/scripts/install-claude-code.sh")
     if d["internal_tooling"] == "dormant":
-        out.append("connectors: run pmos login google, then pmos login slack, then pmos doctor "
+        out.append("connectors: run switchboard login google, then switchboard login slack, then switchboard doctor "
                    "(system/connectors; see .agents/skills/using-connectors/SKILL.md)")
     return out
 
@@ -526,7 +526,7 @@ def plan(files: dict[str, dict[str, str]], values: dict[str, str], destination: 
     unchanged: list[str] = []
     rendered: dict[str, bytes] = {}
     for rel in sorted(files):
-        if rel in KIT_ONLY or rel.startswith(".pm-os-kit/") or is_protected(rel):
+        if rel in KIT_ONLY or rel.startswith(".switchboard-kit/") or is_protected(rel):
             continue
         data = render((KIT_ROOT / rel).read_bytes(), values)
         rendered[rel] = data
@@ -608,21 +608,21 @@ def python_syntax_errors(rendered: dict[str, bytes]) -> list[str]:
 
 
 def write_env_file(d: dict, destination: Path) -> Path:
-    """PM_OS_STATE_HOME/env: KEY=VALUE lines every shell and scheduled task sources."""
+    """SWITCHBOARD_STATE_HOME/env: KEY=VALUE lines every shell and scheduled task sources."""
     home = Path(d["location"]["state_home"])
     home.mkdir(parents=True, exist_ok=True)
     lines = {
-        "PM_OS_ROOT": str(destination),
-        "PM_OS_WORKTREES_DIR": d["location"]["worktrees_dir"],
-        "PM_OS_STATE_HOME": str(home),
-        "PM_OS_MUX": d["mux"],
-        "PM_OS_RUNTIME": "native" if d["runtime"] == "windows-native" else d["runtime"],
-        "PM_OS_SYNCED_SEGMENT": d["location"]["synced_segment"] or "",
-        "PM_OS_BOARD_AUTOSTART": os.environ.get("PM_OS_BOARD_AUTOSTART", "0"),
+        "SWITCHBOARD_ROOT": str(destination),
+        "SWITCHBOARD_WORKTREES_DIR": d["location"]["worktrees_dir"],
+        "SWITCHBOARD_STATE_HOME": str(home),
+        "SWITCHBOARD_MUX": d["mux"],
+        "SWITCHBOARD_RUNTIME": "native" if d["runtime"] == "windows-native" else d["runtime"],
+        "SWITCHBOARD_SYNCED_SEGMENT": d["location"]["synced_segment"] or "",
+        "SWITCHBOARD_BOARD_AUTOSTART": os.environ.get("SWITCHBOARD_BOARD_AUTOSTART", "0"),
     }
     target = home / "env"
-    # Merge, never replace: install.ps1 and the owner add keys (PM_OS_PYTHON,
-    # PM_OS_TOOL_PATH, PM_OS_RUBY, WMUX_BIN, PM_OS_PROFILE) that scheduled tasks
+    # Merge, never replace: install.ps1 and the owner add keys (SWITCHBOARD_PYTHON,
+    # SWITCHBOARD_TOOL_PATH, SWITCHBOARD_RUBY, WMUX_BIN, SWITCHBOARD_PROFILE) that scheduled tasks
     # need. A test or second install must not repoint a live checkout either,
     # or drop those keys.
     existing: dict[str, str] = {}
@@ -633,12 +633,12 @@ def write_env_file(d: dict, destination: Path) -> Path:
             key, _, value = raw.partition("=")
             existing[key.strip()] = value.strip()
             order.append(key.strip())
-    old_root = existing.get("PM_OS_ROOT")
+    old_root = existing.get("SWITCHBOARD_ROOT")
     if (old_root and Path(old_root).resolve() != destination.resolve()
             and (Path(old_root) / "AGENTS.md").exists()
-            and os.environ.get("PM_OS_ENV_REPOINT") != "1"):
-        log(f"env: {target} keeps the live install (PM_OS_ROOT={old_root}); "
-            f"set PM_OS_ENV_REPOINT=1 to point it at {destination}, or set PM_OS_STATE_HOME for a test install")
+            and os.environ.get("SWITCHBOARD_ENV_REPOINT") != "1"):
+        log(f"env: {target} keeps the live install (SWITCHBOARD_ROOT={old_root}); "
+            f"set SWITCHBOARD_ENV_REPOINT=1 to point it at {destination}, or set SWITCHBOARD_STATE_HOME for a test install")
         # Another checkout's install: every key the live file has wins; only missing keys are added.
         lines = {k: v for k, v in lines.items() if k not in existing}
     if old_text:
@@ -649,7 +649,7 @@ def write_env_file(d: dict, destination: Path) -> Path:
     merged = dict(existing)
     merged.update(lines)
     keys = [k for k in dict.fromkeys(order) if k in merged] + [k for k in lines if k not in existing]
-    header = "# PM OS environment (KEY=VALUE). Written by install.py and install.ps1; edit by hand as needed.\n"
+    header = "# switchboard environment (KEY=VALUE). Written by install.py and install.ps1; edit by hand as needed.\n"
     target.write_text(header + "".join(f"{k}={merged[k]}\n" for k in keys))
     return target
 
@@ -754,8 +754,8 @@ def execute(p: dict, files: dict[str, dict[str, str]], destination: Path, no_git
         # Windows from warning on every file.
         subprocess.run(git + ["config", "core.autocrlf", "false"], check=True)
         subprocess.run(git + ["add", "--all", "."], check=True)
-        subprocess.run(git + ["-c", "user.name=PM OS kit", "-c", f"user.email={p['values']['OWNER_EMAIL']}",
-                       "commit", "-q", "-m", f"Install PM OS kit {p['kit_version']}"], check=True)
+        subprocess.run(git + ["-c", "user.name=switchboard kit", "-c", f"user.email={p['values']['OWNER_EMAIL']}",
+                       "commit", "-q", "-m", f"Install switchboard kit {p['kit_version']}"], check=True)
     return installed
 
 
@@ -764,7 +764,7 @@ def load_backup_module(destination: Path):
     for root in (KIT_ROOT, destination):
         path = root / BACKUP_SCRIPT
         if path.is_file():
-            spec = importlib.util.spec_from_file_location("pm_os_local_backup", path)
+            spec = importlib.util.spec_from_file_location("switchboard_local_backup", path)
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             return module, path
@@ -804,6 +804,13 @@ def main(argv: list[str] | None = None) -> int:
     else:
         destination = ask_destination(default_destination())
     destination = destination.expanduser().resolve()
+    kit = KIT_ROOT.resolve()
+    if destination == kit or kit in destination.parents or destination in kit.parents:
+        # The clone and the install folder share a default name, so a clone made in the install folder's
+        # place would be refused later as "not empty", which points at the wrong fix.
+        log(f"destination {destination} holds this downloaded copy ({kit}). Install into another folder, "
+            f"or clone the kit somewhere else first, for example {destination.parent / (destination.name + '-src')}.")
+        return 1
     files = load_manifest()
     problems = verify_kit(files)
     if problems:
@@ -846,7 +853,7 @@ def main(argv: list[str] | None = None) -> int:
     backup = offer_backup(destination, args.restore_backup, dry_run=report_only)
     if backup.get("restored") and not env_was_there:
         # The restored env names the old folder. The owner just picked this one.
-        os.environ["PM_OS_ENV_REPOINT"] = "1"
+        os.environ["SWITCHBOARD_ENV_REPOINT"] = "1"
     summary = {k: v for k, v in p.items() if not k.startswith("_")}
     summary["backup"] = backup
     summary["counts"] = {k: len(summary[k]) for k in ("write", "unchanged", "keep_personal", "keep_locally_modified", "remove", "seed_configs")}

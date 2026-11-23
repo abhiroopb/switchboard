@@ -45,7 +45,7 @@ sys.path.insert(0, str(SCRIPTS))
 import no_window  # noqa: E402
 import owner_tabs  # noqa: E402
 
-SENDER = "PM OS worker question"
+SENDER = "switchboard worker question"
 PREFIX = "[WORKER QUESTION]"
 RETRY_SECONDS = float(os.environ.get("ASK_COS_RETRY_SECONDS") or 30)
 RETRY_MINUTES = float(os.environ.get("ASK_COS_RETRY_MINUTES") or 30)

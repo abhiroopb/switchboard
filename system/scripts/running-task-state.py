@@ -64,7 +64,7 @@ FIELDS = (
     "landed_commit", "report", "resume_sent_at", "resume_escalated_at", "reaped_at", "report_transport_errors",  # documentation only
 )
 MIGRATION_CUTOFF = datetime(2026, 10, 5, 3, 0, tzinfo=timezone.utc)
-STALE_AFTER = timedelta(seconds=int(os.environ.get("PM_OS_TASK_STALE_SECONDS") or 1800))
+STALE_AFTER = timedelta(seconds=int(os.environ.get("SWITCHBOARD_TASK_STALE_SECONDS") or 1800))
 RETAINED_DELIVERED_ROWS = 600  # delivered terminal rows kept per write (newest by finished_at); see module docstring
 
 def _os_replace(src, dst):
@@ -400,8 +400,8 @@ def spawn_steer_delivery(task: dict[str, Any], flags: dict[str, Any]) -> bool:
     waits on the row in `pending_steers`. The worker's ack (session start) and each
     heartbeat start a detached `dispatch.py deliver-steers --task-id ID`, which sends
     them in order by cmux agent message; the sweep runs the same pass as a backstop.
-    Never blocks the hook. PM_OS_NO_STEER_SPAWN=1 turns it off."""
-    if flags or os.environ.get("PM_OS_NO_STEER_SPAWN") == "1":
+    Never blocks the hook. SWITCHBOARD_NO_STEER_SPAWN=1 turns it off."""
+    if flags or os.environ.get("SWITCHBOARD_NO_STEER_SPAWN") == "1":
         return False
     if not any(isinstance(e, dict) and not e.get("delivered_at") and not e.get("dropped_at")
                for e in task.get("pending_steers") or []):

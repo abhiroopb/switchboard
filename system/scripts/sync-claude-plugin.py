@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Keep the installed pm-os Claude Code plugin in step with the repo.
+"""Keep the installed switchboard Claude Code plugin in step with the repo.
 
     python3 system/scripts/sync-claude-plugin.py            # copy what changed, print one JSON line
     python3 system/scripts/sync-claude-plugin.py --check    # exit 1 while the installed copy is behind
 
-Why: Claude Code runs the pm-os plugin from its own copy,
-~/.claude/plugins/cache/pm-os-local/pm-os/<version>, made at install time. The version
+Why: Claude Code runs the switchboard plugin from its own copy,
+~/.claude/plugins/cache/switchboard-local/switchboard/<version>, made at install time. The version
 never changes (0.1.0), so `claude plugin update` has nothing to fetch, and every hook fix
-in system/claude-marketplace/plugins/pm-os after the install would stay in the repo,
+in system/claude-marketplace/plugins/switchboard after the install would stay in the repo,
 so a new hook such as the CoS autobind hook would never run.
 
 What it does:
 - Copies every file of the repo's plugin folder (hooks, commands, agents, manifest)
-  that differs into each installed pm-os copy. __pycache__ and .pyc are skipped.
+  that differs into each installed switchboard copy. __pycache__ and .pyc are skipped.
   Files only in the installed copy are listed, never deleted. An installed file edited
   after the repo copy (a hand fix whose branch has not landed) is held, not overwritten,
   until the repo file changes again.
@@ -39,8 +39,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-PLUGIN = "pm-os@pm-os-local"
-PLUGIN_REL = Path("system") / "claude-marketplace" / "plugins" / "pm-os"
+PLUGIN = "switchboard@switchboard-local"
+PLUGIN_REL = Path("system") / "claude-marketplace" / "plugins" / "switchboard"
 HOOKS_JSON = Path("hooks") / "hooks.json"
 SKIP_PARTS = {"__pycache__", ".DS_Store"}
 
@@ -88,7 +88,7 @@ def load_profile(repo: Path) -> Any | None:
 
 
 def profile_applies(profile: Any | None, base: Path) -> bool:
-    if profile is None or (os.name != "nt" and not os.environ.get("PM_OS_HOOK_PROFILE_ANY_OS")):
+    if profile is None or (os.name != "nt" and not os.environ.get("SWITCHBOARD_HOOK_PROFILE_ANY_OS")):
         return False
     try:
         settings = json.loads((base / "settings.json").read_text(encoding="utf-8"))

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """cmux-shim: a cmux-CLI-compatible front end that drives wmux on Windows.
 
-PM OS scripts (cmux-helpers.sh, dispatch.py, cmux-inject-guard.sh, the Amp
+switchboard scripts (cmux-helpers.sh, dispatch.py, cmux-inject-guard.sh, the Amp
 plugins) speak the cmux 0.65 CLI: `list-workspaces`, `new-workspace --name
 --description --cwd --command --focus false`, `tree`, `read-screen`, `send`,
 `send-key`, `set-status`, `workspace-action`, `rpc workspace.list` and so on.
@@ -18,13 +18,13 @@ output. Point CMUX_BIN / CMUX / CMUX_AMP_CMUX_BIN at `system/scripts/mux/cmux`
 Environment
   WMUX_BIN                 wmux CLI to drive (default: `wmux` on PATH, then
                            `$WMUX_NODE $WMUX_CLI`, the pane env wmux sets)
-  PM_OS_WMUX_SIDECAR       sidecar path (default ~/.pm-os/wmux-sidecar.json)
-  PM_OS_CMUX_SESSION_JSON  cmux-shaped session store the shim renders after
-                           every state change (default ~/.pm-os/wmux-session-store.json);
+  SWITCHBOARD_WMUX_SIDECAR       sidecar path (default ~/.switchboard/wmux-sidecar.json)
+  SWITCHBOARD_CMUX_SESSION_JSON  cmux-shaped session store the shim renders after
+                           every state change (default ~/.switchboard/wmux-session-store.json);
                            export it as CC_CMUX_SESSION_JSON for the readers
-  PM_OS_WMUX_REPORT_AGENT  "1" (default) mirrors `set-status amp …` into
+  SWITCHBOARD_WMUX_REPORT_AGENT  "1" (default) mirrors `set-status amp …` into
                            `wmux report-agent --blocked/--unblocked`; "0" disables
-  PM_OS_WMUX_SHELL         shell spec for every workspace the shim creates
+  SWITCHBOARD_WMUX_SHELL         shell spec for every workspace the shim creates
                            (default `bash.exe`: wmux resolves it to Git Bash with
                            `--login -i`; wmux's own default is PowerShell).
                            "" or "default" keeps wmux's default shell.
@@ -32,7 +32,7 @@ Environment
   CMUX_SURFACE_ID          default surface (wmux surface id)
   CMUX_SHIM_TRACE          "1" prints every wmux call to stderr
 
-Only cmux verbs PM OS uses are implemented; an unknown verb exits 2 with the
+Only cmux verbs switchboard uses are implemented; an unknown verb exits 2 with the
 cmux-style error so callers fall through exactly as they do on an old cmux.
 """
 from __future__ import annotations
@@ -74,8 +74,8 @@ SEED_HINT = ("cmux-shim: recorded in the sidecar; run system\\windows\\seed-sess
 STATE_TEXT = {"running": "Running", "interrupted": "Needs input", "idle": "Idle"}
 
 # ------------------------------------------------------------------- lane model
-# Mirror of system/cmux-sidebars/pm-os.swift (bucketOf, isP0, isBackground and
-# the lane list), so the PM OS board on Windows shows the same lanes, order,
+# Mirror of system/cmux-sidebars/switchboard.swift (bucketOf, isP0, isBackground and
+# the lane list), so the switchboard board on Windows shows the same lanes, order,
 # labels and tints as the cmux sidebar on macOS. Keep the two in step.
 LANES: list[dict[str, str]] = [
     {"key": "pinned", "label": "Pinned", "icon": "pin", "tint": "#9AA0A6"},
@@ -91,7 +91,7 @@ LANES: list[dict[str, str]] = [
 ]
 LANE_BY_KEY = {lane["key"]: lane for lane in LANES}
 LANE_ALIASES = {"review": "toreview", "attn": "attention"}
-# PM OS lane -> the cmux `workspace status` vocabulary command-center-digest.py reads.
+# switchboard lane -> the cmux `workspace status` vocabulary command-center-digest.py reads.
 CMUX_LANE = {"attention": "needs-attention", "active": "working", "workers": "working", "toreview": "review",
              "pinned": "todo", "p0": "todo", "waiting": "todo", "paused": "todo", "idle": "todo", "background": "todo"}
 # Signal colors the pipeline publishers paint (review-lane plugin, cmux-status).
@@ -171,9 +171,9 @@ def amp_state(side: dict[str, Any]) -> str:
 
 
 def lane_of(ws: dict[str, Any], side: dict[str, Any]) -> str:
-    """Lane key for one workspace. Precedence copies pm-os.swift: pinned, then
+    """Lane key for one workspace. Precedence copies switchboard.swift: pinned, then
     background by title, then live agent state, then signal color, then the
-    P0 title tag, then idle. Workers (PM OS worker descriptions) sit in their
+    P0 title tag, then idle. Workers (switchboard worker descriptions) sit in their
     own lane unless they need attention or are running."""
     override = side.get("lane") or "auto"
     if override != "auto":
@@ -192,7 +192,7 @@ def lane_of(ws: dict[str, Any], side: dict[str, Any]) -> str:
     bucket = SIGNAL_LANE.get(color, "idle")
     if bucket in ("attention", "active"):
         return bucket
-    if (side.get("description") or "").startswith("PM OS worker"):
+    if (side.get("description") or "").startswith("switchboard worker"):
         return "workers"
     if bucket != "idle":
         return bucket
@@ -255,20 +255,20 @@ class Wmux:
         install folder (%LOCALAPPDATA%\\Programs\\wmux, scoop) through node or
         wmux.exe, then `wmux` on PATH. Outside a wmux pane the CLI is not on PATH."""
         self.extra_env: dict[str, str] = {}
-        if os.environ.get("PM_OS_TEST_SANDBOX") == "1":
+        if os.environ.get("SWITCHBOARD_TEST_SANDBOX") == "1":
             # Test sandbox: a wmux pane exports the real
             # WMUX_BIN, so it proves nothing. Only a test that names its fake in
-            # PM_OS_TEST_WMUX_BIN (and strips the pane's WMUX_* variables) gets the
+            # SWITCHBOARD_TEST_WMUX_BIN (and strips the pane's WMUX_* variables) gets the
             # normal lookup; anything else fails every call closed.
-            fake = os.environ.get("PM_OS_TEST_WMUX_BIN")
+            fake = os.environ.get("SWITCHBOARD_TEST_WMUX_BIN")
             if not fake:
-                return ["/nonexistent/pm-os-test-sandbox/wmux"]
+                return ["/nonexistent/switchboard-test-sandbox/wmux"]
             # A test may still point WMUX_BIN at another fake for one call; the
             # live install never counts, and nothing falls through to the pane's
             # WMUX_NODE + WMUX_CLI or the install folder.
             override = os.environ.get("WMUX_BIN") or fake
             if re.search(r"[\\/]programs[\\/]wmux[\\/]", override.lower()):
-                return ["/nonexistent/pm-os-test-sandbox/wmux"]
+                return ["/nonexistent/switchboard-test-sandbox/wmux"]
             return [sys.executable, override] if override.endswith(".py") else [override]
         try:
             sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -292,11 +292,11 @@ class Wmux:
         the CLI is a node process per call. These verbs map one to one onto a pipe method
         in wmux's cli/wmux.js. Anything else, any test, and any remote target uses the CLI.
         """
-        if os.name != "nt" or os.environ.get("PM_OS_WMUX_DIRECT") == "0" or os.environ.get("PM_OS_TEST_SANDBOX") == "1":
+        if os.name != "nt" or os.environ.get("SWITCHBOARD_WMUX_DIRECT") == "0" or os.environ.get("SWITCHBOARD_TEST_SANDBOX") == "1":
             return None
-        if any(os.environ.get(key) for key in ("PM_OS_TEST_WMUX_BIN", "WMUX_REMOTE", "WMUX_REMOTE_TOKEN")):
+        if any(os.environ.get(key) for key in ("SWITCHBOARD_TEST_WMUX_BIN", "WMUX_REMOTE", "WMUX_REMOTE_TOKEN")):
             return None
-        # pm-os-env.sh exports WMUX_BIN as the installed CLI. Any other value is a stand-in the caller chose.
+        # switchboard-env.sh exports WMUX_BIN as the installed CLI. Any other value is a stand-in the caller chose.
         override = os.environ.get("WMUX_BIN", "").replace("\\", "/").lower()
         if override and "/resources/cli-bin/" not in override:
             return None
@@ -415,7 +415,7 @@ class Wmux:
 # ------------------------------------------------------------------------ sidecar
 
 def default_state_dir() -> Path:
-    return Path(os.environ.get("PM_OS_STATE_HOME") or Path.home() / ".pm-os")
+    return Path(os.environ.get("SWITCHBOARD_STATE_HOME") or Path.home() / ".switchboard")
 
 
 INJECTED_LOG_MAX_BYTES = 1_000_000
@@ -425,7 +425,7 @@ def note_injected(sid: str, text: str) -> None:
     """Record a hash of every line typed into a pane. A typed line looks like the owner's own in
     Claude Code's transcript, so gmail_send_guard.py reads this to keep a worker's "send it" from
     approving an email. Hashes only, never the text. A failure never blocks delivery."""
-    if os.environ.get("PM_OS_TEST_SANDBOX") == "1":
+    if os.environ.get("SWITCHBOARD_TEST_SANDBOX") == "1":
         return
     path = default_state_dir() / "injected-prompts.jsonl"
     digest = hashlib.sha256(re.sub(r"[\s⏎]+", "", text).encode("utf-8")).hexdigest()
@@ -445,11 +445,11 @@ DEFAULT_WORKSPACE_SHELL = "bash.exe"
 
 def workspace_shell() -> str:
     """Shell spec passed to `wmux new-workspace --shell`. wmux's own default on
-    Windows is pwsh, then powershell, then cmd; PM OS scripts, seeds, and the
-    `.bashrc` that sources pm-os-env.sh all assume Git Bash. wmux resolves the
+    Windows is pwsh, then powershell, then cmd; switchboard scripts, seeds, and the
+    `.bashrc` that sources switchboard-env.sh all assume Git Bash. wmux resolves the
     bare alias `bash.exe` to Git for Windows' bash at its install root with
     `--login -i` (never the WSL launcher in System32)."""
-    raw = os.environ.get("PM_OS_WMUX_SHELL")
+    raw = os.environ.get("SWITCHBOARD_WMUX_SHELL")
     if raw is None:
         return DEFAULT_WORKSPACE_SHELL
     raw = raw.strip()
@@ -461,7 +461,7 @@ class Sidecar:
     rewrite on every change."""
 
     def __init__(self, path: Path | None = None) -> None:
-        self.path = Path(os.environ.get("PM_OS_WMUX_SIDECAR") or path or default_state_dir() / "wmux-sidecar.json")
+        self.path = Path(os.environ.get("SWITCHBOARD_WMUX_SIDECAR") or path or default_state_dir() / "wmux-sidecar.json")
         self.data: dict[str, Any] = {"version": 1, "next_ref": 1, "next_surface": 1, "next_pane": 1,
                                      "workspaces": {}, "surfaces": {}, "panes": {}, "closed": []}
         self.dirty = False
@@ -670,7 +670,7 @@ class Shim:
         return self._workspaces
 
     def lane_view(self) -> dict[str, Any]:
-        """Lanes in cmux-sidebar order with their rows; the PM OS board renders
+        """Lanes in cmux-sidebar order with their rows; the switchboard board renders
         this and `cmux sidebar lanes --json` prints it."""
         rows: dict[str, list[dict[str, Any]]] = {lane["key"]: [] for lane in LANES}
         unread_total = 0
@@ -822,7 +822,7 @@ class Shim:
         """Write the cmux-shaped session store so running-task-state.py,
         workspace-session-state.py and command-center-digest.py read wmux state
         through CC_CMUX_SESSION_JSON unchanged."""
-        target = os.environ.get("PM_OS_CMUX_SESSION_JSON")
+        target = os.environ.get("SWITCHBOARD_CMUX_SESSION_JSON")
         path = Path(target) if target else default_state_dir() / "wmux-session-store.json"
         try:
             live = self._workspaces if self._workspaces is not None else self.workspaces()
@@ -921,7 +921,7 @@ class Shim:
             inferred = CMUX_LANE.get(lane_of(ws, {**side, "lane": "auto"}), "todo")
             effective = inferred if override == "auto" else CMUX_LANE.get(LANE_ALIASES.get(override, override), override)
             # Line 1 is cmux's own vocabulary (todo|working|needs-attention|review|done)
-            # because command-center-digest.py reads it; `lane:` is the PM OS lane key.
+            # because command-center-digest.py reads it; `lane:` is the switchboard lane key.
             self.out(f"{effective}\ninferred: {inferred}\noverride: {'none (auto)' if override == 'auto' else override}\nlane: {lane_of(ws, side)}")
             for key, item in sorted((side.get("status") or {}).items()):
                 extras = " ".join(f"{k}={item[k]}" for k in ("icon", "color", "priority") if item.get(k) not in (None, "", 0))
@@ -1097,7 +1097,7 @@ class Shim:
         elif action == "mark-unread":
             side["unread"] = max(1, int(side.get("unread") or 0))
         elif action in ("move-top", "move-up", "move-down"):
-            # wmux has no reorder RPC. The sidecar order drives the PM OS board now
+            # wmux has no reorder RPC. The sidecar order drives the switchboard board now
             # and seed-session.ps1 applies it to wmux's own list at the next start.
             self.move(ws, action)
         elif action in ("close-others", "close-above", "close-below"):
@@ -1188,7 +1188,7 @@ class Shim:
             return default
 
     def submit_settle(self, body: str) -> float:
-        base = self.env_float("PM_OS_SHIM_SUBMIT_SETTLE", 0.4)
+        base = self.env_float("SWITCHBOARD_SHIM_SUBMIT_SETTLE", 0.4)
         return 0.0 if base <= 0 else min(2.0, base + len(body) / 2000)
 
     def prompt_log(self, sid: str) -> dict[str, Any] | None:
@@ -1209,8 +1209,8 @@ class Shim:
         return max((int(p.get("seq") or 0) for p in payload["prompts"] if isinstance(p, dict)), default=0)
 
     def confirm_submitted(self, sid: str, before: int) -> bool:
-        tries = int(self.env_float("PM_OS_SHIM_SUBMIT_RETRIES", 3))
-        wait = self.env_float("PM_OS_SHIM_SUBMIT_WAIT", 2.5)
+        tries = int(self.env_float("SWITCHBOARD_SHIM_SUBMIT_RETRIES", 3))
+        wait = self.env_float("SWITCHBOARD_SHIM_SUBMIT_WAIT", 2.5)
         for attempt in range(tries + 1):
             deadline = time.monotonic() + wait
             while True:
@@ -1232,14 +1232,14 @@ class Shim:
         moved off the origin: a never-shown wmux tab reads as blank text even with
         its prompt drawn). Typed earlier, the line can reach Git Bash before
         readline and lose its Enter."""
-        deadline = time.monotonic() + self.env_float("PM_OS_SHIM_READY_SECONDS", 15)
+        deadline = time.monotonic() + self.env_float("SWITCHBOARD_SHIM_READY_SECONDS", 15)
         while True:
             try:
                 info = self.wmux.json(["read-screen", "--surface", sid, "--lines", "5"], timeout=10)
             except ShimError:
                 info = {}
             if isinstance(info, dict) and ((info.get("text") or "").strip() or info.get("cursorX") or info.get("cursorY")):
-                time.sleep(self.env_float("PM_OS_SHIM_READY_SETTLE", 0.5))
+                time.sleep(self.env_float("SWITCHBOARD_SHIM_READY_SETTLE", 0.5))
                 return True
             if time.monotonic() >= deadline:
                 return False
@@ -1325,7 +1325,7 @@ class Shim:
         self.out("ok")
 
     def mirror_blocked(self, ws: dict[str, Any], side: dict[str, Any], blocked: bool) -> None:
-        if os.environ.get("PM_OS_WMUX_REPORT_AGENT", "1") != "1":
+        if os.environ.get("SWITCHBOARD_WMUX_REPORT_AGENT", "1") != "1":
             return
         if blocked == bool(side.get("blocked")):
             return
@@ -1451,9 +1451,9 @@ class Shim:
         raise ShimError(f"Error: hooks {sub} is not supported by cmux-shim", 2)
 
     def cmd_sidebar(self, pos, flags) -> None:
-        """cmux custom sidebars (system/cmux-sidebars/pm-os.swift) have no wmux
+        """cmux custom sidebars (system/cmux-sidebars/switchboard.swift) have no wmux
         counterpart. The same lanes come from the sidecar: `sidebar lanes --json`
-        feeds the PM OS board (system/scripts/mux/pm-os-board.py), `reload`
+        feeds the switchboard board (system/scripts/mux/switchboard-board.py), `reload`
         re-pushes every lane into wmux's own rows, `validate` checks the model."""
         sub = pos[0] if pos else "lanes"
         if sub in ("lanes", "state", "board"):
@@ -1641,7 +1641,7 @@ class Shim:
         """After typing over a suggestion and before Enter: is `body` all that is in the box?
         A draft parked with the cursor at its start would show around our text."""
         wanted = self.comparable(body.replace("\x1b[200~", "").replace("\x1b[201~", ""))
-        deadline = time.monotonic() + self.env_float_value("PM_OS_SHIM_VERIFY_SECONDS", 4)
+        deadline = time.monotonic() + self.env_float_value("SWITCHBOARD_SHIM_VERIFY_SECONDS", 4)
         while True:
             _, state, draft, _ = self.read_composer(sid)
             seen = self.comparable(draft)
@@ -1750,7 +1750,7 @@ class Shim:
             return done(failure_reason="the recipient's composer holds a draft; not typing over it")
         # One line by default: a raw newline would submit early, and cmd.exe cuts
         # an argument at a newline. " ⏎ " is the transport mark that
-        # owner_tabs.decode_marks() reads back as a newline. PM_OS_WMUX_PASTE=
+        # owner_tabs.decode_marks() reads back as a newline. SWITCHBOARD_WMUX_PASTE=
         # bracketed sends real newlines inside a bracketed paste instead, for a
         # ConPTY build that passes the paste markers through to Claude Code.
         body = self.typeable(text)
@@ -1758,7 +1758,7 @@ class Shim:
         # Long text never goes through the keyboard: a long report typed into a Claude
         # tab can arrive as only its last characters. The full text goes to a file and one short pointer line
         # is typed instead; Claude reads the file.
-        limit = int(self.env_float_value("PM_OS_WMUX_TYPE_MAX", 300))
+        limit = int(self.env_float_value("SWITCHBOARD_WMUX_TYPE_MAX", 300))
         if limit > 0 and len(body.replace("\n", " ⏎ ")) > limit:
             spill = self.spill_message(reply["id"], text)
             body = self.pointer_line(text, spill, limit)
@@ -1768,7 +1768,7 @@ class Shim:
             # and %VAR% expands even inside quotes, so the text would run as commands.
             return done(failure_reason="wmux runs through wmux.cmd here, and cmd.exe would rewrite this text; "
                                        "put node on PATH or set WMUX_NODE and WMUX_CLI so the shim calls wmux.js")
-        bracketed = os.environ.get("PM_OS_WMUX_PASTE", "").lower() == "bracketed"
+        bracketed = os.environ.get("SWITCHBOARD_WMUX_PASTE", "").lower() == "bracketed"
         if bracketed and not via_cmd:
             body = "\x1b[200~" + body + "\x1b[201~"
         else:
@@ -1835,7 +1835,7 @@ class Shim:
 
     @staticmethod
     def spill_dir() -> Path:
-        return Path(os.environ.get("PM_OS_WMUX_SPILL_DIR") or default_state_dir() / "messages")
+        return Path(os.environ.get("SWITCHBOARD_WMUX_SPILL_DIR") or default_state_dir() / "messages")
 
     def spill_message(self, msg_id: str, text: str) -> Path:
         folder = self.spill_dir()
@@ -1866,7 +1866,7 @@ class Shim:
         return [p for p in payload["prompts"] if isinstance(p, dict)]
 
     def wait_new_prompt(self, sid: str, seq0: int) -> dict[str, Any] | None:
-        deadline = time.monotonic() + self.env_float_value("PM_OS_SHIM_VERIFY_SECONDS", 4)
+        deadline = time.monotonic() + self.env_float_value("SWITCHBOARD_SHIM_VERIFY_SECONDS", 4)
         while True:
             entries = [p for p in (self.prompt_entries(sid) or []) if int(p.get("seq") or 0) > seq0
                        and p.get("source", "agent") != "shell"]

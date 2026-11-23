@@ -70,7 +70,7 @@ def folder(rel: str) -> str:
 def portability(tree: Tree, previous: dict) -> tuple[str, str]:
     files: dict[str, dict] = {}
     for rel in sorted(tree):
-        if rel in SKIP or rel.startswith(".pm-os-kit/"):
+        if rel in SKIP or rel.startswith(".switchboard-kit/"):
             continue
         cls, reason = classify(rel, tree[rel])
         old = (previous.get(rel) or {}).get("class")

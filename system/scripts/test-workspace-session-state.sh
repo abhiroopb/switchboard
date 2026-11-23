@@ -29,7 +29,7 @@ fail() { echo "FAIL - $1"; FAIL=$((FAIL + 1)); }
 # Complete live inventory across windows; workspace:99 has no agent.
 cat > "$FIXTURE/workspaces.json" <<'JSON'
 {"workspaces": [
-  {"ref": "workspace:85", "id": "WID-85", "custom_title": "📮 Pm Os Reliability"},
+  {"ref": "workspace:85", "id": "WID-85", "custom_title": "📮 Switchboard Reliability"},
   {"ref": "workspace:88", "id": "WID-88", "custom_title": "🧱 Volunteer Roster"},
   {"ref": "workspace:77", "id": "WID-77", "custom_title": "✅ Done Stream"},
   {"ref": "workspace:20", "id": "WID-20", "custom_title": "🛠️ Review Stream"},
@@ -46,7 +46,7 @@ cat > "$FIXTURE/session.json" <<'JSON'
 {"windows": [
   {"tabManager": {"workspaces": [
     {"workspaceId": "WID-85",
-     "customTitle": "📮 Pm Os Reliability",
+     "customTitle": "📮 Switchboard Reliability",
      "panels": [{"terminal": {"agent": {"kind": "amp", "sessionId": "T-0085-live"}}}],
      "statusEntries": [{"key": "amp", "value": "Running", "timestamp": 1785364113.0}]}
   ]}},
@@ -59,12 +59,12 @@ cat > "$FIXTURE/session.json" <<'JSON'
 ]}
 JSON
 
-# Workstream updates: pm-os-reliability still active mid-task; team-calendar
+# Workstream updates: switchboard-reliability still active mid-task; team-calendar
 # also still active (the worker stopped WITHOUT emitting a terminal update);
 # done-stream settled; blocked-stream explicitly blocked.
 cat > "$FIXTURE/updates.json" <<'JSON'
 {"updated_at": "2026-07-29T00:00:00Z", "updates": {
-  "workstream:pm-os-reliability": {"status": "active", "timestamp": "2026-07-29T00:00:00Z"},
+  "workstream:switchboard-reliability": {"status": "active", "timestamp": "2026-07-29T00:00:00Z"},
   "workstream:team-calendar": {"status": "active", "timestamp": "2026-07-29T00:00:00Z"},
   "workstream:done-stream":       {"status": "waiting", "timestamp": "2026-07-29T00:00:00Z"},
   "workstream:review-stream":     {"status": "to review", "timestamp": "2026-09-08T17:18:10Z"},
@@ -79,7 +79,7 @@ JSON
 run_classifier() {
     CC_WORKSPACES_JSON="${CC_WORKSPACES_JSON:-$FIXTURE/workspaces.json}" \
     CC_CMUX_SESSION_JSON="${CC_CMUX_SESSION_JSON:-$FIXTURE/session.json}" \
-    PM_OS_WORKSPACE_UPDATES_JSON="${PM_OS_WORKSPACE_UPDATES_JSON:-$FIXTURE/updates.json}" \
+    SWITCHBOARD_WORKSPACE_UPDATES_JSON="${SWITCHBOARD_WORKSPACE_UPDATES_JSON:-$FIXTURE/updates.json}" \
     REPO_ROOT="$REAL_REPO" \
         python3 "$CLASSIFIER" "$@" 2>/dev/null
 }
@@ -87,7 +87,7 @@ run_classifier() {
 field() { python3 -c "import json,sys; print(json.load(sys.stdin).get('$1') or '')"; }
 
 # --- workspace:85 regression: live Running thread -> active --------------------
-out="$(run_classifier --workspace workspace:85 --workstream pm-os-reliability)"
+out="$(run_classifier --workspace workspace:85 --workstream switchboard-reliability)"
 [[ "$(printf '%s' "$out" | field classification)" == "active" ]] \
     && ok "workspace:85 fixture (Running thread) classifies active" \
     || fail "workspace:85 fixture classifies active (got: $out)"
@@ -177,7 +177,7 @@ out="$(CC_CMUX_SESSION_JSON="$FIXTURE/session4.json" run_classifier --workstream
 # launcher can `claude --resume` it and provenance can verify it.
 cat > "$FIXTURE/session5.json" <<'JSON'
 {"windows": [{"tabManager": {"workspaces": [
-  {"workspaceId": "WID-85", "customTitle": "📮 Pm Os Reliability",
+  {"workspaceId": "WID-85", "customTitle": "📮 Switchboard Reliability",
    "panels": [{"terminal": {
       "agent": {"kind": "claude", "sessionId": "0b7c9d2e-1111-4222-8333-444455556666", "permissionMode": "bypassPermissions"},
       "resumeBinding": {"kind": "claude", "checkpointId": "0b7c9d2e-1111-4222-8333-444455556666", "autoResume": true}}}],
@@ -189,7 +189,7 @@ cat > "$FIXTURE/session5.json" <<'JSON'
    "statusEntries": [{"key": "claude_code", "value": "Running", "timestamp": 1785364113.0}]}
 ]}}]}
 JSON
-out="$(CC_CMUX_SESSION_JSON="$FIXTURE/session5.json" run_classifier --workspace workspace:85 --workstream pm-os-reliability)"
+out="$(CC_CMUX_SESSION_JSON="$FIXTURE/session5.json" run_classifier --workspace workspace:85 --workstream switchboard-reliability)"
 [[ "$(printf '%s' "$out" | field classification)" == "paused-mid-task" ]] \
     && ok "Claude tab: claude_code Idle + active update classifies paused-mid-task" \
     || fail "Claude tab Idle classifies paused-mid-task (got: $out)"
@@ -231,7 +231,7 @@ out="$(CC_CMUX_SESSION_JSON="$FIXTURE/corrupt.json" run_classifier --workspace w
 
 # --- Summary --------------------------------------------------------------------
 echo '{"workspaces": []}' > "$FIXTURE/empty.json"
-out="$(CC_WORKSPACES_JSON="$FIXTURE/empty.json" run_classifier --workstream pm-os-reliability)"
+out="$(CC_WORKSPACES_JSON="$FIXTURE/empty.json" run_classifier --workstream switchboard-reliability)"
 [[ "$(printf '%s' "$out" | field classification)" == "unreachable" ]] \
     && ok "cached Running entry cannot resurrect a vanished workspace" \
     || fail "cached Running entry resurrected a vanished workspace (got: $out)"

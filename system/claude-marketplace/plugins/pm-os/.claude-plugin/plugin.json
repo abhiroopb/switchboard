@@ -1,9 +1,0 @@
-{
-  "name": "pm-os",
-  "version": "0.1.0",
-  "description": "PM OS for Claude Code: guardrails, worker liveness, workspace reports, slash commands, reviewer agents, and MCP servers. Hooks run the existing Amp plugin modules through hooks/amp-bridge.ts.",
-  "author": {
-    "name": "PM OS"
-  },
-  "keywords": ["pm-os", "cmux", "guardrails"]
-}

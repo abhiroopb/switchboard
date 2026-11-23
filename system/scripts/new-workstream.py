@@ -245,7 +245,7 @@ MIN_WORDS_WITHOUT_TITLE = 2
 # Tokens a URL leaves behind; a slug that contains one was built from a link.
 URL_FRAGMENTS = {
     "https", "http", "www", "com", "org", "net", "io", "co", "html", "htm",
-    "slack", "archives", "pmos", "google", "docs", "drive", "sheets",
+    "slack", "archives", "google", "docs", "drive", "sheets",
     "document", "spreadsheets", "presentation", "edit", "view", "d", "u",
     "linear", "app", "internal-example", "github", "pull", "blob", "tree", "issues",
     "atlassian", "browse", "jira", "confluence", "wiki", "pages", "figma",
@@ -260,7 +260,7 @@ TITLE_TAIL = {"guide", "doc", "document", "draft", "notes", "template", "v2",
 
 # Source fetches (link_titles.py) are skipped offline: in tests, in dispatch
 # dry runs, or when the caller sets this variable.
-OFFLINE_ENV = "PM_OS_NEW_WORKSTREAM_OFFLINE"
+OFFLINE_ENV = "SWITCHBOARD_NEW_WORKSTREAM_OFFLINE"
 
 CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
@@ -791,7 +791,7 @@ def main() -> int:
     config = {
         "name": title,
         "emoji": emoji,
-        # Ultra is the default for every PM OS thread.
+        # Ultra is the default for every switchboard thread.
         # Set high only when the owner explicitly chooses it for this workstream.
         "agent_mode": "ultra",
         "auto_open": False,

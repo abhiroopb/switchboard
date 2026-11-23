@@ -7,8 +7,8 @@ Load when processing the Gmail section of the start-of-day triage.
 Fetch both unread and read emails in the inbox. Make two parallel calls:
 
 ```
-pmos mail search --label Inbox --only-is-unread --max-results 25
-pmos mail search --label Inbox --only-is-read --max-results 20
+switchboard mail search --label Inbox --only-is-unread --max-results 25
+switchboard mail search --label Inbox --only-is-read --max-results 20
 ```
 
 Combine results into a single list. Unread emails come first, then read emails. De-duplicate by message ID if any overlap.
@@ -49,7 +49,7 @@ Categorize into sections:
 
 Go through each email one at a time (unread first, then read). For each email:
 
-1. Read the full email with `pmos mail read --message-ids <id>`.
+1. Read the full email with `switchboard mail read --message-ids <id>`.
 2. Show a summary of who sent it, what it's about, and the key content.
 3. If it's a human-written email that warrants a reply, **proactively draft a reply**.
 4. Offer options:
@@ -65,24 +65,24 @@ For bot/automated emails (GitHub, Datadog, Calendar invites, Figma notifications
 
 ### Send Reply
 
-1. Create the reply draft with `pmos mail draft --draft-type reply --reference-message-id <id> --to-recipient <to> --body "<text>"`. It never sends.
-2. Where `PM_OS_GMAIL_SEND` is on, show it with `pmos mail show --draft-id <id>`, print To, Cc, Bcc, Subject, the body, and any links verbatim in one message, and wait. After the owner's own "send it", run `pmos mail send --draft-id <id> --expect-hash <send check>`. Where it is off, tell the user: "Reply draft saved to <To>, subject <Subject> — open Gmail to review and hit send."
-3. If unread, mark as read: `pmos mail modify --message-ids <id> --labels-to-remove UNREAD`.
+1. Create the reply draft with `switchboard mail draft --draft-type reply --reference-message-id <id> --to-recipient <to> --body "<text>"`. It never sends.
+2. Where `SWITCHBOARD_GMAIL_SEND` is on, show it with `switchboard mail show --draft-id <id>`, print To, Cc, Bcc, Subject, the body, and any links verbatim in one message, and wait. After the owner's own "send it", run `switchboard mail send --draft-id <id> --expect-hash <send check>`. Where it is off, tell the user: "Reply draft saved to <To>, subject <Subject> — open Gmail to review and hit send."
+3. If unread, mark as read: `switchboard mail modify --message-ids <id> --labels-to-remove UNREAD`.
 
 ### Mark as Read
 
 ```
-pmos mail modify --message-ids <IDs> --labels-to-remove UNREAD
+switchboard mail modify --message-ids <IDs> --labels-to-remove UNREAD
 ```
 
 ### Archive
 
 ```
-pmos mail modify --message-ids <IDs> --labels-to-remove INBOX
+switchboard mail modify --message-ids <IDs> --labels-to-remove INBOX
 ```
 
 ### Save for Later
 
 ```
-pmos mail modify --message-ids <IDs> --labels-to-add "To Do" --labels-to-remove INBOX
+switchboard mail modify --message-ids <IDs> --labels-to-add "To Do" --labels-to-remove INBOX
 ```

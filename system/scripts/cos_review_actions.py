@@ -19,7 +19,7 @@ Shape (v2)::
      "replies": {"task:rt-...": [{"text": "send it", "at": "...", "state": "sent",
                                   "via": "cmux", "detail": ""}]}}
 
-Usage (from any pm-os checkout; state always lands in the main checkout)::
+Usage (from any switchboard checkout; state always lands in the main checkout)::
 
     python3 system/scripts/cos_review_actions.py complete task:rt-000000000026
     python3 system/scripts/cos_review_actions.py skip draft:345

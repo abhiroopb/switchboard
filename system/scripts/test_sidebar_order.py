@@ -41,12 +41,12 @@ class SectionTest(unittest.TestCase):
         self.assertEqual(so.surface_key("⏰ Scheduled Jobs"), "scheduled-jobs")
         self.assertEqual(so.surface_key("📅 Meetings Registry"), "meetings")
         self.assertEqual(so.surface_key("📅 Meetings"), "meetings")
-        self.assertIsNone(so.surface_key("📊 PM OS Maintenance 2"))
+        self.assertIsNone(so.surface_key("📊 Switchboard Maintenance 2"))
         self.assertIsNone(so.surface_key("🧭 CoS review notes"))
 
     def test_sections(self):
         self.assertEqual(so.section_of("🧭 CoS"), "pinned")
-        self.assertEqual(so.section_of("📊 PM OS Maintenance 1"), "workers")
+        self.assertEqual(so.section_of("📊 Switchboard Maintenance 1"), "workers")
         self.assertEqual(so.section_of("🔥 P0 · Ship it"), "workers")
         self.assertEqual(so.section_of("📅 Meetings Registry"), "background")
         self.assertEqual(so.section_of("Router 2"), "background")
@@ -59,11 +59,11 @@ class SectionTest(unittest.TestCase):
 
 class PlanTest(unittest.TestCase):
     def test_target_order_cos_todo_launchpad_workers_then_background(self):
-        live = rows("🚀 Launchpad", "📊 PM OS Maintenance 1", "📅 Meetings Registry", "🧭 CoS",
-                    "⏰ Scheduled Jobs", "✅ Todo", "📊 PM OS Maintenance 2", "📬 Comms Triage")
+        live = rows("🚀 Launchpad", "📊 Switchboard Maintenance 1", "📅 Meetings Registry", "🧭 CoS",
+                    "⏰ Scheduled Jobs", "✅ Todo", "📊 Switchboard Maintenance 2", "📬 Comms Triage")
         result = so.plan(live, comms_on=True)
         self.assertEqual(titles(result), ["🧭 CoS", "✅ Todo", "🚀 Launchpad", "📬 Comms Triage",
-                                          "📊 PM OS Maintenance 1", "📊 PM OS Maintenance 2",
+                                          "📊 Switchboard Maintenance 1", "📊 Switchboard Maintenance 2",
                                           "⏰ Scheduled Jobs", "📅 Meetings Registry"])
         self.assertFalse(result["in_order"])
         self.assertEqual(result["missing_pinned"], [])
@@ -73,7 +73,7 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(titles(so.plan(live, comms_on=False))[1:], ["B worker", "A worker", "C worker"])
 
     def test_in_order_and_missing_pinned(self):
-        live = rows("🧭 CoS", "🚀 Launchpad", "📊 PM OS Maintenance 1")
+        live = rows("🧭 CoS", "🚀 Launchpad", "📊 Switchboard Maintenance 1")
         result = so.plan(live, comms_on=False)
         self.assertTrue(result["in_order"])
         self.assertNotIn("moves", result, "no drag plan: wmux gets no ordering")
@@ -81,7 +81,7 @@ class PlanTest(unittest.TestCase):
 
     def test_cli_order_prints_sections_and_says_cmux_only(self):
         out = subprocess.run([sys.executable, str(HERE / "sidebar_order.py"), "order"],
-                             capture_output=True, text=True, encoding="utf-8", env={**os.environ, "PM_OS_COMMS_TRIAGE": "off"})
+                             capture_output=True, text=True, encoding="utf-8", env={**os.environ, "SWITCHBOARD_COMMS_TRIAGE": "off"})
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertIn("Pinned: cos, todo, launchpad", out.stdout)
         self.assertIn("cmux only", out.stdout)
@@ -101,7 +101,7 @@ class CmuxOnlyTest(unittest.TestCase):
         body = helpers[helpers.index("arrange_workspace_sidebar() {"):]
         pinned = re.search(r'local -a top_pinned=\((.*?)\)', body).group(1)
         self.assertEqual(re.findall(r'"routine:([\w-]+)"', pinned),
-                         ["megadesk" if k == "cos" else k for k in so.pinned_keys(True)])
+                         ["switchboard" if k == "cos" else k for k in so.pinned_keys(True)])
         bottom = re.search(r'local -a bottom_unpinned=\((.*?)\)', body).group(1)
         self.assertEqual(re.findall(r'"routine:([\w-]+)"', bottom), [k for k, _ in so.BOTTOM])
 
@@ -109,7 +109,7 @@ class CmuxOnlyTest(unittest.TestCase):
         helpers = self.read("system/cmux-helpers.sh")
         body = helpers[helpers.index("arrange_workspace_sidebar() {"):]
         body = body[:body.index("\n}\n")]
-        self.assertIn('[[ "${PM_OS_MUX:-}" == "wmux" ]] && return 0', body)
+        self.assertIn('[[ "${SWITCHBOARD_MUX:-}" == "wmux" ]] && return 0', body)
         self.assertNotIn("sidebar arrange", body)
 
     def test_no_wmux_ordering_steps_remain(self):
@@ -138,8 +138,8 @@ class SeedSessionTest(unittest.TestCase):
     fixture file here; -Force -NoPrefs leaves the live wmux and its settings alone)."""
 
     def test_pins_and_tints_fixed_surfaces_and_keeps_the_row_order(self):
-        scrambled = [("🚀 Launchpad", False), ("📊 PM OS Maintenance 1", False), ("📅 Meetings Registry", True),
-                     ("🧭 CoS", False), ("⏰ Scheduled Jobs", False), ("✅ To Do", False), ("📊 PM OS Maintenance 2", False)]
+        scrambled = [("🚀 Launchpad", False), ("📊 Switchboard Maintenance 1", False), ("📅 Meetings Registry", True),
+                     ("🧭 CoS", False), ("⏰ Scheduled Jobs", False), ("✅ To Do", False), ("📊 Switchboard Maintenance 2", False)]
         with tempfile.TemporaryDirectory() as tmp:
             session = Path(tmp) / "session.json"
             session.write_text(json.dumps({"version": 1, "windows": [{"id": "w1", "workspaces": [
@@ -148,7 +148,7 @@ class SeedSessionTest(unittest.TestCase):
             sidecar = Path(tmp) / "sidecar.json"   # a stale order_index from the old arrange step is ignored
             sidecar.write_text(json.dumps({"workspaces": {"ws-4": {"order_index": 0}, "ws-1": {"order_index": 2}}}),
                                encoding="utf-8")
-            env = {**os.environ, "PM_OS_COMMS_TRIAGE": "off", "PM_OS_WMUX_SHELL": "default"}
+            env = {**os.environ, "SWITCHBOARD_COMMS_TRIAGE": "off", "SWITCHBOARD_WMUX_SHELL": "default"}
             out = subprocess.run([POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
                                   str(HERE.parent / "windows" / "seed-session.ps1"), "-SessionPath", str(session),
                                   "-Sidecar", str(sidecar), "-NoPrefs", "-Force"],

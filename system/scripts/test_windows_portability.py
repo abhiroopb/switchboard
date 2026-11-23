@@ -44,14 +44,14 @@ class LaunchCommandOnWindowsTests(unittest.TestCase):
     def row(self, agent: str = "claude") -> dict:
         return {"id": "rt-win", "attempt_id": "rt-win.a1.abc", "workstream": "demo", "mode": "ultra",
                 "agent": agent, "worker_id": "worker-win", "session_id": "0" * 8 + "-0000-0000-0000-" + "0" * 12,
-                "worktree": "C:\\Home\\owner\\AppData\\Local\\pm-os\\worktrees\\rt-win"}
+                "worktree": "C:\\Home\\owner\\AppData\\Local\\switchboard\\worktrees\\rt-win"}
 
     def test_claude_worker_seeds_a_pointer_to_the_prompt_file(self) -> None:
         with mock.patch.object(dispatch.os, "name", "nt"):
             line = dispatch.launch_command_for(self.row())
         self.assertIn("Read and follow all instructions in ", line)
         self.assertNotIn("$(cat", line, "the whole prompt as one argument exceeds the Windows command-line limit")
-        self.assertIn("PM_OS_WORKTREE=C:/Home/owner/AppData/Local/pm-os/worktrees/rt-win", line)
+        self.assertIn("SWITCHBOARD_WORKTREE=C:/Home/owner/AppData/Local/switchboard/worktrees/rt-win", line)
         self.assertNotIn("\\", line, "wmux reads backslash escapes in typed text as keys")
 
     def test_mac_claude_worker_keeps_the_inline_prompt(self) -> None:
@@ -130,8 +130,8 @@ class DrivePathLinkTests(unittest.TestCase):
     """Report links to local pages and images on a Windows drive."""
 
     def test_drive_path_file_url_keeps_the_colon(self) -> None:
-        self.assertEqual(review_surface._file_url(Path("C:/Home/owner/pm os/a.md")),
-                         "file:///C:/Home/owner/pm%20os/a.md")
+        self.assertEqual(review_surface._file_url(Path("C:/Home/owner/switch board/a.md")),
+                         "file:///C:/Home/owner/switch%20board/a.md")
         self.assertEqual(image_compare.file_url(Path("C:/Home/owner/a.png")), "file:///C:/Home/owner/a.png")
         self.assertEqual(review_surface._file_url(Path("/home/owner/a.md")), "file:///home/owner/a.md")
 
@@ -142,8 +142,8 @@ class DrivePathLinkTests(unittest.TestCase):
                          "C:/Home/owner/a b.html")
 
     def test_compare_page_on_a_drive_counts_as_a_compare_link(self) -> None:
-        for path in ("C:/Home/owner/pm-os/workstreams/demo/assets/compare/covers.html",
-                     "C:\\Home\\owner\\pm-os\\workstreams\\demo\\assets\\compare\\covers.html"):
+        for path in ("C:/Home/owner/switchboard/workstreams/demo/assets/compare/covers.html",
+                     "C:\\Home\\owner\\switchboard\\workstreams\\demo\\assets\\compare\\covers.html"):
             self.assertTrue(review_surface.has_compare_link(f"Compare page: {path}"), path)
 
 
@@ -160,12 +160,12 @@ class DirLockTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             lock = f"{tmp}/state/x.lock"
             out = self.bash(f'''
-                pm_os_dir_lock_acquire "{lock}" 0 || exit 10
-                ( source "{self.LIB}"; pm_os_dir_lock_acquire "{lock}" 0 && exit 11; exit 0 ) || exit 12
-                pm_os_dir_lock_release
+                switchboard_dir_lock_acquire "{lock}" 0 || exit 10
+                ( source "{self.LIB}"; switchboard_dir_lock_acquire "{lock}" 0 && exit 11; exit 0 ) || exit 12
+                switchboard_dir_lock_release
                 [ -d "{lock}" ] && exit 13
-                pm_os_dir_lock_acquire "{lock}" 0 || exit 14
-                pm_os_dir_lock_release''')
+                switchboard_dir_lock_acquire "{lock}" 0 || exit 14
+                switchboard_dir_lock_release''')
             self.assertEqual(out.returncode, 0, out.stderr)
 
     def test_lock_left_by_a_dead_process_is_reclaimed(self) -> None:
@@ -175,7 +175,7 @@ class DirLockTests(unittest.TestCase):
             dead = subprocess.Popen(["true"])
             dead.wait()
             (lock / "pid").write_text(str(dead.pid))
-            out = self.bash(f'pm_os_dir_lock_acquire "{lock}" 0 && cat "{lock}/pid"')
+            out = self.bash(f'switchboard_dir_lock_acquire "{lock}" 0 && cat "{lock}/pid"')
             self.assertEqual(out.returncode, 0, out.stderr)
             self.assertNotEqual(out.stdout.strip(), str(dead.pid))
 
@@ -185,12 +185,12 @@ class DirLockTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             lock = f"{tmp}/x.lock"
             out = self.bash(f'''
-                ( pm_os_dir_lock_acquire "{lock}" 0 && kill -9 $BASHPID )
+                ( switchboard_dir_lock_acquire "{lock}" 0 && kill -9 $BASHPID )
                 [ -d "{lock}" ] || exit 10
-                pm_os_dir_lock_acquire "{lock}" 0 || exit 11
+                switchboard_dir_lock_acquire "{lock}" 0 || exit 11
                 [ "$(cat "{lock}/pid")" = "$BASHPID" ] || exit 12
                 [ -d "{lock}.reclaim" ] && exit 13
-                pm_os_dir_lock_release''')
+                switchboard_dir_lock_release''')
             self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
 
     def test_a_retaken_lock_is_never_reclaimed(self) -> None:
@@ -201,7 +201,7 @@ class DirLockTests(unittest.TestCase):
             (lock / "pid").write_text(str(os.getpid()))
             dead = subprocess.Popen(["true"])
             dead.wait()
-            out = self.bash(f'pm_os_dir_lock_reclaim "{lock}" {dead.pid}')
+            out = self.bash(f'switchboard_dir_lock_reclaim "{lock}" {dead.pid}')
             self.assertEqual(out.returncode, 0, out.stderr)
             self.assertEqual((lock / "pid").read_text(), str(os.getpid()))
             self.assertFalse(Path(f"{lock}.reclaim").exists())
@@ -216,17 +216,17 @@ class DirLockTests(unittest.TestCase):
                 echo {dead.pid} > "{lock}/pid"
                 sleep 300 >/dev/null 2>&1 & live=$!
                 echo $live > "{lock}.reclaim/pid"
-                pm_os_dir_lock_acquire "{lock}" 0 && exit 10
+                switchboard_dir_lock_acquire "{lock}" 0 && exit 10
                 [ -d "{lock}" ] || exit 11
                 kill $live; wait $live 2>/dev/null
-                pm_os_dir_lock_acquire "{lock}" 2 || exit 12
+                switchboard_dir_lock_acquire "{lock}" 2 || exit 12
                 [ -d "{lock}.reclaim" ] && exit 13
-                pm_os_dir_lock_release''')
+                switchboard_dir_lock_release''')
             self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
 
     def test_windows_shell_detection(self) -> None:
-        self.assertEqual(self.bash("OSTYPE=msys; pm_os_is_windows_shell").returncode, 0)
-        self.assertEqual(self.bash("OSTYPE=darwin25; pm_os_is_windows_shell").returncode, 1)
+        self.assertEqual(self.bash("OSTYPE=msys; switchboard_is_windows_shell").returncode, 0)
+        self.assertEqual(self.bash("OSTYPE=darwin25; switchboard_is_windows_shell").returncode, 1)
 
 
 if __name__ == "__main__":

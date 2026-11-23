@@ -19,11 +19,11 @@ todo_cli = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = todo_cli
 SPEC.loader.exec_module(todo_cli)
 
-REBUILD_SCRIPT = Path(__file__).with_name("rebuild-megadesk-state.py")
-REBUILD_SPEC = importlib.util.spec_from_file_location("rebuild_megadesk_surface_gate_test", REBUILD_SCRIPT)
-rebuild_megadesk = importlib.util.module_from_spec(REBUILD_SPEC)
-sys.modules[REBUILD_SPEC.name] = rebuild_megadesk
-REBUILD_SPEC.loader.exec_module(rebuild_megadesk)
+REBUILD_SCRIPT = Path(__file__).with_name("rebuild-switchboard-state.py")
+REBUILD_SPEC = importlib.util.spec_from_file_location("rebuild_switchboard_surface_gate_test", REBUILD_SCRIPT)
+rebuild_switchboard = importlib.util.module_from_spec(REBUILD_SPEC)
+sys.modules[REBUILD_SPEC.name] = rebuild_switchboard
+REBUILD_SPEC.loader.exec_module(rebuild_switchboard)
 
 
 def item(item_id: str, **overrides):
@@ -109,47 +109,47 @@ class TodoSurfaceGateTests(unittest.TestCase):
         self.assertEqual([entry["id"] for entry in result["reconciled"]], ["b"])
         self.assertEqual(reconcile.call_count, 1)
 
-    def test_megadesk_builder_does_not_fall_back_to_raw_todos(self):
+    def test_switchboard_builder_does_not_fall_back_to_raw_todos(self):
         self.write_items([item("stale")])
         with (
-            mock.patch.object(rebuild_megadesk, "TODO_CLI_PATH", self.todo_path),
-            mock.patch.object(rebuild_megadesk, "cli_json", return_value=None),
+            mock.patch.object(rebuild_switchboard, "TODO_CLI_PATH", self.todo_path),
+            mock.patch.object(rebuild_switchboard, "cli_json", return_value=None),
         ):
             with self.assertRaisesRegex(RuntimeError, "surface verification failed"):
-                rebuild_megadesk.load_open_todos(self.todo_path)
+                rebuild_switchboard.load_open_todos(self.todo_path)
 
-    def test_megadesk_refresh_never_starts_full_reconciliation(self):
+    def test_switchboard_refresh_never_starts_full_reconciliation(self):
         root = self.root.resolve()
-        script = root / "system" / "scripts" / "rebuild-megadesk-state.py"
+        script = root / "system" / "scripts" / "rebuild-switchboard-state.py"
         state_dir = root / "system" / "state"
         for write in (False, True):
             with (
                 self.subTest(write=write),
-                mock.patch.object(rebuild_megadesk, "__file__", str(script)),
+                mock.patch.object(rebuild_switchboard, "__file__", str(script)),
                 mock.patch.object(sys, "argv", [str(script), "--todo-path", str(self.todo_path)] + (["--write"] if write else [])),
-                mock.patch.object(rebuild_megadesk, "build_queue", return_value=({}, {})) as build,
-                mock.patch.object(rebuild_megadesk, "append_event"),
+                mock.patch.object(rebuild_switchboard, "build_queue", return_value=({}, {})) as build,
+                mock.patch.object(rebuild_switchboard, "append_event"),
                 mock.patch("builtins.print"),
             ):
-                rebuild_megadesk.main()
+                rebuild_switchboard.main()
                 build.assert_called_once()
                 self.assertEqual(build.call_args.args, (root, state_dir, self.todo_path))
                 self.assertFalse(build.call_args.kwargs.get("persist_sources", False))
                 self.assertFalse((state_dir / ".last-auto-reconcile-attempt").exists())
 
-    def test_megadesk_keeps_verified_snapshot_gate(self):
+    def test_switchboard_keeps_verified_snapshot_gate(self):
         result = {"items": [], "actionable": []}
         with (
-            mock.patch.object(rebuild_megadesk, "TODO_CLI_PATH", TODO_CLI),
-            mock.patch.object(rebuild_megadesk, "cli_json", return_value=result) as cli,
+            mock.patch.object(rebuild_switchboard, "TODO_CLI_PATH", TODO_CLI),
+            mock.patch.object(rebuild_switchboard, "cli_json", return_value=result) as cli,
         ):
-            rebuild_megadesk.load_open_todos(self.todo_path)
+            rebuild_switchboard.load_open_todos(self.todo_path)
         cli.assert_called_once()
         self.assertEqual(cli.call_args.args, ([sys.executable, str(TODO_CLI), "--path", str(self.todo_path), "snapshot"],))
         self.assertTrue(cli.call_args.kwargs["required"])
         self.assertEqual(cli.call_args.kwargs["timeout"], 150)
 
-    def test_megadesk_snapshot_failures_preserve_diagnostics(self):
+    def test_switchboard_snapshot_failures_preserve_diagnostics(self):
         cases = (
             (subprocess.TimeoutExpired(["python3"], 45), "timed out after 45"),
             (subprocess.CalledProcessError(1, ["python3"], stderr="LaunchDarkly gate failed: HTTP 404"), "HTTP 404"),
@@ -160,17 +160,17 @@ class TodoSurfaceGateTests(unittest.TestCase):
         for outcome, expected in cases:
             with (
                 self.subTest(expected=expected),
-                mock.patch.object(rebuild_megadesk, "TODO_CLI_PATH", TODO_CLI),
-                mock.patch.object(rebuild_megadesk.subprocess, "run") as run,
+                mock.patch.object(rebuild_switchboard, "TODO_CLI_PATH", TODO_CLI),
+                mock.patch.object(rebuild_switchboard.subprocess, "run") as run,
             ):
                 if isinstance(outcome, Exception):
                     run.side_effect = outcome
                 else:
                     run.return_value = outcome
                 with self.assertRaisesRegex(RuntimeError, expected):
-                    rebuild_megadesk.load_open_todos(self.todo_path)
+                    rebuild_switchboard.load_open_todos(self.todo_path)
                 # Optional calendar sources retain their existing fallback behavior.
-                self.assertIsNone(rebuild_megadesk.cli_json(["python3", "optional-calendar.py"]))
+                self.assertIsNone(rebuild_switchboard.cli_json(["python3", "optional-calendar.py"]))
 
     def test_slack_reply_and_reaction_auto_close(self):
         for verdict in ("resolved_by_owner", "resolved_by_reaction"):
@@ -285,7 +285,7 @@ class DisplayTitleTests(unittest.TestCase):
         )
         self.env.start()
         self.addCleanup(self.env.stop)
-        # Load named_refs from this checkout, not from ~/Development/pm-os.
+        # Load named_refs from this checkout, not from ~/Development/switchboard.
         root_patch = mock.patch.object(todo_cli, "default_repo_root", return_value=Path(__file__).resolve().parents[2])
         root_patch.start()
         self.addCleanup(root_patch.stop)

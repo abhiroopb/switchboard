@@ -15,7 +15,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-os.environ.setdefault("PM_OS_TEST_SANDBOX", "1")
+os.environ.setdefault("SWITCHBOARD_TEST_SANDBOX", "1")
 import dispatch  # noqa: E402
 import private_identifiers as pi  # noqa: E402
 
@@ -44,7 +44,7 @@ class RepoCase(unittest.TestCase):
         env = patch.dict(os.environ)
         env.start()
         self.addCleanup(env.stop)
-        os.environ.pop("PM_OS_PRIVATE_IDENTIFIERS", None)
+        os.environ.pop("SWITCHBOARD_PRIVATE_IDENTIFIERS", None)
         self.addCleanup(self.tmp.cleanup)
 
     def add_list(self) -> None:

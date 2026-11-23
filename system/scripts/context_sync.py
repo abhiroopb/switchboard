@@ -126,10 +126,10 @@ def main() -> int:
             ],
         ),
         (
-            "refresh_megadesk_state",
+            "refresh_switchboard_state",
             [
                 sys.executable,
-                "system/scripts/rebuild-megadesk-state.py",
+                "system/scripts/rebuild-switchboard-state.py",
                 "--write",
                 "--event-source",
                 f"context-sync-{args.phase}",

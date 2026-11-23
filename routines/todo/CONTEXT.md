@@ -36,7 +36,7 @@ Daily (session start + end of session)
 - Use visual separators like `===` and `----` plus light emoji labeling, but keep the layout skimmable rather than decorative.
 
 ## Data
-- Persistent store: `system/state/todo.json` under PM_OS_ROOT
+- Persistent store: `system/state/todo.json` under SWITCHBOARD_ROOT
 - Skill: `todo`
 
 ## Current State

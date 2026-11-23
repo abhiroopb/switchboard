@@ -24,7 +24,7 @@
 #   ps aux | grep command-center-loop | grep -v grep
 #
 # Optional: install as a launchd job (more reliable across reboots) — see
-# `system/launchd/com.pm-os.command-center.plist` once written.
+# `system/launchd/com.switchboard.command-center.plist` once written.
 
 set -euo pipefail
 
@@ -64,11 +64,11 @@ TICK_LOCK="$STATE_DIR/command-center-tick.lock"
 # last render. wmux only:
 # cmux reuses numbers, so a rewrite between renders would let a number from the
 # digest the owner is reading pass the identity check for a newer tab. On
-# Windows the user environment and pm-os-env.sh export PM_OS_MUX=wmux.
+# Windows the user environment and switchboard-env.sh export SWITCHBOARD_MUX=wmux.
 # CC_SKIP_MAP_REFRESH_DISABLED=1 turns it off.
 refresh_actions_map_on_skip() {
   [[ "${CC_SKIP_MAP_REFRESH_DISABLED:-0}" == "1" ]] && return 0
-  [[ "${PM_OS_MUX:-}" == "wmux" ]] || return 0
+  [[ "${SWITCHBOARD_MUX:-}" == "wmux" ]] || return 0
   if CMUX_BIN="${CMUX_BIN:-$CMUX}" python3 "$DIGEST_SCRIPT" --actions-map-only \
       --actions-file "$STATE_DIR/command-center-actions.json" >/dev/null 2>&1; then
     echo "command-center tick: action map refreshed"
@@ -109,8 +109,8 @@ fi
 # the sweep too, or prune_orphan_worktrees can park a live worker's checkout
 # while a test runs against a fixture ledger.
 if [[ "$STATE_DIR" != "$REPO_ROOT/system/state" ]]; then
-  export PM_OS_WORKTREES_DIR="${PM_OS_WORKTREES_DIR:-$STATE_DIR/worktrees}"
-  export PM_OS_LOCKS_DIR="${PM_OS_LOCKS_DIR:-$STATE_DIR/locks}"
+  export SWITCHBOARD_WORKTREES_DIR="${SWITCHBOARD_WORKTREES_DIR:-$STATE_DIR/worktrees}"
+  export SWITCHBOARD_LOCKS_DIR="${SWITCHBOARD_LOCKS_DIR:-$STATE_DIR/locks}"
 fi
 
 # Find the CoS workspace ref each loop (in case it changes)
@@ -315,7 +315,7 @@ post_comms_review() {
   [[ -x "$post_script" ]] || return 0
   # shellcheck source=lib/comms-triage.sh
   source "$REPO_ROOT/system/scripts/lib/comms-triage.sh"
-  pm_os_comms_triage_enabled || return 0
+  switchboard_comms_triage_enabled || return 0
 
   local output
   if output="$(CMUX_BIN="$CMUX" bash "$post_script" 2>&1)"; then
@@ -489,9 +489,9 @@ for t in stale:
   # a landing the sweep just finished is pushed in the same tick. Only the
   # real state dir pushes: a redirected STATE_DIR is a fixture.
   # Kill switch: AUTO_PUSH_DISABLED=1. Never breaks the loop.
-  # Off by default: PM OS stays local and has no origin remote;
-  # only PM_OS_AUTO_PUSH=on turns the hourly push back on.
-  if [[ "${PM_OS_AUTO_PUSH:-off}" == "on" && "${AUTO_PUSH_DISABLED:-0}" != "1" && "$STATE_DIR" == "$REPO_ROOT/system/state" ]]; then
+  # Off by default: switchboard stays local and has no origin remote;
+  # only SWITCHBOARD_AUTO_PUSH=on turns the hourly push back on.
+  if [[ "${SWITCHBOARD_AUTO_PUSH:-off}" == "on" && "${AUTO_PUSH_DISABLED:-0}" != "1" && "$STATE_DIR" == "$REPO_ROOT/system/state" ]]; then
     [[ -d "$STATE_DIR/logs" ]] || mkdir -p "$STATE_DIR/logs"
     { tick_stamp; REPO_ROOT="$REPO_ROOT" \
       python3 "$REPO_ROOT/system/scripts/dispatch.py" auto-push 2>&1 || true; } >>"$STATE_DIR/logs/auto-push.tick.log"
@@ -513,7 +513,7 @@ for t in stale:
       >>"$STATE_DIR/logs/skill-sync.log"
   fi
 
-  # Plugin copy refresh: Claude Code runs the pm-os plugin from a copy made at install time,
+  # Plugin copy refresh: Claude Code runs the switchboard plugin from a copy made at install time,
   # so hook fixes on main never reach it on their own. sync-claude-plugin.py copies what changed,
   # holds an installed file edited by hand, keeps the Windows hook profile, and skips during a
   # rebase. Same fixture rule as skill sync. Kill switch: PLUGIN_SYNC_DISABLED=1.

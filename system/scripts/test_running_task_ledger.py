@@ -79,7 +79,7 @@ class LedgerHarness(unittest.TestCase):
             **os.environ,
             "RUNNING_TASKS_FILE": str(self.ledger),
             "CC_CMUX_SESSION_JSON": str(self.store),
-            "PM_OS_TASK_STALE_SECONDS": str(STALE_SECONDS),
+            "SWITCHBOARD_TASK_STALE_SECONDS": str(STALE_SECONDS),
         }
         proc = subprocess.run([sys.executable, str(SCRIPT), *args], capture_output=True, text=True, env=env)
         self.assertEqual(proc.returncode, expect, f"{' '.join(args)}\nstdout={proc.stdout}\nstderr={proc.stderr}")
@@ -111,7 +111,7 @@ class LedgerHarness(unittest.TestCase):
 
 class TestLifecycle(LedgerHarness):
     def test_start_ack_heartbeat_and_executor_fence(self) -> None:
-        started = self.start(workstream="pm-os-maintenance")
+        started = self.start(workstream="switchboard-maintenance")
         self.assertEqual(started["status"], "routing")
         self.assertEqual(started["attempt"], 1)
         self.assertTrue(started["attempt_id"].startswith(f"{TASK}.a1."))
@@ -302,7 +302,7 @@ class TestLandedMidTask(LedgerHarness):
 
     def run_cli(self, *args: str, expect: int = 0) -> dict:
         env = {**os.environ, "RUNNING_TASKS_FILE": str(self.ledger), "CC_CMUX_SESSION_JSON": str(self.store),
-               "PM_OS_TASK_STALE_SECONDS": str(STALE_SECONDS), "REPO_ROOT": str(self.repo),
+               "SWITCHBOARD_TASK_STALE_SECONDS": str(STALE_SECONDS), "REPO_ROOT": str(self.repo),
                "CLAUDE_PROJECTS_DIR": str(self.projects)}
         proc = subprocess.run([sys.executable, str(SCRIPT), *args], capture_output=True, text=True, env=env)
         self.assertEqual(proc.returncode, expect, f"{' '.join(args)}\nstdout={proc.stdout}\nstderr={proc.stderr}")
@@ -526,14 +526,14 @@ class TestSharedStateHome(LedgerHarness):
                          ["main-state", "running-tasks.json", "session.json"])
 
     def test_ledger_inside_a_task_worktree_is_refused_naming_main(self) -> None:
-        inside = Path(self.tmp.name) / "pm-os" / ".amp" / "worktrees" / "rt-x" / "system" / "state" / "running-tasks.json"
+        inside = Path(self.tmp.name) / "switchboard" / ".amp" / "worktrees" / "rt-x" / "system" / "state" / "running-tasks.json"
         inside.parent.mkdir(parents=True)
         self.ledger = inside
         env = {**os.environ, "RUNNING_TASKS_FILE": str(inside), "CC_CMUX_SESSION_JSON": str(self.store)}
         proc = subprocess.run([sys.executable, str(SCRIPT), "start", "--task-id", TASK, "--prompt", "x", "--origin", "cos"],
                               capture_output=True, text=True, env=env)
         self.assertNotEqual(proc.returncode, 0)
-        self.assertIn(str(Path(self.tmp.name) / "pm-os" / "system" / "state" / "running-tasks.json"), proc.stderr)
+        self.assertIn(str(Path(self.tmp.name) / "switchboard" / "system" / "state" / "running-tasks.json"), proc.stderr)
         self.assertEqual(list(inside.parent.iterdir()), [])
 
 

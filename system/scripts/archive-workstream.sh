@@ -2,7 +2,7 @@
 # archive-workstream.sh — Move a workstream to workstreams/_archive/ and
 # refresh the README index.
 #
-# Called by pm-os-guardrails plugin when a workstream's config.yaml status
+# Called by switchboard-guardrails plugin when a workstream's config.yaml status
 # flips to Done/Cancelled/Resolved.
 #
 # Usage: archive-workstream.sh <slug>
@@ -11,8 +11,8 @@
 
 set -euo pipefail
 
-PM_OS_DIR="${PM_OS_DIR:-${PM_OS_ROOT:-$HOME/Development/pm-os}}"
-LOG_FILE="$PM_OS_DIR/.state/archive-workstream.log"
+SWITCHBOARD_DIR="${SWITCHBOARD_DIR:-${SWITCHBOARD_ROOT:-$HOME/Development/switchboard}}"
+LOG_FILE="$SWITCHBOARD_DIR/.state/archive-workstream.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 
 log() {
@@ -25,8 +25,8 @@ if [ -z "$slug" ]; then
   exit 1
 fi
 
-src="$PM_OS_DIR/workstreams/$slug"
-dst_root="$PM_OS_DIR/workstreams/_archive"
+src="$SWITCHBOARD_DIR/workstreams/$slug"
+dst_root="$SWITCHBOARD_DIR/workstreams/_archive"
 
 if [ ! -d "$src" ]; then
   log "skip: $slug not found at $src"
@@ -43,7 +43,7 @@ mv "$src" "$dst_root/$slug"
 log "archived: $slug → _archive/"
 
 # Keep open todos visible after their owning workstream leaves the active tree.
-TODO_FILE="${TODO_FILE:-${PM_OS_ROOT:-$HOME/Development/pm-os}/system/state/todo.json}"
+TODO_FILE="${TODO_FILE:-${SWITCHBOARD_ROOT:-$HOME/Development/switchboard}/system/state/todo.json}"
 if [ -f "$TODO_FILE" ]; then
   python3 - "$TODO_FILE" "$slug" <<'PY' >> "$LOG_FILE" 2>&1
 import json
@@ -76,15 +76,15 @@ fi
 # Drop the workstream's entries from sidebar-publisher state so
 # publish-workspace-status.sh stops retrying a closed workspace forever.
 for STATE_FILE in \
-  "$PM_OS_DIR/system/state/sources/workspace-updates.json" \
-  "$PM_OS_DIR/system/state/sources/workspace-status-published.json"; do
+  "$SWITCHBOARD_DIR/system/state/sources/workspace-updates.json" \
+  "$SWITCHBOARD_DIR/system/state/sources/workspace-status-published.json"; do
   if [ -f "$STATE_FILE" ]; then
     python3 - "$STATE_FILE" "$slug" <<'PY' >> "$LOG_FILE" 2>&1
 try:
     import fcntl
 except ImportError:  # Windows: flock() over msvcrt, system/scripts/flock_compat.py
     import os as _os, sys as _sys
-    _sys.path.insert(0, _os.environ.get("PM_OS_SCRIPTS_DIR") or _os.path.join(_os.environ.get("PM_OS_ROOT") or _os.path.expanduser("~/Development/pm-os"), "system", "scripts"))
+    _sys.path.insert(0, _os.environ.get("SWITCHBOARD_SCRIPTS_DIR") or _os.path.join(_os.environ.get("SWITCHBOARD_ROOT") or _os.path.expanduser("~/Development/switchboard"), "system", "scripts"))
     import flock_compat as fcntl
 import json
 import os
@@ -129,17 +129,17 @@ PY
 done
 
 # Refresh the workstreams README table
-if [ -x "$PM_OS_DIR/system/scripts/render-workstreams-readme.py" ] || \
-   [ -f "$PM_OS_DIR/system/scripts/render-workstreams-readme.py" ]; then
-  python3 "$PM_OS_DIR/system/scripts/render-workstreams-readme.py" >> "$LOG_FILE" 2>&1 || \
+if [ -x "$SWITCHBOARD_DIR/system/scripts/render-workstreams-readme.py" ] || \
+   [ -f "$SWITCHBOARD_DIR/system/scripts/render-workstreams-readme.py" ]; then
+  python3 "$SWITCHBOARD_DIR/system/scripts/render-workstreams-readme.py" >> "$LOG_FILE" 2>&1 || \
     log "warn: render-workstreams-readme.py failed (non-fatal)"
 fi
 
 # Drop a one-line note in today's daily log if the directory exists
 TODAY="$(date +%Y-%m-%d)"
-DAILY="$PM_OS_DIR/notes/daily/$TODAY.md"
-if [ -d "$PM_OS_DIR/notes/daily" ] && [ -f "$DAILY" ]; then
-  printf '\n- Archived workstream: %s (auto, via pm-os-guardrails plugin)\n' "$slug" >> "$DAILY"
+DAILY="$SWITCHBOARD_DIR/notes/daily/$TODAY.md"
+if [ -d "$SWITCHBOARD_DIR/notes/daily" ] && [ -f "$DAILY" ]; then
+  printf '\n- Archived workstream: %s (auto, via switchboard-guardrails plugin)\n' "$slug" >> "$DAILY"
 fi
 
 echo "Archived $slug"

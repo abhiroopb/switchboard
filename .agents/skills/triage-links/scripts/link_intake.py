@@ -172,7 +172,7 @@ def discover_capabilities() -> dict[str, Capability]:
                 break
         capabilities[name] = Capability(name, "skill", status)
 
-    for command in ["agent-browser", "pmos", "gh", "python3"]:
+    for command in ["agent-browser", "switchboard", "gh", "python3"]:
         if shutil.which(command):
             capabilities[command] = Capability(command, "executable", "active")
     return capabilities

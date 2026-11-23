@@ -7,14 +7,14 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export REPO_ROOT
 export CMUX_BIN="${CMUX_BIN:-/Applications/cmux.app/Contents/Resources/bin/cmux}"
-export CMUX_LOCK_DIR="${CMUX_LOCK_DIR:-${TMPDIR:-/tmp}/pm-os-focus-verify.lock}"
+export CMUX_LOCK_DIR="${CMUX_LOCK_DIR:-${TMPDIR:-/tmp}/switchboard-focus-verify.lock}"
 
 # shellcheck source=../cmux-helpers.sh
 source "$REPO_ROOT/system/cmux-helpers.sh"
 
 probe_ref=""
 before=""
-log_file="$(mktemp "${TMPDIR:-/tmp}/pm-os-focus-verify.XXXXXX")"
+log_file="$(mktemp "${TMPDIR:-/tmp}/switchboard-focus-verify.XXXXXX")"
 
 selected_workspace() {
     CMUX_QUIET=1 cmux_cmd list-workspaces 2>/dev/null \
@@ -31,7 +31,7 @@ try:
     import fcntl
 except ImportError:  # Windows: flock() over msvcrt, system/scripts/flock_compat.py
     import os as _os, sys as _sys
-    _sys.path.insert(0, _os.environ.get("PM_OS_SCRIPTS_DIR") or _os.path.join(_os.environ.get("PM_OS_ROOT") or _os.path.expanduser("~/Development/pm-os"), "system", "scripts"))
+    _sys.path.insert(0, _os.environ.get("SWITCHBOARD_SCRIPTS_DIR") or _os.path.join(_os.environ.get("SWITCHBOARD_ROOT") or _os.path.expanduser("~/Development/switchboard"), "system", "scripts"))
     import flock_compat as fcntl
 import sys
 from pathlib import Path
@@ -52,7 +52,7 @@ restore_and_cleanup() {
     local current
     current=$(selected_workspace || true)
     if [[ -n "$before" && "$current" != "$before" ]]; then
-        PM_OS_EXPLICIT_USER_FOCUS=1 \
+        SWITCHBOARD_EXPLICIT_USER_FOCUS=1 \
             cmux_cmd select-workspace --workspace "$before" >/dev/null 2>&1 || true
     fi
     rm -f "$log_file"
@@ -70,7 +70,7 @@ after_comms=$(selected_workspace)
     exit 1
 }
 
-probe_title="🧪 PM OS Focus Probe $$"
+probe_title="🧪 switchboard Focus Probe $$"
 output=$(CMUX_QUIET=1 cmux_cmd new-workspace --name "$probe_title" --cwd "$REPO_ROOT")
 probe_ref=$(printf '%s\n' "$output" | grep -oE 'workspace:[0-9]+' | head -1 || true)
 [[ -n "$probe_ref" ]] || { echo "error: could not resolve probe workspace" >&2; exit 1; }

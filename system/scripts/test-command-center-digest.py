@@ -109,7 +109,7 @@ def run_digest(root: Path, workspaces: list[dict], lanes: dict, todos: list[dict
         session_file.write_text(json.dumps(session or {"windows": []}), encoding="utf-8")
     env = dict(
         os.environ,
-        PM_OS_COMMS_TRIAGE="on",  # the machine-local off switch must not change these cases
+        SWITCHBOARD_COMMS_TRIAGE="on",  # the machine-local off switch must not change these cases
         CC_REPO_ROOT=str(root),
         CC_TODO_FILE=str(todo_file),
         CC_WORKSPACES_JSON=str(ws_file),
@@ -117,7 +117,7 @@ def run_digest(root: Path, workspaces: list[dict], lanes: dict, todos: list[dict
         CC_CMUX_SESSION_JSON=str(session_file),
         CC_TODO_CLI=str(Path(__file__).resolve().parents[1] / "skill-overrides" / "todo" / "scripts" / "todo_cli.py"),
         CC_TODAY=TODAY,
-        PM_OS_TODO_SURFACE_SKIP="1",
+        SWITCHBOARD_TODO_SURFACE_SKIP="1",
     )
     out = subprocess.run(
         [sys.executable, str(SCRIPT)],
@@ -471,7 +471,7 @@ def main() -> int:
         print("== 15. workspace.list failure fails closed ==")
         env = dict(
             os.environ,
-            PM_OS_COMMS_TRIAGE="on",  # the machine-local off switch must not change these cases
+            SWITCHBOARD_COMMS_TRIAGE="on",  # the machine-local off switch must not change these cases
         CC_REPO_ROOT=str(root),
             CC_TODO_FILE=str(root / "fixture-todo.json"),
             CC_WORKSPACES_JSON=str(root / "does-not-exist.json"),

@@ -1,18 +1,18 @@
 ---
 name: syncing-context
-description: "Refreshes PM OS context surfaces, indexes, and megadesk state. Use when asked to sync PM OS, run a context sync, refresh indexes, or do CoS preflight or postflight maintenance."
+description: "Refreshes switchboard context surfaces, indexes, and switchboard state. Use when asked to sync switchboard, run a context sync, refresh indexes, or do CoS preflight or postflight maintenance."
 ---
 
 # Syncing Context
 
-Refresh the lightweight context surfaces that keep PM OS coherent between sessions.
+Refresh the lightweight context surfaces that keep switchboard coherent between sessions.
 
 ## Use For
 
-- `sync PM OS`
+- `sync switchboard`
 - `context sync`
-- CoS preflight at the start of a megadesk session
-- CoS postflight at the end of a megadesk session
+- CoS preflight at the start of a switchboard session
+- CoS postflight at the end of a switchboard session
 
 ## Arguments
 
@@ -46,7 +46,7 @@ python3 system/scripts/context_sync.py --phase <start|end|manual> --write
 
 - `workstreams/README.md`
 - `system/state/sources/people.json`
-- megadesk state via `system/scripts/rebuild-megadesk-state.py`
+- switchboard state via `system/scripts/rebuild-switchboard-state.py`
 - `system/state/sources/context-sync.json`
 
 ## Guardrails

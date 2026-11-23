@@ -59,8 +59,8 @@ if ! git commit --quiet -m "chore: todo state snapshot $(date '+%Y-%m-%d %H:%M')
 fi
 echo "commit-todo-state: committed $(git rev-parse --short HEAD)"
 
-if [[ "$NO_PUSH" == 1 || "${PM_OS_AUTO_PUSH:-off}" != "on" ]]; then
-  exit 0  # PM OS stays local unless PM_OS_AUTO_PUSH=on
+if [[ "$NO_PUSH" == 1 || "${SWITCHBOARD_AUTO_PUSH:-off}" != "on" ]]; then
+  exit 0  # switchboard stays local unless SWITCHBOARD_AUTO_PUSH=on
 fi
 
 branch="$(git rev-parse --abbrev-ref HEAD)"

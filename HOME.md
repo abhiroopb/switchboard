@@ -1,13 +1,13 @@
 ---
-title: PM OS Home
+title: switchboard Home
 date: 2026-01-15
 status: active
 tags: [index]
 ---
 
-# PM OS Home
+# switchboard Home
 
-This vault is the PM OS repository opened in place. Every file below lives where it always has; Obsidian only reads it. Start here, then use the file explorer or Quick Switcher (⌘O) to jump anywhere.
+This vault is the switchboard repository opened in place. Every file below lives where it always has; Obsidian only reads it. Start here, then use the file explorer or Quick Switcher (⌘O) to jump anywhere.
 
 New to the vault? Read [Obsidian onboarding](docs/obsidian-onboarding.md) first.
 
@@ -34,11 +34,11 @@ New to the vault? Read [Obsidian onboarding](docs/obsidian-onboarding.md) first.
 ## Operating the system
 
 - [Docs](docs/README.md) — setup guides and [runbooks](docs/runbooks/README.md) with exact command sequences.
-- [Routines](routines/README.md) — CoS, comms triage, Megadesk, router, todo, scheduled jobs.
+- [Routines](routines/README.md) — CoS, comms triage, switchboard, router, todo, scheduled jobs.
 - [System](system/README.md) — scripts, prompts, plugins, state rebuilders. Human-readable system docs: [system index](system/INDEX.md).
 - [Sub-agents](sub-agents/README.md) — reviewer personas used for document QA.
 - [Outputs](outputs/README.md) — drafts and generated artifacts by bucket; the [outputs index](outputs/INDEX.md) maps every bucket with counts and monthly sub-indexes for the big generated ones.
-- [Repository README](README.md) — what PM OS is and how the folders fit together.
+- [Repository README](README.md) — what switchboard is and how the folders fit together.
 - [Agent policy (AGENTS.md)](AGENTS.md) — the operating rules the agent follows in this repo.
 
 ## Conventions in this vault

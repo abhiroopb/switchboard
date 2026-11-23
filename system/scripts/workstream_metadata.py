@@ -304,7 +304,7 @@ def recover_flat_yaml(text: str) -> dict[str, Any]:
     Only top-level `key: scalar`, `key: |`/`>` blocks, and simple `- item`
     lists survive; anything nested is dropped. Free text is taken verbatim,
     so an unquoted `next_step: ... non-urgent: watch ...` keeps its meaning
-    instead of killing the whole Megadesk rebuild.
+    instead of killing the whole switchboard rebuild.
     """
     data: dict[str, Any] = {}
     lines = text.splitlines()
@@ -352,7 +352,7 @@ def load_yaml(path: Path) -> dict[str, Any]:
 
     One hand-edited `workstreams/*/config.yaml` with an unquoted `: ` inside
     `next_step` raises ScannerError and must not abort
-    rebuild-megadesk-state.py for every workstream. Readers warn and keep
+    rebuild-switchboard-state.py for every workstream. Readers warn and keep
     going; `lint-workstream-metadata.py` surfaces the file to fix.
     """
     if not path.exists():

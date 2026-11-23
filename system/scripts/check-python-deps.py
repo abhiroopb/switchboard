@@ -124,8 +124,8 @@ def alert_line(missing: list[dict[str, str]], interpreter: str) -> str:
 def send_alert(text: str) -> bool:
     stamp = now().strftime("%Y%m%d-%H%M")
     cmd = ["bash", str(REPORT_SCRIPT), "--task-id", f"python-deps-{stamp}", "--origin", "cos",
-           "--workstream", "pm-os-maintenance", "--status", "blocked", "--urgent", "--create-if-missing", text]
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
+           "--workstream", "switchboard-maintenance", "--status", "blocked", "--urgent", "--create-if-missing", text]
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
     env["REPORT_TO_COS_NO_HOOKS"] = "1"
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=180)

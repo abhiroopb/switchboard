@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-os.environ["PM_OS_TEST_SANDBOX"] = "1"
+os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"
 
 import dispatch  # noqa: E402
 

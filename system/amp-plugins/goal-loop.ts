@@ -20,7 +20,7 @@
 //   goal-loop.met_threshold   min P(yes) to count the goal as met (default 0.8)
 
 import type { PluginAPI, ThreadMessage } from '@ampcode/plugin'
-import { isHeadless, isPluginEnabled, logEvent, readState, writeState } from './pm-os/lib'
+import { isHeadless, isPluginEnabled, logEvent, readState, writeState } from './switchboard/lib'
 
 const PLUGIN = 'goal-loop'
 const DEFAULT_MAX_TURNS = 10

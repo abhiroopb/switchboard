@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
-# Daemon memory watchdog — kills runaway PM OS daemon processes before they OOM macOS.
+# Daemon memory watchdog — kills runaway switchboard daemon processes before they OOM macOS.
 #
 # Why: macOS does not enforce ulimit -v/-d/-m for user processes, so a bash
 # `$(...)` capture of an amp/gdrive/etc. command that streams unbounded output
 # will grow until the box swaps. This script is the per-RSS enforcer that
 # substitutes for setrlimit on macOS.
 #
-# Strategy: scan bash processes whose argv contains "Development/pm-os/daemon/"
+# Strategy: scan bash processes whose argv contains "Development/switchboard/daemon/"
 # or whose parent is atrun. If RSS > THRESHOLD_KB, SIGKILL and log.
 #
-# Runs every 5 minutes via com.pm-os.daemon-memory-watchdog.plist.
+# Runs every 5 minutes via com.switchboard.daemon-memory-watchdog.plist.
 
 set -euo pipefail
 export LANG="en_US.UTF-8"
 export LC_ALL="en_US.UTF-8"
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/bin:$HOME/bin"
 
-THRESHOLD_KB="${PMOS_WATCHDOG_THRESHOLD_KB:-1048576}"   # 1 GB
-PM_OS_DIR="${PM_OS_ROOT:-$HOME/Development/pm-os}"
-LOG_FILE="$PM_OS_DIR/.state/daemon-memory-watchdog.log"
-SLACK_WEBHOOK_LIB="$PM_OS_DIR/daemon/slack-webhook.sh"
+THRESHOLD_KB="${SWITCHBOARD_WATCHDOG_THRESHOLD_KB:-1048576}"   # 1 GB
+SWITCHBOARD_DIR="${SWITCHBOARD_ROOT:-$HOME/Development/switchboard}"
+LOG_FILE="$SWITCHBOARD_DIR/.state/daemon-memory-watchdog.log"
+SLACK_WEBHOOK_LIB="$SWITCHBOARD_DIR/daemon/slack-webhook.sh"
 
 mkdir -p "$(dirname "$LOG_FILE")"
 
@@ -39,7 +39,7 @@ notify_slack() {
     fi
   fi
   # Fallback: macOS notification banner.
-  osascript -e "display notification \"$msg\" with title \"PM OS watchdog\"" 2>/dev/null || true
+  osascript -e "display notification \"$msg\" with title \"switchboard watchdog\"" 2>/dev/null || true
 }
 
 killed_any=0
@@ -57,10 +57,10 @@ while IFS= read -r line; do
   rss_kb=$(echo "$line" | awk '{print $3}')
   argv=$(echo "$line" | cut -d' ' -f4-)
 
-  # Match condition: argv references a pm-os daemon script, OR parent is atrun
+  # Match condition: argv references a switchboard daemon script, OR parent is atrun
   is_daemon=0
   case "$argv" in
-    *"Development/pm-os/daemon/"*) is_daemon=1 ;;
+    *"Development/switchboard/daemon/"*) is_daemon=1 ;;
   esac
   if [ "$is_daemon" = "0" ] && [ -n "$atrun_pids" ]; then
     for ap in $atrun_pids; do

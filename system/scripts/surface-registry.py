@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read the PM OS dispatch-surface registry."""
+"""Read the switchboard dispatch-surface registry."""
 
 from __future__ import annotations
 

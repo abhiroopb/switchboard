@@ -54,7 +54,7 @@ class SyntheticSizeTests(unittest.TestCase):
 
     def base(self, size: int) -> str:
         tail = f"\n{MODULE.PROFILE_SECTION_START}\n{MODULE.PROFILE_SECTION_END}\n"
-        return "# PM OS\n" + "x" * (size - len("# PM OS\n") - len(tail)) + tail
+        return "# switchboard\n" + "x" * (size - len("# switchboard\n") - len(tail)) + tail
 
     def test_file_over_the_limit_is_an_error(self) -> None:
         self.write("AGENTS.md", self.base(40_001))

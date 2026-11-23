@@ -12,7 +12,7 @@ This module is the one place that turns an identifier into the name the owner re
 - ``pr_title(ref)``          title for a PR/issue URL or ``owner/repo#N`` label,
                              from the cache or one ``gh`` call, "" when unknown
 - ``linear_title(key)``      title for a Linear key (``EXBOT-4219``), cached,
-                             one ``pmos linear issue`` call
+                             one ``switchboard linear issue`` call
 - ``task_name(task_id)``     ``<emoji> <Workstream Name> (rt-…)`` from the
                              running-tasks ledger and the workstream config
 - ``name_refs(text)``        rewrites every bare reference in a line so the
@@ -250,7 +250,7 @@ def linear_title(key: str) -> str:
         return ""
     if not _may_fetch():
         return ""
-    data = _run_json(["pmos", "linear", "issue", "--id", key])
+    data = _run_json(["switchboard", "linear", "issue", "--id", key])
     issue = data.get("issue") if isinstance(data.get("issue"), dict) else data
     title = _clip((issue or {}).get("title") or "")
     _remember(url, title)
@@ -312,12 +312,12 @@ def _ledger_row(task_id: str) -> dict:
 def task_name(task_id: str, workstream: str = "") -> str:
     """``<emoji> <Workstream Name> (rt-…)``; the slug comes from the ledger row
     unless the caller already knows it. An unknown task is still named by its
-    kind: ``a PM OS task (rt-…)``."""
+    kind: ``a switchboard task (rt-…)``."""
     task_id = (task_id or "").strip()
     slug = workstream or str(_ledger_row(task_id).get("workstream") or "")
     if slug:
         return f"{workstream_title(slug)} ({task_id})" if task_id else workstream_title(slug)
-    return f"a PM OS task ({task_id})" if task_id else ""
+    return f"a switchboard task ({task_id})" if task_id else ""
 
 
 def set_fetch_budget(n: int) -> None:

@@ -203,7 +203,7 @@ class ProfileTickHookTests(unittest.TestCase):
         self.hooks = self.scripts / "profile-tick.d"
         self.hooks.mkdir(parents=True)
         self.env = {**os.environ, "REPO_ROOT": str(self.root), "STATE_DIR": str(self.root / "system" / "state"),
-                    "PM_OS_PYTHON": sys.executable}
+                    "SWITCHBOARD_PYTHON": sys.executable}
 
     def run_runner(self):
         # A copy, so the runner's default root and the hooks glob both sit in the fixture.

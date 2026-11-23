@@ -1,5 +1,5 @@
 #!/bin/sh
-# PM OS kit installer entry point. Finds Python 3.11+ and hands off to install.py.
+# switchboard kit installer entry point. Finds Python 3.11+ and hands off to install.py.
 # Usage: sh install.sh --owner-name "Your Name" --owner-email you@example.com [--destination DIR] [--dry-run|--apply|--update]
 # Works from macOS, Linux, WSL2 and Git Bash. From PowerShell run: py install.py ...
 # Setup decisions (scope, Windows runtime, optional organization tools); owner choices (install folder, full loop, memory) are asked, see that file: docs/install-decisions.md

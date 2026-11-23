@@ -10,12 +10,12 @@
 
 import type { PluginAPI } from '@ampcode/plugin'
 import {
-  PM_OS_REPO,
+  SWITCHBOARD_REPO,
   isHeadless,
   isPluginEnabled,
   logEvent,
   runDebouncedDetached,
-} from './pm-os/lib'
+} from './switchboard/lib'
 
 const PLUGIN = 'daily-rollup-trigger'
 const DEBOUNCE_SECONDS = 5 * 60
@@ -37,11 +37,11 @@ function isOutboundWrite(event: { tool?: string; input?: Record<string, unknown>
   if (!/(?:^|__)shell_command$/.test(tool)) return false
   const command = String(event.input?.command ?? event.input?.cmd ?? '')
   return (
-    /pmos slack\b[\s\S]*\b(send|post|reply)\b/i.test(command)
-    || /pmos mail\b[\s\S]*\bsend\b/i.test(command)
-    || /pmos (linear|jira)\b[\s\S]*\b(create|update|edit|comment|assign|transition)\b/i.test(command)
-    || /pmos airtable\b[\s\S]*\b(create|update)\b/i.test(command)
-    || /pmos (drive|calendar)\b[\s\S]*\b(create|update|write|insert|append|put|comment-add|comment-reply)\b/i.test(command)
+    /switchboard slack\b[\s\S]*\b(send|post|reply)\b/i.test(command)
+    || /switchboard mail\b[\s\S]*\bsend\b/i.test(command)
+    || /switchboard (linear|jira)\b[\s\S]*\b(create|update|edit|comment|assign|transition)\b/i.test(command)
+    || /switchboard airtable\b[\s\S]*\b(create|update)\b/i.test(command)
+    || /switchboard (drive|calendar)\b[\s\S]*\b(create|update|write|insert|append|put|comment-add|comment-reply)\b/i.test(command)
   )
 }
 
@@ -52,7 +52,7 @@ export default function (amp: PluginAPI) {
   async function fireRollup(action: string): Promise<boolean> {
     const spawned = await runDebouncedDetached(
       PLUGIN, 'global', DEBOUNCE_SECONDS,
-      'python3', [`${PM_OS_REPO}/system/scripts/build-daily-activity-rollup.py`],
+      'python3', [`${SWITCHBOARD_REPO}/system/scripts/build-daily-activity-rollup.py`],
       { label: PLUGIN },
     )
     if (!spawned) return false

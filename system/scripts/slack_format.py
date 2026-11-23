@@ -8,8 +8,8 @@ with anchor text that names the thing (`<https://url|anchor>`, or
 in an API-posted message.
 
 This module is the Python half of the check. The TypeScript half lives in
-system/amp-plugins/pm-os-guardrails.ts (rule 13, `slack-link-format`); both run
-system/amp-plugins/pm-os/test-fixtures/slack-link-format-cases.json so the
+system/amp-plugins/switchboard-guardrails.ts (rule 13, `slack-link-format`); both run
+system/amp-plugins/switchboard/test-fixtures/slack-link-format-cases.json so the
 detectors stay aligned. `send-triage-draft.py` uses it because the guardrail
 exempts that script.
 
@@ -17,11 +17,11 @@ CLI: `python3 slack_format.py check "<text>"` prints the finding as JSON and
 exits 1 when the text would be rejected.
 
 Native lists:
-external-replies.md Rule 4 item 5. A list in a Slack message PM OS posts is a
+external-replies.md Rule 4 item 5. A list in a Slack message switchboard posts is a
 `rich_text_list` block (style bullet, or ordered when the source is numbered),
 never a `•`, `-`, `*`, `1.` text bullet inside mrkdwn. `bullet_lines(text)` is the
 detector (guardrail rule 14, `slack-native-bullets`, mirrors it in TypeScript);
-`to_blocks(text)` is the converter the PM OS send scripts run at send time so
+`to_blocks(text)` is the converter the switchboard send scripts run at send time so
 existing drafts keep posting: paragraphs stay mrkdwn `section` blocks, every run
 of bullet lines becomes a `rich_text` block whose lists carry the same words.
 
@@ -52,7 +52,7 @@ CHANNEL_SOURCE_FILES = (
 )
 
 _CHANNEL_ID_RE = re.compile(r"^[CG][A-Z0-9]{8,}$")
-# Mirrors SLACK_PLAIN_CHANNEL_RE in pm-os-guardrails.ts.
+# Mirrors SLACK_PLAIN_CHANNEL_RE in switchboard-guardrails.ts.
 _PLAIN_CHANNEL_RE = re.compile(r"(?<![\w<#/&@.\-])#([a-z0-9](?:[a-z0-9_\-]*[a-z0-9])?)(?![\w\-])")
 _FENCED_CODE_RE = re.compile(r"```[\s\S]*?```")
 _INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
@@ -112,7 +112,7 @@ def blocks_texts(blocks: object) -> list[str]:
     A rich_text `link` element with a non-empty `text` is a labelled link, so its
     `url` is never read as prose; a `link` with no `text` renders the URL itself,
     so its `url` is returned and `bare_urls` reports it. A string that is not JSON
-    is returned whole. Mirrors `slackBlocksTexts` in pm-os-guardrails.ts (so a
+    is returned whole. Mirrors `slackBlocksTexts` in switchboard-guardrails.ts (so a
     `--blocks "$(cat blocks.json)"` argument is no false positive); the `blocks` cases
     in slack-link-format-cases.json run against both.
     """
@@ -269,7 +269,7 @@ def check(text: str, resolve: Resolver = resolve_channel_id) -> Finding:
 # Native lists (rule 14, slack-native-bullets)
 # ---------------------------------------------------------------------------
 
-# Mirrors SLACK_TEXT_BULLET_RE in pm-os-guardrails.ts: optional indent, a bullet glyph
+# Mirrors SLACK_TEXT_BULLET_RE in switchboard-guardrails.ts: optional indent, a bullet glyph
 # (• ◦ ▪ - *) or an ordinal (`1.` / `1)`), one or more spaces, then content. `---`
 # rules and `*bold*` lines never match because the marker must be followed by a space.
 _TEXT_BULLET_RE = re.compile(r"^(?P<indent>[ \t]*)(?P<marker>[•◦▪\-*]|\d{1,3}[.)])[ \t]+(?P<body>\S.*)$")

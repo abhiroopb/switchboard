@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Install PM OS-owned Amp plugins from tracked sources in system/amp-plugins/.
+# Install switchboard-owned Amp plugins from tracked sources in system/amp-plugins/.
 #
-# - Installs one host for the modules in pm-os-bundle.json. Their original
+# - Installs one host for the modules in switchboard-bundle.json. Their original
 #   source files remain in place for imports, tests, and independent edits.
 # - --unbundle restores separate hosts for rollback.
 # - Ensures ~/.config/amp/plugins/<name> is a symlink to the tracked copy.
@@ -12,15 +12,15 @@
 # - Where symlinks are unavailable (Windows Git Bash, where `ln -s` makes a
 #   plain copy that goes stale), each runtime .ts entry is a two-line shim
 #   that re-exports the tracked source by absolute path, so Amp always loads
-#   the current file and relative imports (pm-os/, pm-os-bundle.json) resolve
+#   the current file and relative imports (switchboard/, switchboard-bundle.json) resolve
 #   next to the source. A task worktree installs shims that point at the main
 #   checkout, because the worktree is removed when the task lands.
-#   PM_OS_PLUGIN_LINK_MODE=symlink|shim overrides the probe.
+#   SWITCHBOARD_PLUGIN_LINK_MODE=symlink|shim overrides the probe.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-TARGET_DIR="${PM_OS_PLUGIN_TARGET_DIR:-$HOME/.config/amp/plugins}"
+TARGET_DIR="${SWITCHBOARD_PLUGIN_TARGET_DIR:-$HOME/.config/amp/plugins}"
 BACKUP_DIR="$TARGET_DIR/_pre-symlink-backup"
 FORCE=0
 UNBUNDLE=0
@@ -34,10 +34,10 @@ done
 mkdir -p "$TARGET_DIR"
 
 # Link mode: a real symlink where the filesystem allows one, else a shim.
-LINK_MODE="${PM_OS_PLUGIN_LINK_MODE:-}"
+LINK_MODE="${SWITCHBOARD_PLUGIN_LINK_MODE:-}"
 if [[ -z "$LINK_MODE" ]]; then
-    probe_src="$TARGET_DIR/.pm-os-link-probe-src.$$"
-    probe_dst="$TARGET_DIR/.pm-os-link-probe.$$"
+    probe_src="$TARGET_DIR/.switchboard-link-probe-src.$$"
+    probe_dst="$TARGET_DIR/.switchboard-link-probe.$$"
     : > "$probe_src"
     if ln -s "$probe_src" "$probe_dst" 2>/dev/null && [[ -L "$probe_dst" ]]; then
         LINK_MODE=symlink
@@ -46,17 +46,17 @@ if [[ -z "$LINK_MODE" ]]; then
     fi
     rm -f "$probe_src" "$probe_dst"
 fi
-case "$LINK_MODE" in symlink|shim) ;; *) echo "PM_OS_PLUGIN_LINK_MODE must be symlink or shim" >&2; exit 2 ;; esac
+case "$LINK_MODE" in symlink|shim) ;; *) echo "SWITCHBOARD_PLUGIN_LINK_MODE must be symlink or shim" >&2; exit 2 ;; esac
 
 SOURCE_ROOT="$REPO_ROOT"
-if [[ "$LINK_MODE" == "shim" && -z "${PM_OS_PLUGIN_SOURCE_DIR:-}" ]]; then
+if [[ "$LINK_MODE" == "shim" && -z "${SWITCHBOARD_PLUGIN_SOURCE_DIR:-}" ]]; then
     # Shims are absolute paths, so never aim them at a task worktree.
     main_root="$(git -C "$REPO_ROOT" worktree list --porcelain 2>/dev/null | sed -n '1s/^worktree //p')"
     if [[ -n "$main_root" && -d "$main_root/system/amp-plugins" ]]; then
         SOURCE_ROOT="$(cd "$main_root" && pwd)"
     fi
 fi
-SOURCE_DIR="${PM_OS_PLUGIN_SOURCE_DIR:-$SOURCE_ROOT/system/amp-plugins}"
+SOURCE_DIR="${SWITCHBOARD_PLUGIN_SOURCE_DIR:-$SOURCE_ROOT/system/amp-plugins}"
 
 # Path form Bun accepts in an import specifier (C:/... on Windows).
 if command -v cygpath >/dev/null 2>&1; then SOURCE_SPEC="$(cygpath -m "$SOURCE_DIR")"; else SOURCE_SPEC="$SOURCE_DIR"; fi
@@ -64,7 +64,7 @@ if command -v cygpath >/dev/null 2>&1; then SOURCE_SPEC="$(cygpath -m "$SOURCE_D
 shim_text() {
     local spec="$SOURCE_SPEC/$1"
     printf '%s\n' \
-        "// PM OS plugin shim written by system/scripts/install-amp-plugins.sh: loads the tracked source." \
+        "// switchboard plugin shim written by system/scripts/install-amp-plugins.sh: loads the tracked source." \
         "export * from '$spec'" \
         "export { default } from '$spec'"
 }
@@ -85,7 +85,7 @@ shim_skips() {
     [[ "$LINK_MODE" == "shim" && "$1" != *.ts ]]
 }
 
-BUNDLED=$(python3 -c 'import json,sys; print("\n".join(n+".ts" for n in json.load(open(sys.argv[1]))))' "$SOURCE_DIR/pm-os-bundle.json" | tr -d '\r')
+BUNDLED=$(python3 -c 'import json,sys; print("\n".join(n+".ts" for n in json.load(open(sys.argv[1]))))' "$SOURCE_DIR/switchboard-bundle.json" | tr -d '\r')
 
 changed=0
 failed=0
@@ -142,7 +142,7 @@ install_entry() {
 if [[ "$UNBUNDLE" -eq 0 ]]; then
     retiring="$BUNDLED"
 else
-    retiring="pm-os-runtime.ts"
+    retiring="switchboard-runtime.ts"
 fi
 while IFS= read -r name; do
     target="$TARGET_DIR/$name"
@@ -164,7 +164,7 @@ done <<< "$retiring"
 
 for source in "$SOURCE_DIR"/*; do
     name="$(basename "$source")"
-    case "$name" in _retired|cmux-session.ts|pm-os-bundle.json) continue ;; esac
+    case "$name" in _retired|cmux-session.ts|switchboard-bundle.json) continue ;; esac
     target="$TARGET_DIR/$name"
     shim_skips "$name" && continue
     if [[ -e "$target" && ! -L "$target" && "$FORCE" -eq 0 ]] && ! is_canonical "$name"; then
@@ -178,10 +178,10 @@ done
 for source in "$SOURCE_DIR"/*; do
     name="$(basename "$source")"
     case "$name" in
-        _retired|cmux-session.ts|pm-os-bundle.json) continue ;;
+        _retired|cmux-session.ts|switchboard-bundle.json) continue ;;
     esac
     if [[ "$UNBUNDLE" -eq 0 ]] && grep -qxF "$name" <<< "$BUNDLED"; then continue; fi
-    if [[ "$UNBUNDLE" -eq 1 && "$name" == "pm-os-runtime.ts" ]]; then continue; fi
+    if [[ "$UNBUNDLE" -eq 1 && "$name" == "switchboard-runtime.ts" ]]; then continue; fi
     shim_skips "$name" && continue
     install_entry "$name"
 done

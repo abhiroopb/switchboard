@@ -8,7 +8,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$REPO_ROOT/system/cmux-helpers.sh"
 
 title="${1:-🧭 CoS}"
-ws_ref=$(normalize_megadesk_workspace "" "$title") || {
+ws_ref=$(normalize_switchboard_workspace "" "$title") || {
     echo "No CoS workspace found" >&2
     exit 1
 }

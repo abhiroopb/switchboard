@@ -3,7 +3,7 @@
 
 GNU `stat -f` means "report the filesystem": it prints a block of text to stdout, then
 fails. On Windows and Linux, `$(stat -f %m f || echo 0)` therefore captured that text, and
-the arithmetic reading it died on `File:`. That silently broke log rotation, the Megadesk
+the arithmetic reading it died on `File:`. That silently broke log rotation, the switchboard
 freshness check, and two stale-lock reclaims on the Windows install (2026-11-08). Scripts
 now go through mux_mtime, mux_size, and mux_mode in system/scripts/lib/mux.sh.
 
@@ -60,7 +60,7 @@ BASH = find_bash()
 
 def run_bash(*argv: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
     return subprocess.run([BASH, *argv], capture_output=True, text=True, encoding="utf-8", errors="replace",
-                          env={**os.environ, "PM_OS_TEST_SANDBOX": "1", "PM_OS_MUX": "none", **(env or {})},
+                          env={**os.environ, "SWITCHBOARD_TEST_SANDBOX": "1", "SWITCHBOARD_MUX": "none", **(env or {})},
                           timeout=120)
 
 
@@ -135,7 +135,7 @@ class NoBareBsdIdiomsTests(unittest.TestCase):
 class RotateLogsTests(unittest.TestCase):
     def test_oversized_log_rotates_and_a_small_one_stays(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp) / "pm-os"
+            root = Path(tmp) / "switchboard"
             (root / "system" / "config").mkdir(parents=True)
             shutil.copy(SCRIPTS.parent / "config" / "state-pruned.txt", root / "system" / "config")
             state = root / ".state"
@@ -146,7 +146,7 @@ class RotateLogsTests(unittest.TestCase):
             if os.name != "nt":
                 big.chmod(0o640)
             result = run_bash((SCRIPTS / "rotate-logs.sh").as_posix(),
-                              env={"PM_OS_DIR": root.as_posix(), "HOME": (Path(tmp) / "home").as_posix()})
+                              env={"SWITCHBOARD_DIR": root.as_posix(), "HOME": (Path(tmp) / "home").as_posix()})
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("rotated=1 ", result.stdout)
             self.assertTrue((state / "big.log.1.gz").exists())
@@ -214,13 +214,13 @@ class CmuxLockTests(unittest.TestCase):
         script = f'source "{(REPO / "system" / "cmux-helpers.sh").as_posix()}"\n' \
                  'stub_cmux() { echo called; }\nCMUX_BIN=stub_cmux\ncmux_cmd ping\n'
         # REPO_ROOT pins the inject guard, which re-sources mux.sh, to this tree. Without it a
-        # worktree run would test main's helper (PM_OS_ROOT) instead of the branch's.
+        # worktree run would test main's helper (SWITCHBOARD_ROOT) instead of the branch's.
         return run_bash("-c", script, env={"CMUX_LOCK_DIR": lock.as_posix(), "CMUX_BIN": "stub_cmux",
                                            "REPO_ROOT": REPO.as_posix()})
 
     def test_orphaned_lock_older_than_a_minute_is_reclaimed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            lock = Path(tmp) / "pm-os-cmux.lock"
+            lock = Path(tmp) / "switchboard-cmux.lock"
             lock.mkdir()
             age(lock, 600)
             result = self.call(lock)
@@ -234,7 +234,7 @@ class CmuxLockTests(unittest.TestCase):
 class RepoDriftCheckTests(unittest.TestCase):
     def test_only_a_skill_newer_than_the_repo_counts_as_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp) / "pm-os"
+            root = Path(tmp) / "switchboard"
             home = Path(tmp) / "home"
             for rel, source in (("daemon/repo-drift-check.sh", REPO / "daemon" / "repo-drift-check.sh"),
                                 ("system/scripts/lib/mux.sh", MUX)):

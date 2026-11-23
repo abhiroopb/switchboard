@@ -4,20 +4,20 @@ set -euo pipefail
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/bin:$PATH"
 export HOME="${HOME:-{{HOME}}}"
 
-PM_OS_DIR="${PM_OS_ROOT:-$HOME/Development/pm-os}"
-STATE_DIR="$PM_OS_DIR/.state"
+SWITCHBOARD_DIR="${SWITCHBOARD_ROOT:-$HOME/Development/switchboard}"
+STATE_DIR="$SWITCHBOARD_DIR/.state"
 QUEUE_FILE="$STATE_DIR/pending-amp-notifications.jsonl"
 LOCK_DIR="$STATE_DIR/pending-amp-notifications.lock"
 LOG_FILE="$STATE_DIR/daemon.log"
-MEGADESK_EVENTS="$PM_OS_DIR/system/state/events.jsonl"
+SWITCHBOARD_EVENTS="$SWITCHBOARD_DIR/system/state/events.jsonl"
 # Passive per-target notification inbox (automation-routing policy):
 # flush appends entries here and logs a passive line on the target workspace's
 # chrome instead of injecting a prompt/user turn into its Amp session.
-INBOX_DIR="${AMP_NOTIFY_INBOX_DIR:-$PM_OS_DIR/outputs/automation-inbox}"
+INBOX_DIR="${AMP_NOTIFY_INBOX_DIR:-$SWITCHBOARD_DIR/outputs/automation-inbox}"
 CMUX="${CMUX:-/Applications/cmux.app/Contents/Resources/bin/cmux}"
 
 # shellcheck source=../system/cmux-helpers.sh
-source "$PM_OS_DIR/system/cmux-helpers.sh"
+source "$SWITCHBOARD_DIR/system/cmux-helpers.sh"
 
 mkdir -p "$STATE_DIR"
 touch "$QUEUE_FILE"
@@ -60,13 +60,13 @@ resolve_target_workspace() {
   esac
 }
 
-append_megadesk_event() {
+append_switchboard_event() {
   local level="$1"
   local event_summary="$2"
   local message="$3"
   local line
 
-  mkdir -p "$(dirname "$MEGADESK_EVENTS")"
+  mkdir -p "$(dirname "$SWITCHBOARD_EVENTS")"
   line=$(jq -nc \
     --arg timestamp "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" \
     --arg level "$level" \
@@ -80,10 +80,10 @@ append_megadesk_event() {
   # be racing this append. The line is jq-built, so it is always valid JSON.
   local append_err
   if ! append_err=$(printf '%s\n' "$line" \
-      | python3 "$PM_OS_DIR/system/scripts/events_stream.py" append \
-          --state-dir "$(dirname "$MEGADESK_EVENTS")" 2>&1); then
+      | python3 "$SWITCHBOARD_DIR/system/scripts/events_stream.py" append \
+          --state-dir "$(dirname "$SWITCHBOARD_EVENTS")" 2>&1); then
     log "events_stream append failed (${append_err:-unknown error}); using direct append fallback"
-    printf '%s\n' "$line" >> "$MEGADESK_EVENTS"
+    printf '%s\n' "$line" >> "$SWITCHBOARD_EVENTS"
   fi
 }
 
@@ -112,8 +112,8 @@ enqueue_notification() {
     '{id: $id, created_at: $created_at, level: $level, event_summary: $event_summary, message: $message, target: $target}' >> "$QUEUE_FILE"
 
   log "Queued Amp notification for '$event_summary' ($level)"
-  append_megadesk_event "$level" "$event_summary" "$message"
-  bash "$PM_OS_DIR/system/scripts/publish-megadesk-status.sh" >/dev/null 2>&1 || true
+  append_switchboard_event "$level" "$event_summary" "$message"
+  bash "$SWITCHBOARD_DIR/system/scripts/publish-switchboard-status.sh" >/dev/null 2>&1 || true
 }
 
 # Flush queued notifications PASSIVELY: append each to the per-target inbox
@@ -212,7 +212,7 @@ PY
     fi
   done <<< "$summary"
 
-  bash "$PM_OS_DIR/system/scripts/publish-megadesk-status.sh" >/dev/null 2>&1 || true
+  bash "$SWITCHBOARD_DIR/system/scripts/publish-switchboard-status.sh" >/dev/null 2>&1 || true
 }
 
 case "${1:-}" in

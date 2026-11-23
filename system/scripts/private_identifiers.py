@@ -60,7 +60,7 @@ from typing import Iterable, Iterator
 
 LIST_RELPATH = Path("local") / "private-identifiers.txt"
 STAMP_RELPATH = Path(".state") / "private-identifiers.seen"
-FORMAT_LINE = "# pm-os private identifiers v1. Salted hashes only. Gitignored. Edit with private_identifiers.py."
+FORMAT_LINE = "# switchboard private identifiers v1. Salted hashes only. Gitignored. Edit with private_identifiers.py."
 # About 0.7 ms each on Windows. At 10,000 a 40-commit landing held the
 # landing lock for 90 seconds, for little gain: nightly backups already hold plaintext
 # copies of these values in the same gitignored folder.
@@ -176,7 +176,7 @@ class IdentifierList:
 
 
 def list_path(repo_root: Path) -> Path:
-    override = os.environ.get("PM_OS_PRIVATE_IDENTIFIERS")
+    override = os.environ.get("SWITCHBOARD_PRIVATE_IDENTIFIERS")
     return Path(override) if override else Path(repo_root) / LIST_RELPATH
 
 

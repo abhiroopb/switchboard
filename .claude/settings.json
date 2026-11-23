@@ -1,5 +1,5 @@
 {
-  "$comment": "PM OS project settings for Claude Code. CLAUDE.md imports AGENTS.md for the policy; this file wires the shell-expressible guardrails as a PreToolUse hook. Personal overrides go in .claude/settings.local.json (git-ignored).",
+  "$comment": "switchboard project settings for Claude Code. CLAUDE.md imports AGENTS.md for the policy; this file wires the shell-expressible guardrails as a PreToolUse hook. Personal overrides go in .claude/settings.local.json (git-ignored).",
   "hooks": {
     "PreToolUse": [
       {
@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pm-os-guardrails.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/switchboard-guardrails.py",
             "timeout": 10
           }
         ]

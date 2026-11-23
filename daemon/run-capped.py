@@ -2,7 +2,7 @@
 """Run a command with wall-clock and process-group RSS caps.
 
 macOS does not reliably enforce shell `ulimit` memory limits for these daemon
-jobs, so PM OS meeting jobs use this wrapper to keep one runaway headless Amp
+jobs, so switchboard meeting jobs use this wrapper to keep one runaway headless Amp
 or Google Drive call from freezing the laptop.
 """
 
@@ -18,7 +18,7 @@ from pathlib import Path
 
 
 def log(message: str) -> None:
-    root = Path(os.environ.get("PM_OS_ROOT") or Path.home() / "Development/pm-os")
+    root = Path(os.environ.get("SWITCHBOARD_ROOT") or Path.home() / "Development/switchboard")
     log_file = root / ".state" / "daemon-memory-watchdog.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
     timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

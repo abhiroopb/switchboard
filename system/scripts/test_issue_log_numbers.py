@@ -30,8 +30,8 @@ class IssueLogNumbers(unittest.TestCase):
             (root / REL.parent).mkdir(parents=True)
             if text:
                 (root / REL).write_text(text, encoding="utf-8")
-        env = {"PM_OS_VAULT_ROOT": str(self.main), "PM_OS_WORKTREES_DIR": str(self.trees),
-               "PM_OS_ISSUE_LOG_CLAIMS_DIR": str(self.tmp / "claims")}
+        env = {"SWITCHBOARD_VAULT_ROOT": str(self.main), "SWITCHBOARD_WORKTREES_DIR": str(self.trees),
+               "SWITCHBOARD_ISSUE_LOG_CLAIMS_DIR": str(self.tmp / "claims")}
         patcher = mock.patch.dict(os.environ, env)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -82,7 +82,7 @@ class IssueLogNumbers(unittest.TestCase):
         self.assertTrue((self.tmp / "claims" / "workstreams__demo__2026-11-12-demo-issues.md" / "issue-4").is_dir())
 
     def test_the_real_windows_log_has_no_duplicates(self) -> None:
-        log = Path(__file__).resolve().parents[2] / "workstreams/pm-os-maintenance/2026-11-12-windows-cos-issues.md"
+        log = Path(__file__).resolve().parents[2] / "workstreams/switchboard-maintenance/2026-11-12-windows-cos-issues.md"
         if not log.is_file():
             self.skipTest("log not in this checkout")
         self.assertEqual(iln.duplicates(log.read_text(encoding="utf-8")), {})

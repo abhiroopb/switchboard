@@ -1,16 +1,16 @@
 {
-  "name": "pm-os-local",
+  "name": "switchboard-local",
   "owner": {
-    "name": "PM OS"
+    "name": "switchboard"
   },
   "metadata": {
-    "description": "PM OS plugins for Claude Code, loaded in place from the pm-os repository."
+    "description": "switchboard plugins for Claude Code, loaded in place from the switchboard repository."
   },
   "plugins": [
     {
-      "name": "pm-os",
-      "source": "./plugins/pm-os",
-      "description": "PM OS guardrails, liveness, reports, commands, agents, and MCP servers (Claude port of system/amp-plugins).",
+      "name": "switchboard",
+      "source": "./plugins/switchboard",
+      "description": "switchboard guardrails, liveness, reports, commands, agents, and MCP servers (Claude port of system/amp-plugins).",
       "version": "0.1.0",
       "category": "productivity"
     }

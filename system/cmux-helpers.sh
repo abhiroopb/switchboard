@@ -18,7 +18,7 @@ set -euo pipefail
 
 # --- Configuration (all overridable via env) ---
 # Backend detection (cmux on macOS, the wmux shim on Windows/WSL). On macOS
-# with cmux this sets PM_OS_MUX=cmux and changes nothing else.
+# with cmux this sets SWITCHBOARD_MUX=cmux and changes nothing else.
 # shellcheck source=scripts/lib/mux.sh
 _cmux_helpers_dir="${BASH_SOURCE[0]//\\//}"
 if [[ "$_cmux_helpers_dir" == */* ]]; then _cmux_helpers_dir="${_cmux_helpers_dir%/*}"; else _cmux_helpers_dir="."; fi
@@ -26,59 +26,59 @@ source "$_cmux_helpers_dir/scripts/lib/mux.sh" && mux_init
 # shellcheck source=scripts/lib/comms-triage.sh
 source "$_cmux_helpers_dir/scripts/lib/comms-triage.sh"
 CMUX_BIN="${CMUX_BIN:-/Applications/cmux.app/Contents/Resources/bin/cmux}"
-CMUX_LOCK_DIR="${CMUX_LOCK_DIR:-${TMPDIR:-/tmp}/pm-os-cmux.lock}"
-CMUX_WORKSPACE_LAUNCH_LOCK="${CMUX_WORKSPACE_LAUNCH_LOCK:-${TMPDIR:-/tmp}/pm-os-ws-launch.lock}"
+CMUX_LOCK_DIR="${CMUX_LOCK_DIR:-${TMPDIR:-/tmp}/switchboard-cmux.lock}"
+CMUX_WORKSPACE_LAUNCH_LOCK="${CMUX_WORKSPACE_LAUNCH_LOCK:-${TMPDIR:-/tmp}/switchboard-ws-launch.lock}"
 # A cap below the live workspace count makes the status publisher skip every
 # pass, so Mark Read and lane state go stale.
 CMUX_STATUS_MAX_WORKSPACES="${CMUX_STATUS_MAX_WORKSPACES:-40}"
 AMP_CMD="${AMP_CMD:-amp}"
 CLAUDE_CMD="${CLAUDE_CMD:-claude}"
-REPO_ROOT="${REPO_ROOT:-${PM_OS_ROOT:-$HOME/Development/pm-os}}"
-# The owner's time zone for worker prompts and the CoS trial window: PM_OS_TZ (an
-# IANA name, set in ~/.pm-os/env by the installer), else America/Los_Angeles.
-PM_OS_TZ_NAME="${PM_OS_TZ:-America/Los_Angeles}"
-if [[ "$PM_OS_TZ_NAME" == "America/Los_Angeles" ]]; then
-    PM_OS_TZ_LABEL="Pacific Time (America/Los_Angeles)"
+REPO_ROOT="${REPO_ROOT:-${SWITCHBOARD_ROOT:-$HOME/Development/switchboard}}"
+# The owner's time zone for worker prompts and the CoS trial window: SWITCHBOARD_TZ (an
+# IANA name, set in ~/.switchboard/env by the installer), else America/Los_Angeles.
+SWITCHBOARD_TZ_NAME="${SWITCHBOARD_TZ:-America/Los_Angeles}"
+if [[ "$SWITCHBOARD_TZ_NAME" == "America/Los_Angeles" ]]; then
+    SWITCHBOARD_TZ_LABEL="Pacific Time (America/Los_Angeles)"
 else
-    PM_OS_TZ_LABEL="the $PM_OS_TZ_NAME time zone"
+    SWITCHBOARD_TZ_LABEL="the $SWITCHBOARD_TZ_NAME time zone"
 fi
 
 # Which agent the launchers start: `claude` (Claude Code) or `amp`. One knob
-# PM_OS_AGENT=claude|amp in the environment,
+# SWITCHBOARD_AGENT=claude|amp in the environment,
 # else the top-level `agent:` key in system/config/router.yaml, else claude.
-# system/scripts/pm_os_agent.py is the one resolver; dispatch.py agent_kind()
+# system/scripts/switchboard_agent.py is the one resolver; dispatch.py agent_kind()
 # imports it and this function asks it for the config level. Every Amp path
 # below is unchanged when the answer is amp. The config answer is read once per
-# config path when this library is sourced (callers use $(pm_os_agent), a
+# config path when this library is sourced (callers use $(switchboard_agent), a
 # subshell, so a lazy cache would never stick).
-_pm_os_agent_config_path() { printf '%s' "${ROUTER_CONFIG:-$REPO_ROOT/system/config/router.yaml}"; }
-_pm_os_agent_from_config() {  # <router.yaml path>; prints claude|amp
+_switchboard_agent_config_path() { printf '%s' "${ROUTER_CONFIG:-$REPO_ROOT/system/config/router.yaml}"; }
+_switchboard_agent_from_config() {  # <router.yaml path>; prints claude|amp
     local resolver
-    resolver="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/pm_os_agent.py"
+    resolver="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/switchboard_agent.py"
     if [[ -f "$resolver" ]] && command -v python3 >/dev/null 2>&1; then
-        env -u PM_OS_AGENT python3 "$resolver" --config "$1" 2>/dev/null && return 0
+        env -u SWITCHBOARD_AGENT python3 "$resolver" --config "$1" 2>/dev/null && return 0
     fi
     echo claude
 }
-_PM_OS_AGENT_CFG_PATH="$(_pm_os_agent_config_path)"
-_PM_OS_AGENT_CFG_VALUE="$(_pm_os_agent_from_config "$_PM_OS_AGENT_CFG_PATH")"
-pm_os_agent() {
+_SWITCHBOARD_AGENT_CFG_PATH="$(_switchboard_agent_config_path)"
+_SWITCHBOARD_AGENT_CFG_VALUE="$(_switchboard_agent_from_config "$_SWITCHBOARD_AGENT_CFG_PATH")"
+switchboard_agent() {
     local agent
-    agent=$(printf '%s' "${PM_OS_AGENT:-}" | tr '[:upper:]' '[:lower:]' | tr -d "[:space:]\"'")
+    agent=$(printf '%s' "${SWITCHBOARD_AGENT:-}" | tr '[:upper:]' '[:lower:]' | tr -d "[:space:]\"'")
     case "$agent" in claude|amp) echo "$agent"; return 0 ;; esac
     local cfg
-    cfg="$(_pm_os_agent_config_path)"
-    if [[ "$cfg" == "$_PM_OS_AGENT_CFG_PATH" && -n "$_PM_OS_AGENT_CFG_VALUE" ]]; then
-        echo "$_PM_OS_AGENT_CFG_VALUE"
+    cfg="$(_switchboard_agent_config_path)"
+    if [[ "$cfg" == "$_SWITCHBOARD_AGENT_CFG_PATH" && -n "$_SWITCHBOARD_AGENT_CFG_VALUE" ]]; then
+        echo "$_SWITCHBOARD_AGENT_CFG_VALUE"
     else
-        _pm_os_agent_from_config "$cfg"
+        _switchboard_agent_from_config "$cfg"
     fi
 }
 
 # The bare interactive command for the configured agent at an Amp mode, for
 # surfaces that type their own launch line (start-day.sh CoS): `amp -m <mode>`
 # or `claude --dangerously-skip-permissions --model <m> --effort <e>`.
-# Settings every PM OS Claude tab starts with (system/config/claude-tab-settings.json):
+# Settings every switchboard Claude tab starts with (system/config/claude-tab-settings.json):
 # prompt suggestions off, because a suggested next prompt sits in the composer
 # and the inject guard cannot tell it from a typed draft.
 claude_tab_settings() {
@@ -91,22 +91,22 @@ claude_tab_settings() {
 # Remote Control turns it back on by itself, so a
 # wmux restore keeps CoS reachable; the resume builder still passes the flag for a CoS that
 # never had it. Workers, routine tabs, and every other surface get nothing.
-# PM_OS_COS_REMOTE_CONTROL_LAUNCH=1 rides along so cos_autobind.py skips its /rc reminder.
-# Kill switch: PM_OS_COS_REMOTE_CONTROL=off (local/machines/<MACHINE>.env).
+# SWITCHBOARD_COS_REMOTE_CONTROL_LAUNCH=1 rides along so cos_autobind.py skips its /rc reminder.
+# Kill switch: SWITCHBOARD_COS_REMOTE_CONTROL=off (local/machines/<MACHINE>.env).
 COS_REMOTE_CONTROL_NAME="${COS_REMOTE_CONTROL_NAME:-CoS}"
 is_cos_surface() {  # <surface name>
-    case "${1:-}" in megadesk|routine:megadesk) return 0 ;; esac
+    case "${1:-}" in switchboard|routine:switchboard) return 0 ;; esac
     return 1
 }
 cos_remote_control_enabled() {  # <surface name>
     is_cos_surface "${1:-}" || return 1
-    [[ "$(pm_os_agent)" == "claude" ]] || return 1
-    if ! declare -F pm_os_machine_value >/dev/null && [[ -f "$REPO_ROOT/system/scripts/lib/machine-role.sh" ]]; then
+    [[ "$(switchboard_agent)" == "claude" ]] || return 1
+    if ! declare -F switchboard_machine_value >/dev/null && [[ -f "$REPO_ROOT/system/scripts/lib/machine-role.sh" ]]; then
         # shellcheck source=scripts/lib/machine-role.sh
         source "$REPO_ROOT/system/scripts/lib/machine-role.sh"
     fi
-    local switch="${PM_OS_COS_REMOTE_CONTROL:-}"
-    declare -F pm_os_machine_value >/dev/null && switch="$(pm_os_machine_value PM_OS_COS_REMOTE_CONTROL)"
+    local switch="${SWITCHBOARD_COS_REMOTE_CONTROL:-}"
+    declare -F switchboard_machine_value >/dev/null && switch="$(switchboard_machine_value SWITCHBOARD_COS_REMOTE_CONTROL)"
     case "$(printf '%s' "${switch:-on}" | tr '[:upper:]' '[:lower:]')" in
         off|0|false|no) return 1 ;;
     esac
@@ -116,15 +116,15 @@ cos_remote_control_args() {  # <surface name>: " --remote-control CoS" or nothin
     cos_remote_control_enabled "${1:-}" || return 0
     printf ' --remote-control %q' "$COS_REMOTE_CONTROL_NAME"
 }
-cos_remote_control_env() {  # <surface name>: "PM_OS_COS_REMOTE_CONTROL_LAUNCH=1 " or nothing
+cos_remote_control_env() {  # <surface name>: "SWITCHBOARD_COS_REMOTE_CONTROL_LAUNCH=1 " or nothing
     cos_remote_control_enabled "${1:-}" || return 0
-    printf 'PM_OS_COS_REMOTE_CONTROL_LAUNCH=1 '
+    printf 'SWITCHBOARD_COS_REMOTE_CONTROL_LAUNCH=1 '
 }
 
 agent_interactive_command() {  # <agent mode> [surface name]
     local mode="${1:-ultra}"
     local surface="${2:-}"
-    if [[ "$(pm_os_agent)" == "claude" ]]; then
+    if [[ "$(switchboard_agent)" == "claude" ]]; then
         local model effort
         read -r model effort <<<"$(claude_mode_flags "$mode")"
         printf '%s%s --dangerously-skip-permissions --model %s --effort %s --settings %q%s' \
@@ -162,17 +162,17 @@ AMP_THREAD_ID_RE='^T-[0-9a-fA-F-]+$'
 
 # The id regex a reused tab's prior session must match for the configured agent.
 agent_session_id_re() {
-    if [[ "$(pm_os_agent)" == "claude" ]]; then printf '%s' "$CLAUDE_SESSION_ID_RE"; else printf '%s' "$AMP_THREAD_ID_RE"; fi
+    if [[ "$(switchboard_agent)" == "claude" ]]; then printf '%s' "$CLAUDE_SESSION_ID_RE"; else printf '%s' "$AMP_THREAD_ID_RE"; fi
 }
 
 # "Amp" or "Claude" for log lines.
 agent_display_name() {
-    if [[ "$(pm_os_agent)" == "claude" ]]; then echo Claude; else echo Amp; fi
+    if [[ "$(switchboard_agent)" == "claude" ]]; then echo Claude; else echo Amp; fi
 }
 
 # The screen regex that proves the configured agent's TUI is up.
 agent_ready_marker() {
-    if [[ "$(pm_os_agent)" == "claude" ]]; then printf '%s' "$CLAUDE_READY_MARKER"; else printf '%s' "$AMP_READY_MARKER"; fi
+    if [[ "$(switchboard_agent)" == "claude" ]]; then printf '%s' "$CLAUDE_READY_MARKER"; else printf '%s' "$AMP_READY_MARKER"; fi
 }
 
 # Shared inject guard so any caller (route-to-workspace seeding, wrap/close,
@@ -191,14 +191,14 @@ AMP_READY_POLL="${AMP_READY_POLL:-2}"
 # worker tabs (verify-amp), and owner tabs call the same helper through that
 # subcommand, never a second copy. The helper is located next to this library,
 # not under REPO_ROOT, so a fixture REPO_ROOT (the test harnesses) still runs
-# the real code. PM_OS_DISPATCH_PY is a test seam.
+# the real code. SWITCHBOARD_DISPATCH_PY is a test seam.
 _CMUX_HELPERS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PM_OS_DISPATCH_PY="${PM_OS_DISPATCH_PY:-$_CMUX_HELPERS_DIR/scripts/dispatch.py}"
+SWITCHBOARD_DISPATCH_PY="${SWITCHBOARD_DISPATCH_PY:-$_CMUX_HELPERS_DIR/scripts/dispatch.py}"
 
 WORKSTREAM_LINK_SUMMARY_RULE="If the current workspace is a workstream and the user drops a link to a source artifact such as a Google Doc, Slack thread or channel, Markdown file, video, Figma, or web page, treat it as durable workstream input. For normal source artifacts, create or update a dated markdown summary note in the workstream folder instead of leaving the analysis only in chat or /tmp. For meeting artifacts, including Gemini meeting emails and meeting-note docs, save or update the canonical note under projects/*/meetings/ (or projects/_inbox/meetings/ when routing is unclear) and then add a short summary plus link in the workstream CONTEXT.md instead of writing a second meeting note into the workstream folder."
 WORKSTREAM_MEETING_NOTES_RULE="Before making recommendations, drafting documents, or replying on behalf of a workstream, check recent meeting context relevant to the workspace. Start with the Recent Meetings section in the workstream CONTEXT.md and any linked projects/*/meetings/ notes. If the linked note cites a Gemini Notes source, or if the owner mentions meeting notes, what was said, what changed, or asks for meeting context, open the linked Gemini note automatically before answering unless they explicitly asks to stay with the summarized note only."
-WORKSTREAM_REVIEW_SURFACE_RULE="Review-surface contract: any deliverable the owner must review is a Markdown note inside the pm-os Obsidian vault (the repo root), written with the drafting-docs Markdown workflow: outputs/reviews/<YYYY-MM-DD>-<slug>.md for cross-cutting reviews or the owning workstream folder, with frontmatter and native relative links. Pass the note as --review-artifact <url> on emit-workspace-update.py, giving either the vault-relative path or its obsidian://open?vault=pm-os&file=<path> URI, and include the same pointer in the report-to-cos.sh summary; both boundaries reject a review deliverable whose note does not exist inside the vault and both store the obsidian:// link as the review pointer. Create a Google Doc (drafting-docs template workflow, never a blank Doc, targeted edits only on an existing Doc) or a hosted page only when the owner explicitly asks for that surface; existing collaborative Google Docs stay unchanged. Code diffs, logs, tests, raw sources, and internal-state Markdown are not review deliverables and are not blocked."
-WORKSTREAM_MODEL_ROUTING_RULE="Agent-mode routing: ultra is the default for every PM OS thread. high is used only when the owner explicitly chooses it for a thread. If this session is not already ultra and the owner did not explicitly choose high for it, recommend once that the owner press Ctrl+S and select ultra before the next turn. Do not wait for the owner to name the mode. You cannot change the active mode yourself. For one specific unresolved high-impact judgment, use Oracle in addition to the current mode."
+WORKSTREAM_REVIEW_SURFACE_RULE="Review-surface contract: any deliverable the owner must review is a Markdown note inside the switchboard Obsidian vault (the repo root), written with the drafting-docs Markdown workflow: outputs/reviews/<YYYY-MM-DD>-<slug>.md for cross-cutting reviews or the owning workstream folder, with frontmatter and native relative links. Pass the note as --review-artifact <url> on emit-workspace-update.py, giving either the vault-relative path or its obsidian://open?vault=switchboard&file=<path> URI, and include the same pointer in the report-to-cos.sh summary; both boundaries reject a review deliverable whose note does not exist inside the vault and both store the obsidian:// link as the review pointer. Create a Google Doc (drafting-docs template workflow, never a blank Doc, targeted edits only on an existing Doc) or a hosted page only when the owner explicitly asks for that surface; existing collaborative Google Docs stay unchanged. Code diffs, logs, tests, raw sources, and internal-state Markdown are not review deliverables and are not blocked."
+WORKSTREAM_MODEL_ROUTING_RULE="Agent-mode routing: ultra is the default for every switchboard thread. high is used only when the owner explicitly chooses it for a thread. If this session is not already ultra and the owner did not explicitly choose high for it, recommend once that the owner press Ctrl+S and select ultra before the next turn. Do not wait for the owner to name the mode. You cannot change the active mode yourself. For one specific unresolved high-impact judgment, use Oracle in addition to the current mode."
 WORKSTREAM_LEDGER_FENCE_RULE="Live-worker fence: never settle another task's ledger row while its worker thread is live. running-task-state.py update --status cancelled|done|failed|blocked on an active row whose bound thread is live in cmux returns _live_worker=true and writes nothing; a row that shows routing for hours may have launched seconds ago, so check the live thread first and message that worker to stop or steer it. --replace-report is the only sanctioned override, for a row whose worker already landed its work or when the owner explicitly overrules; never use it on a row that merely looks stuck."
 
 # --- Logging ---
@@ -232,7 +232,7 @@ EOF
     fi
 
     cat <<EOF
-IMPORTANT: Skip all AGENTS.md session-start steps (todo, kb-distill, start-of-day, daemon, skill loading). You are a focused workspace launched by start-day.sh. Go straight to the task below. $presentation_rule $WORKSTREAM_MODEL_ROUTING_RULE $WORKSTREAM_LEDGER_FENCE_RULE Timezone: all user-facing dates and times are ${PM_OS_TZ_LABEL}. The session-context "Today's date" is UTC — never treat it as local; run \`date\` before any today/tomorrow/day-of-week claim about meetings, deadlines, or events, and label UTC timestamps explicitly when quoting logs. Before you pause, finish, or enter a waiting state, emit a structured update with python3 system/scripts/emit-workspace-update.py --source $source_key --status <active|to review|waiting|blocked|paused|done> --summary "<what changed>" --recommended-next-action "<next action>". Use active only while the agent is running. Use "to review" ONLY when there is a concrete artifact, decision, or result that genuinely requires the owner's review — never for an ordinary completed startup/verification pass (use done or waiting for those; startup-seeded "to review" is auto-demoted to done unless you add --review-artifact). If this startup-seeded turn genuinely produced an artifact awaiting the owner's review (e.g. drafts pending approval), emit --status "to review" --review-artifact — do NOT escalate to "needs review"/"needs action", those mean urgent and paint the red lane. If you completed or deferred todo items linked to this workstream, include either --todo-update "<todo-id>|done" or --linked-todos <waiting|scheduled|done> with dates when needed. $WORKSTREAM_REVIEW_SURFACE_RULE $WORKSTREAM_MEETING_NOTES_RULE $WORKSTREAM_LINK_SUMMARY_RULE
+IMPORTANT: Skip all AGENTS.md session-start steps (todo, kb-distill, start-of-day, daemon, skill loading). You are a focused workspace launched by start-day.sh. Go straight to the task below. $presentation_rule $WORKSTREAM_MODEL_ROUTING_RULE $WORKSTREAM_LEDGER_FENCE_RULE Timezone: all user-facing dates and times are ${SWITCHBOARD_TZ_LABEL}. The session-context "Today's date" is UTC — never treat it as local; run \`date\` before any today/tomorrow/day-of-week claim about meetings, deadlines, or events, and label UTC timestamps explicitly when quoting logs. Before you pause, finish, or enter a waiting state, emit a structured update with python3 system/scripts/emit-workspace-update.py --source $source_key --status <active|to review|waiting|blocked|paused|done> --summary "<what changed>" --recommended-next-action "<next action>". Use active only while the agent is running. Use "to review" ONLY when there is a concrete artifact, decision, or result that genuinely requires the owner's review — never for an ordinary completed startup/verification pass (use done or waiting for those; startup-seeded "to review" is auto-demoted to done unless you add --review-artifact). If this startup-seeded turn genuinely produced an artifact awaiting the owner's review (e.g. drafts pending approval), emit --status "to review" --review-artifact — do NOT escalate to "needs review"/"needs action", those mean urgent and paint the red lane. If you completed or deferred todo items linked to this workstream, include either --todo-update "<todo-id>|done" or --linked-todos <waiting|scheduled|done> with dates when needed. $WORKSTREAM_REVIEW_SURFACE_RULE $WORKSTREAM_MEETING_NOTES_RULE $WORKSTREAM_LINK_SUMMARY_RULE
 If the owner explicitly says this workstream or its work is done, complete, finished, resolved, closed, paused, or deferred, treat that as a full lifecycle action, not just a status edit. For done/complete/finished/resolved/closed, mark linked to-dos done and emit the done update with --linked-todos done --close-workspace --clear-manual-open. For pause/defer, emit the paused or waiting update with --close-workspace --clear-manual-open and update linked to-dos accordingly. In every explicit lifecycle case, verify that the owning cmux workspace actually disappears; a state update alone is not completion. Never use --clear-manual-open unless the owner explicitly requested that lifecycle action in this conversation turn. Do not infer it from your own decision to wait, pause, stop, or finish an initial review.
 If the owner asks to add or promote work from this workstream to P0, treat that as an immediate workspace-routing action: after updating the to-do, run \`bash system/scripts/ensure-p0-workspaces.sh\` in the same turn. The reconciler must remove the standalone workstream from its normal lane and consolidate it into the canonical \`<emoji> P0 · <workstream>\` workspace in the P0 section. Do not leave duplicate normal and P0 tabs open, and do not wait for the next start-of-day run.
 Before reading CONTEXT.md, if this is a workstream session and \`workstreams/<this-workstream>/.signals/recent.md\` exists, read it first. It contains a recent cross-surface activity digest (Slack, Gmail, Linear, GitHub, Jira, Notion, Drive, Tracker, Calendar, Doc comments, Slack reactions) filtered to this workstream by channel and keyword. Use it to surface what changed while the workspace was idle, not as a substitute for CONTEXT.md.
@@ -299,7 +299,7 @@ cmux_cmd() {
     local focus_value=""
     local index
 
-    # PM OS automation is non-focusing by default. New workspaces always start
+    # switchboard automation is non-focusing by default. New workspaces always start
     # in the background unless a caller passes an explicit focus value. Commands
     # that select a workspace or focus the app require a marker that only
     # user-initiated entry points may set.
@@ -316,7 +316,7 @@ cmux_cmd() {
         done
         if [[ -z "$focus_value" ]]; then
             command_args+=(--focus false)
-        elif [[ "$focus_value" == "true" && "${PM_OS_EXPLICIT_USER_FOCUS:-0}" != "1" ]]; then
+        elif [[ "$focus_value" == "true" && "${SWITCHBOARD_EXPLICIT_USER_FOCUS:-0}" != "1" ]]; then
             log_error "Blocked background cmux workspace focus. Use an explicit user focus action."
             return 2
         fi
@@ -325,7 +325,7 @@ cmux_cmd() {
     if { [[ "$command" == "select-workspace" || "$command" == "set-app-focus" ]] \
         || [[ "$command" == "workspace" && "${command_args[1]:-}" == "select" ]] \
         || [[ "$command" == "rpc" && "${command_args[1]:-}" =~ ^(workspace\.select|app\.setFocus)$ ]]; } \
-        && [[ "${PM_OS_EXPLICIT_USER_FOCUS:-0}" != "1" ]]; then
+        && [[ "${SWITCHBOARD_EXPLICIT_USER_FOCUS:-0}" != "1" ]]; then
         log_error "Blocked background cmux focus change. Use an explicit user focus action."
         return 2
     fi
@@ -334,7 +334,7 @@ cmux_cmd() {
     local owner_file="$CMUX_LOCK_DIR/pid"
     local lock_owner=""
 
-    # Serialize PM OS automation so overlapping sidebar and workspace writes
+    # Serialize switchboard automation so overlapping sidebar and workspace writes
     # do not hammer cmux's socket at the same time.
     while ! mkdir "$CMUX_LOCK_DIR" 2>/dev/null; do
         if [[ -f "$owner_file" ]]; then
@@ -403,8 +403,8 @@ acquire_ws_launch_lock() {
         log_error "Legacy workspace launch lock needs inspected cleanup: $WS_LAUNCH_LOCK_DIR"
         return 1
     fi
-    if pm_os_is_windows_shell; then
-        pm_os_dir_lock_acquire "$CMUX_WORKSPACE_LAUNCH_LOCK.win" "${WS_LAUNCH_LOCK_TIMEOUT:-60}" && return 0
+    if switchboard_is_windows_shell; then
+        switchboard_dir_lock_acquire "$CMUX_WORKSPACE_LAUNCH_LOCK.win" "${WS_LAUNCH_LOCK_TIMEOUT:-60}" && return 0
         log_error "Could not acquire workspace launch lock: $CMUX_WORKSPACE_LAUNCH_LOCK.win"
         return 1
     fi
@@ -429,8 +429,8 @@ PY
 }
 
 release_ws_launch_lock() {
-    if pm_os_is_windows_shell; then
-        pm_os_dir_lock_release
+    if switchboard_is_windows_shell; then
+        switchboard_dir_lock_release
         return 0
     fi
     exec 9>&-
@@ -454,7 +454,7 @@ warn_dynamic_ui_updates_disabled() {
     fi
     if (( now - last_warn >= 3600 )); then
         mkdir -p "$marker_dir"
-        if cmux_cmd notify --title "PM OS cmux warning" --body "$reason" >/dev/null 2>&1; then
+        if cmux_cmd notify --title "switchboard cmux warning" --body "$reason" >/dev/null 2>&1; then
             printf '%s\n' "$now" > "$marker_file"
         fi
     fi
@@ -512,17 +512,17 @@ PY
 }
 
 # Core surfaces that ALWAYS launch in ultra:
-# CoS (routine dir `megadesk`), LaunchPad, Comms Triage, and every Router.
+# CoS (routine dir `switchboard`), LaunchPad, Comms Triage, and every Router.
 # Each surface's config.yaml / router.yaml stays the documented canonical
 # value (ultra). This floor is defense in depth: no env override, config
 # drift, or default fallback may recreate one of these surfaces at a lower
 # mode. Matching is by routine directory name, case-insensitive.
-PM_OS_ULTRA_SURFACES="megadesk launchpad comms-triage router"
+SWITCHBOARD_ULTRA_SURFACES="switchboard launchpad comms-triage router"
 
 is_ultra_surface() {  # <workstream-or-routine name>
     local needle surface
     needle=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
-    for surface in $PM_OS_ULTRA_SURFACES; do
+    for surface in $SWITCHBOARD_ULTRA_SURFACES; do
         [[ "$needle" == "$surface" ]] && return 0
     done
     return 1
@@ -532,17 +532,17 @@ is_ultra_surface() {  # <workstream-or-routine name>
 # alone launches at a lower mode for a dated window; LaunchPad, Comms Triage,
 # Routers and every worker stay on the ultra floor. The one knob is
 # system/config/router.yaml `cos_mode_trial:` (mode, start, end; calendar
-# dates in PM_OS_TZ, inclusive). Outside the window, or with
-# PM_OS_COS_MODE_TRIAL_DISABLED=1, CoS floors to ultra as before. Prints the
+# dates in SWITCHBOARD_TZ, inclusive). Outside the window, or with
+# SWITCHBOARD_COS_MODE_TRIAL_DISABLED=1, CoS floors to ultra as before. Prints the
 # trial mode when active for the given name, nothing otherwise.
 cos_mode_trial_mode() {  # <workstream-or-routine name>
     local needle
     needle=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
-    [[ "$needle" == "megadesk" ]] || return 1
-    [[ "${PM_OS_COS_MODE_TRIAL_DISABLED:-0}" == "1" ]] && return 1
+    [[ "$needle" == "switchboard" ]] || return 1
+    [[ "${SWITCHBOARD_COS_MODE_TRIAL_DISABLED:-0}" == "1" ]] && return 1
     local cfg="${ROUTER_CONFIG:-$REPO_ROOT/system/config/router.yaml}"
     [[ -f "$cfg" ]] || return 1
-    PM_OS_TZ="$PM_OS_TZ_NAME" python3 - "$cfg" <<'PY' 2>/dev/null
+    SWITCHBOARD_TZ="$SWITCHBOARD_TZ_NAME" python3 - "$cfg" <<'PY' 2>/dev/null
 import datetime as dt, os, sys, zoneinfo
 try:
     import yaml
@@ -553,7 +553,7 @@ mode = str(trial.get("mode") or "").strip().lower()
 if mode not in {"high", "ultra"}:
     raise SystemExit(1)
 try:
-    zone = zoneinfo.ZoneInfo(os.environ.get("PM_OS_TZ") or "America/Los_Angeles")
+    zone = zoneinfo.ZoneInfo(os.environ.get("SWITCHBOARD_TZ") or "America/Los_Angeles")
 except Exception:
     zone = zoneinfo.ZoneInfo("America/Los_Angeles")
 today = dt.datetime.now(zone).date()
@@ -576,17 +576,17 @@ PY
 
 # Decide which Amp agent mode (-m) a workspace launches with.
 # Precedence:
-#   0. Ultra floor for core surfaces (see PM_OS_ULTRA_SURFACES) — wins over
+#   0. Ultra floor for core surfaces (see SWITCHBOARD_ULTRA_SURFACES) — wins over
 #      everything below. One exception: an active CoS mode trial window in
 #      router.yaml `cos_mode_trial:` (see cos_mode_trial_mode) sets the mode
-#      for megadesk alone.
-#   1. PM_OS_AGENT_MODE env var — CoS judgment at launch time
-#      (e.g. PM_OS_AGENT_MODE=ultra for explicitly hard or strategic work)
+#      for switchboard alone.
+#   1. SWITCHBOARD_AGENT_MODE env var — CoS judgment at launch time
+#      (e.g. SWITCHBOARD_AGENT_MODE=ultra for explicitly hard or strategic work)
 #   2. `agent_mode:` field in the workstream/routine config.yaml
 #   3. ultra
 # Policy: ultra
-# is the PM OS default for every new thread. high is explicit opt-in only —
-# it is honored when the owner (or CoS on their instruction) sets PM_OS_AGENT_MODE=high
+# is the switchboard default for every new thread. high is explicit opt-in only —
+# it is honored when the owner (or CoS on their instruction) sets SWITCHBOARD_AGENT_MODE=high
 # or agent_mode: high in a config. Core surfaces stay floored at ultra.
 # medium and low must never reach Amp: legacy "medium"/"low"
 # inputs coerce to ultra (compatibility); empty or invalid values default to
@@ -594,7 +594,7 @@ PY
 # Valid outputs: high | ultra.
 resolve_agent_mode() {
     local name="$1"
-    local mode="${PM_OS_AGENT_MODE:-}"
+    local mode="${SWITCHBOARD_AGENT_MODE:-}"
     local cfg
 
     if [[ -z "$mode" ]]; then
@@ -618,8 +618,8 @@ PY
         high|ultra) ;;
         low|medium)
             # Compatibility: legacy low/medium configs coerce to the ultra
-            # default. PM OS launchers never pass medium or low to Amp.
-            _helpers_log "WARN" "agent_mode '$mode' is retired for PM OS launches; coercing to 'ultra' (name=$name)"
+            # default. switchboard launchers never pass medium or low to Amp.
+            _helpers_log "WARN" "agent_mode '$mode' is retired for switchboard launches; coercing to 'ultra' (name=$name)"
             mode="ultra"
             ;;
         *) mode="ultra" ;;
@@ -656,7 +656,7 @@ workspace_emoji() {
 
     # 2. Fallback to the hardcoded map (kept for routines + back-compat).
     case "$base_name" in
-        CoS|"Chief of Staff"|megadesk) echo "🧭" ;;
+        CoS|"Chief of Staff"|switchboard) echo "🧭" ;;
         launchpad) echo "🚀" ;;
         todo) echo "✅" ;;
         comms-triage|comms-triage-claude) echo "📬" ;;
@@ -745,7 +745,7 @@ canonical_workspace_name_for_source() {
     local config_name=""
 
     case "$source_type:$name" in
-        megadesk:*|*:CoS|*:"Chief of Staff"|*:megadesk) echo "CoS" ;;
+        switchboard:*|*:CoS|*:"Chief of Staff"|*:switchboard) echo "CoS" ;;
         *:todo) echo "Todo" ;;
         *:comms-triage|*:comms-triage-claude) echo "Comms Triage" ;;
         *:scheduled-jobs) echo "Scheduled Jobs" ;;
@@ -822,7 +822,7 @@ format_legacy_workspace_name() {
 # find_or_create_workspace, so consolidation is a RENAME of the live tab
 # (never an interruption of a running session).
 
-PM_OS_TODO_JSON="${PM_OS_TODO_JSON:-$REPO_ROOT/system/state/todo.json}"
+SWITCHBOARD_TODO_JSON="${SWITCHBOARD_TODO_JSON:-$REPO_ROOT/system/state/todo.json}"
 
 # Print "id<US>title<US>workstream<US>detail" lines (US = \x1f) for surfaced
 # P0 to-dos (active open|actionable, or review-needed waiting whose review_on
@@ -831,9 +831,9 @@ PM_OS_TODO_JSON="${PM_OS_TODO_JSON:-$REPO_ROOT/system/state/todo.json}"
 # source of truth shared with ensure-p0-workspaces.sh. rc=1 when none.
 p0_active_todos_for_workstream() {
     local slug="$1"
-    [[ -n "$slug" && -f "$PM_OS_TODO_JSON" ]] || return 1
+    [[ -n "$slug" && -f "$SWITCHBOARD_TODO_JSON" ]] || return 1
     local out
-    out=$(python3 "$REPO_ROOT/system/scripts/lib/p0-todos.py" "$PM_OS_TODO_JSON" --slug "$slug" 2>/dev/null) || return 1
+    out=$(python3 "$REPO_ROOT/system/scripts/lib/p0-todos.py" "$SWITCHBOARD_TODO_JSON" --slug "$slug" 2>/dev/null) || return 1
     [[ -n "$out" ]] || return 1
     printf '%s\n' "$out"
 }
@@ -1245,7 +1245,7 @@ verify_amp_launch() {
     local launch_command="$3"
     local agent_name
     agent_name=$(agent_display_name)
-    if [[ ! -f "$PM_OS_DISPATCH_PY" ]] || ! command -v python3 >/dev/null 2>&1; then
+    if [[ ! -f "$SWITCHBOARD_DISPATCH_PY" ]] || ! command -v python3 >/dev/null 2>&1; then
         log_warn "$agent_name verification skipped for $name: dispatch.py or python3 unavailable"
         return 2
     fi
@@ -1256,7 +1256,7 @@ verify_amp_launch() {
     # dispatch.py resolves the agent itself (agent_kind) and waits for the
     # matching screen marker; pass this library's answer so both sides agree
     # even when they would read different router.yaml files (fixture REPO_ROOT).
-    verdict=$(PM_OS_AGENT="$(pm_os_agent)" python3 "$PM_OS_DISPATCH_PY" "${args[@]}") || rc=$?
+    verdict=$(SWITCHBOARD_AGENT="$(switchboard_agent)" python3 "$SWITCHBOARD_DISPATCH_PY" "${args[@]}") || rc=$?
     case "$verdict" in
         *'"launch_retyped": true'*) log_warn "Launch command retyped once into $ws_ref for $name (consumed by the shell)" ;;
     esac
@@ -1490,7 +1490,7 @@ wait_for_amp_ready() {
         # falsely report "Amp ready" when the launch command had been dropped
         # and only the shell prompt was on screen. Amp Neo always renders a
         # bordered prompt box (╭──/╰──) or the welcome banner. Under
-        # PM_OS_AGENT=claude the marker is Claude Code's input footer instead.
+        # SWITCHBOARD_AGENT=claude the marker is Claude Code's input footer instead.
         if echo "$screen" | grep -qE "$(agent_ready_marker)"; then
             return 0
         fi
@@ -1512,7 +1512,7 @@ workspace_amp_is_orb() {
     local screen
 
     # Orbs are an Amp executor; a Claude Code tab is always local.
-    [[ "$(pm_os_agent)" == "claude" ]] && return 1
+    [[ "$(switchboard_agent)" == "claude" ]] && return 1
     sf_ref=$(get_workspace_surface "$ws_ref" 2>/dev/null || true)
     [[ -n "$sf_ref" ]] || return 1
     screen=$(cmux_cmd read-screen --workspace "$ws_ref" --surface "$sf_ref" --lines 80 2>/dev/null || true)
@@ -1722,16 +1722,16 @@ rename_workspace_tab() {
     }
 }
 
-style_megadesk_workspace() {
+style_switchboard_workspace() {
     local ws_ref="$1"
     local title="${2:-🧭 CoS}"
     local sf_ref
 
     cmux_cmd rename-workspace --workspace "$ws_ref" "$title" &>/dev/null || {
-        log_warn "Failed to rename Megadesk workspace to: $title"
+        log_warn "Failed to rename switchboard workspace to: $title"
     }
     # Do NOT rename the tab: a manual tab name freezes the title and masks
-    # Amp's live braille-spinner title, which the pm-os sidebar relies on to
+    # Amp's live braille-spinner title, which the switchboard sidebar relies on to
     # show the green "running" bolt (the cmux custom-sidebar API exposes no
     # agent status, only titles). The sidebar row label comes from the
     # workspace title anyway. Clear any legacy frozen name so it self-heals.
@@ -1740,12 +1740,12 @@ style_megadesk_workspace() {
         cmux_cmd tab-action --action clear-name --workspace "$ws_ref" --tab "$sf_ref" &>/dev/null || true
     fi
     cmux_cmd workspace-action --workspace "$ws_ref" --action move-top &>/dev/null || {
-        log_warn "Failed to move Megadesk workspace $ws_ref to top"
+        log_warn "Failed to move switchboard workspace $ws_ref to top"
     }
     pin_workspace "$ws_ref"
 }
 
-normalize_megadesk_workspace() {
+normalize_switchboard_workspace() {
     local listing="${1:-}"
     local title="${2:-🧭 CoS}"
     local ref=""
@@ -1757,7 +1757,7 @@ normalize_megadesk_workspace() {
 
     [[ -z "$listing" ]] && return 1
 
-    for current_name in "🧭 CoS" "CoS" "🧭 Megadesk" "Megadesk" "megadesk"; do
+    for current_name in "🧭 CoS" "CoS"; do
         if ref=$(find_workspace_by_name_in_listing "$listing" "$current_name" 2>/dev/null); then
             break
         fi
@@ -1765,7 +1765,7 @@ normalize_megadesk_workspace() {
     done
 
     if [[ -z "$ref" ]]; then
-        for current_name in "Chief of Staff" "Megadesk"; do
+        for current_name in "Chief of Staff"; do
             if ref=$(find_workspace_by_substring_in_listing "$listing" "$current_name" 2>/dev/null); then
                 break
             fi
@@ -1777,7 +1777,7 @@ normalize_megadesk_workspace() {
 
     current_name=$(workspace_name_for_ref_in_listing "$listing" "$ref" 2>/dev/null || true)
     if [[ "$current_name" != "$title" ]]; then
-        style_megadesk_workspace "$ref" "$title"
+        style_switchboard_workspace "$ref" "$title"
     fi
 
     echo "$ref"
@@ -1797,8 +1797,8 @@ find_workspace_ref_for_source_key_in_listing() {
     local -a candidates=()
 
     case "$key" in
-        megadesk|CoS|"Chief of Staff")
-            candidates=("🧭 CoS" "CoS" "🧭 Megadesk" "Megadesk" "megadesk")
+        switchboard|CoS|"Chief of Staff")
+            candidates=("🧭 CoS" "CoS")
             ;;
         *)
             candidates+=("$(format_workspace_name_for_source "$source_type" "$key")")
@@ -1826,8 +1826,8 @@ find_workspace_ref_for_source_key_in_listing() {
     done
 
     case "$key" in
-        megadesk|CoS|"Chief of Staff")
-            for candidate in "Chief of Staff" "Megadesk"; do
+        switchboard|CoS|"Chief of Staff")
+            for candidate in "Chief of Staff"; do
                 if ref=$(find_workspace_by_substring_in_listing "$listing" "$candidate" 2>/dev/null); then
                     echo "$ref"
                     return 0
@@ -1852,7 +1852,7 @@ close_workspace_ref_verified() {
     local listing
 
     # --force: cmux 0.65 refuses to close a workspace with a running process
-    # (every PM OS tab runs the Amp CLI) without it.
+    # (every switchboard tab runs the Amp CLI) without it.
     if ! cmux_cmd close-workspace --workspace "$ref" --force; then
         log_error "Failed to close cmux workspace $ref"
         return 1
@@ -1917,15 +1917,15 @@ arrange_workspace_sidebar() {
     # top (then Comms Triage where it is on), Workers in the middle, Scheduled
     # Jobs and Meetings at the bottom. The canonical list is
     # system/scripts/sidebar_order.py; keep this one in step.
-    local -a top_pinned=("routine:megadesk" "routine:todo" "routine:launchpad" "routine:comms-triage")
-    if ! pm_os_comms_triage_enabled; then
-        top_pinned=("routine:megadesk" "routine:todo" "routine:launchpad")
+    local -a top_pinned=("routine:switchboard" "routine:todo" "routine:launchpad" "routine:comms-triage")
+    if ! switchboard_comms_triage_enabled; then
+        top_pinned=("routine:switchboard" "routine:todo" "routine:launchpad")
     fi
     local -a bottom_unpinned=("routine:scheduled-jobs" "routine:meetings")
 
     # The order applies on cmux only. wmux cannot order tabs from a script, and
-    # PM OS leaves the wmux order alone.
-    [[ "${PM_OS_MUX:-}" == "wmux" ]] && return 0
+    # switchboard leaves the wmux order alone.
+    [[ "${SWITCHBOARD_MUX:-}" == "wmux" ]] && return 0
     local -a fallback_order=(
     )
 
@@ -2091,7 +2091,7 @@ record_workstream_launch_binding() {
 # Launch-argument seeding (Claude Code). Typing a seed into a fresh Claude
 # composer races the TUI and can leave the handoff typed but unsubmitted.
 # A caller that has already written its launch prompt file sets
-# PM_OS_LAUNCH_SEED_FILE=<file> (plus PM_OS_LAUNCH_SEED_HYDRATION=<label> for
+# SWITCHBOARD_LAUNCH_SEED_FILE=<file> (plus SWITCHBOARD_LAUNCH_SEED_HYDRATION=<label> for
 # a pure startup seed) for prepare_workspace. The Claude launch or resume
 # command then carries "Read and follow all instructions in <file>" as its
 # positional prompt, so the seed is the session's first turn and nothing is
@@ -2099,8 +2099,8 @@ record_workstream_launch_binding() {
 # a marker that send_prompt_via_file consumes instead of typing. Amp, a live
 # preserved session, and a caller without the variable keep the guarded send.
 launch_seed_pointer() {
-    [[ "$(pm_os_agent)" == "claude" ]] || return 1
-    local f="${PM_OS_LAUNCH_SEED_FILE:-}"
+    [[ "$(switchboard_agent)" == "claude" ]] || return 1
+    local f="${SWITCHBOARD_LAUNCH_SEED_FILE:-}"
     [[ -n "$f" && -f "$f" ]] || return 1
     printf 'Read and follow all instructions in %s' "$f"
 }
@@ -2445,7 +2445,7 @@ settings["amp.mcpPermissions"] = [
     {"matches": {"command": "*"}, "action": "reject"},
     {"matches": {"url": "*"}, "action": "reject"},
 ] + settings.get("amp.mcpPermissions", [])
-target = Path.home() / ".config/amp/pm-os-router-settings.json"
+target = Path.home() / ".config/amp/switchboard-router-settings.json"
 target.parent.mkdir(parents=True, exist_ok=True)
 fd, temporary = tempfile.mkstemp(prefix=".router-settings-", dir=target.parent)
 try:
@@ -2486,14 +2486,14 @@ local_amp_launch_command() {
         *) agent_mode="ultra" ;;           # default: ultra for anything unrecognized
     esac
     quoted_cwd=$(printf '%q' "$cwd")
-    quoted_prompt=$(printf '%q' "This is a local-only PM OS workstream session. Stay on this machine and wait for the workstream instructions that follow. Do not use an Amp Orb, a remote VM, SSH, cloud execution, or remote subagent.")
+    quoted_prompt=$(printf '%q' "This is a local-only switchboard workstream session. Stay on this machine and wait for the workstream instructions that follow. Do not use an Amp Orb, a remote VM, SSH, cloud execution, or remote subagent.")
     quoted_slug=$(printf '%q' "$slug")
     quoted_mode=$(printf '%q' "$agent_mode")
 
-    if [[ "$(pm_os_agent)" == "claude" ]]; then
+    if [[ "$(switchboard_agent)" == "claude" ]]; then
         # Claude Code: the seed prompt is a positional argument (stdin would be
         # print mode), the Amp mode maps to --model/--effort, and permission
-        # prompts are skipped because the tab runs unattended (the PM OS
+        # prompts are skipped because the tab runs unattended (the switchboard
         # guardrails still run as a Claude plugin hook). The contextual Amp
         # tab launcher (thread-binding observer) has no Claude equivalent.
         local model effort seed
@@ -2501,19 +2501,19 @@ local_amp_launch_command() {
         seed=$(launch_seed_pointer) && quoted_prompt=$(printf '%q' "$seed")
         # CoS only: --remote-control CoS (cos_remote_control_args). The name is always
         # explicit, so the optional flag value never swallows the seed prompt.
-        printf 'cd %s && %sPM_OS_WORKSTREAM_SLUG=%s exec %s --dangerously-skip-permissions --model %s --effort %s --settings %q%s %s' \
+        printf 'cd %s && %sSWITCHBOARD_WORKSTREAM_SLUG=%s exec %s --dangerously-skip-permissions --model %s --effort %s --settings %q%s %s' \
             "$quoted_cwd" "$(cos_remote_control_env "$surface")" "$quoted_slug" "$CLAUDE_CMD" "$model" "$effort" \
             "$(claude_tab_settings)" "$(cos_remote_control_args "$surface")" "$quoted_prompt"
         return 0
     fi
 
     if [[ -n "$slug" ]]; then
-        printf 'cd %s && echo %s | PM_OS_WORKSTREAM_SLUG=%s exec python3 %s --root %s --launch-owner %s -- %s -m %s' \
+        printf 'cd %s && echo %s | SWITCHBOARD_WORKSTREAM_SLUG=%s exec python3 %s --root %s --launch-owner %s -- %s -m %s' \
             "$quoted_cwd" "$quoted_prompt" "$quoted_slug" \
             "$(printf '%q' "$REPO_ROOT/system/scripts/cmux_new_contextual_amp_tab.py")" \
             "$(printf '%q' "$REPO_ROOT")" "$quoted_slug" "$AMP_CMD" "$quoted_mode"
     else
-        printf 'cd %s && echo %s | PM_OS_WORKSTREAM_SLUG=%s exec %s -m %s' \
+        printf 'cd %s && echo %s | SWITCHBOARD_WORKSTREAM_SLUG=%s exec %s -m %s' \
             "$quoted_cwd" "$quoted_prompt" "$quoted_slug" "$AMP_CMD" "$quoted_mode"
     fi
 }
@@ -2539,7 +2539,7 @@ local_amp_resume_command() {
         low|medium) agent_mode="ultra" ;;  # compatibility: medium/low never reach Amp; default ultra
         *) agent_mode="ultra" ;;
     esac
-    printf 'cd %s && PM_OS_WORKSTREAM_SLUG=%s exec %s threads continue %s -m %s' \
+    printf 'cd %s && SWITCHBOARD_WORKSTREAM_SLUG=%s exec %s threads continue %s -m %s' \
         "$(printf '%q' "$cwd")" "$(printf '%q' "$slug")" "$AMP_CMD" \
         "$(printf '%q' "$thread_id")" "$(printf '%q' "$agent_mode")"
 }
@@ -2561,7 +2561,7 @@ local_claude_resume_command() {
     fi
     local model effort seed
     read -r model effort <<<"$(claude_mode_flags "$agent_mode")"
-    printf 'cd %s && %sPM_OS_WORKSTREAM_SLUG=%s exec %s --resume %s --dangerously-skip-permissions --model %s --effort %s --settings %q%s' \
+    printf 'cd %s && %sSWITCHBOARD_WORKSTREAM_SLUG=%s exec %s --resume %s --dangerously-skip-permissions --model %s --effort %s --settings %q%s' \
         "$(printf '%q' "$cwd")" "$(cos_remote_control_env "$surface")" "$(printf '%q' "$slug")" "$CLAUDE_CMD" \
         "$(printf '%q' "$session_id")" "$model" "$effort" "$(claude_tab_settings)" \
         "$(cos_remote_control_args "$surface")"
@@ -2569,9 +2569,9 @@ local_claude_resume_command() {
     if seed=$(launch_seed_pointer); then printf ' %q' "$seed"; fi
 }
 
-# Resume command for whichever agent pm_os_agent selects.
+# Resume command for whichever agent switchboard_agent selects.
 local_agent_resume_command() {
-    if [[ "$(pm_os_agent)" == "claude" ]]; then
+    if [[ "$(switchboard_agent)" == "claude" ]]; then
         local_claude_resume_command "$@"
     else
         local_amp_resume_command "$@"
@@ -2649,7 +2649,7 @@ _boot_amp_in_workspace() {
         # so workspace-session-state.py returns that UUID as thread_id and
         # `claude --resume` reopens it. The id must match the configured
         # agent's shape: an Amp tab is never resumed by Claude or vice versa.
-        if [[ "${PM_OS_FORCE_FRESH_AMP_THREAD:-false}" != "true" ]]; then
+        if [[ "${SWITCHBOARD_FORCE_FRESH_AMP_THREAD:-false}" != "true" ]]; then
             local prior_thread prior_provenance
             prior_thread=$(amp_thread_for_workspace "$ws_ref")
             if [[ "$prior_thread" =~ $(agent_session_id_re) ]]; then
@@ -2678,7 +2678,7 @@ _boot_amp_in_workspace() {
         launch_command=$(local_amp_launch_command "$cwd" "$agent_mode" "$name")
     fi
     # The router settings file holds Amp settings; Claude Code has no reader for it.
-    if [[ "$name" == "router" && "$(pm_os_agent)" != "claude" ]]; then
+    if [[ "$name" == "router" && "$(switchboard_agent)" != "claude" ]]; then
         local router_settings
         router_settings=$(amp_router_settings_file) || return 1
         launch_command+=" --settings-file $(printf '%q' "$router_settings")"
@@ -2687,10 +2687,10 @@ _boot_amp_in_workspace() {
     # soon as Claude boots, so its hydration marker must exist before launch.
     local seeded_file=""
     if launch_seed_pointer >/dev/null; then
-        seeded_file="$PM_OS_LAUNCH_SEED_FILE"
+        seeded_file="$SWITCHBOARD_LAUNCH_SEED_FILE"
         rm -f "$(launch_seed_marker "$ws_ref")"
-        [[ -n "${PM_OS_LAUNCH_SEED_HYDRATION:-}" ]] && \
-            { mark_startup_hydration "$ws_ref" "$PM_OS_LAUNCH_SEED_HYDRATION" || true; }
+        [[ -n "${SWITCHBOARD_LAUNCH_SEED_HYDRATION:-}" ]] && \
+            { mark_startup_hydration "$ws_ref" "$SWITCHBOARD_LAUNCH_SEED_HYDRATION" || true; }
         log_info "Seeding $name through the launch argument: $seeded_file"
     fi
     send_to_workspace "$ws_ref" "$launch_command" || return 1
@@ -2784,7 +2784,7 @@ prepare_workspace() {
 
     # A seeded boot marked hydration before the launch; a failed boot must not
     # leave that marker to govern a later turn in this tab.
-    if [[ -n "${PM_OS_LAUNCH_SEED_HYDRATION:-}" ]] && launch_seed_pointer >/dev/null; then
+    if [[ -n "${SWITCHBOARD_LAUNCH_SEED_HYDRATION:-}" ]] && launch_seed_pointer >/dev/null; then
         clear_startup_hydration "$ws_ref"
     fi
 
@@ -2822,8 +2822,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
             fi
 
             # Machine-local off switch (system/scripts/comms_triage_setting.py).
-            if [[ "$ws_name" == "comms-triage" && "$source_type" != "workstream" ]] && ! pm_os_comms_triage_enabled; then
-                log_info "Comms Triage is off on this machine (PM_OS_COMMS_TRIAGE=off); not opening it"
+            if [[ "$ws_name" == "comms-triage" && "$source_type" != "workstream" ]] && ! switchboard_comms_triage_enabled; then
+                log_info "Comms Triage is off on this machine (SWITCHBOARD_COMMS_TRIAGE=off); not opening it"
                 exit 0
             fi
 
@@ -2875,7 +2875,7 @@ if v:
             fi
 
             # Preamble: skip AGENTS.md session-start, capture source links as durable workstream notes,
-            # and emit updates back to the Megadesk.
+            # and emit updates back to the switchboard.
             preamble="$(workstream_launch_preamble "$source_key")"
 
             # Pre-launch: refresh any watched_docs declared in this workstream
@@ -3073,7 +3073,7 @@ $prompt"
                 seed_hydration="launch-startup-seed"
             fi
             prep_rc=0
-            ws_ref=$(PM_OS_LAUNCH_SEED_FILE="$seed_file" PM_OS_LAUNCH_SEED_HYDRATION="$seed_hydration" \
+            ws_ref=$(SWITCHBOARD_LAUNCH_SEED_FILE="$seed_file" SWITCHBOARD_LAUNCH_SEED_HYDRATION="$seed_hydration" \
                 prepare_workspace "$ws_name" "$REPO_ROOT") || prep_rc=$?
             if (( prep_rc == 3 )); then
                 # The live-reuse pre-check above said "no live session" but the

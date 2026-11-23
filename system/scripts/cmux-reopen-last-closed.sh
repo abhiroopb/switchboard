@@ -19,14 +19,14 @@
 #                                       command of the fresh workspace the
 #                                       sidebar ↩ button creates)
 set -u
-STACK="${PM_OS_ROOT:-$HOME/Development/pm-os}/.state/cmux-recently-closed.json"
+STACK="${SWITCHBOARD_ROOT:-$HOME/Development/switchboard}/.state/cmux-recently-closed.json"
 CMUX="${CMUX_BIN:-${CMUX:-/Applications/cmux.app/Contents/Resources/bin/cmux}}"
 export CMUX
-SELF="${PM_OS_ROOT:-$HOME/Development/pm-os}/system/scripts/cmux-reopen-last-closed.sh"
+SELF="${SWITCHBOARD_ROOT:-$HOME/Development/switchboard}/system/scripts/cmux-reopen-last-closed.sh"
 # flock_compat.py sits next to this script; the inline Python below imports it when
 # the real fcntl is missing (Windows).
-PM_OS_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && { pwd -W 2>/dev/null || pwd; })"   # Git Bash: pwd -W is the C:/ form native Python can open
-export PM_OS_SCRIPTS_DIR
+SWITCHBOARD_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && { pwd -W 2>/dev/null || pwd; })"   # Git Bash: pwd -W is the C:/ form native Python can open
+export SWITCHBOARD_SCRIPTS_DIR
 
 if [ "${1:-}" != "--exec" ]; then
   # Peek first: don't create a blank workspace when there's nothing to
@@ -56,8 +56,8 @@ import json, os, sys
 try:
     import fcntl
 except ImportError:  # Windows: flock() over msvcrt, system/scripts/flock_compat.py
-    if os.environ.get("PM_OS_SCRIPTS_DIR"):
-        sys.path.insert(0, os.environ["PM_OS_SCRIPTS_DIR"])
+    if os.environ.get("SWITCHBOARD_SCRIPTS_DIR"):
+        sys.path.insert(0, os.environ["SWITCHBOARD_SCRIPTS_DIR"])
     import flock_compat as fcntl
 path = sys.argv[1]
 lock = path.replace(".json", ".lock")
@@ -79,7 +79,7 @@ PY
 )
 if [ -z "${ENTRY:-}" ]; then
   echo "No recently closed workspace recorded."
-  echo "(The recorder daemon com.pm-os.cmux-closed-workspaces logs closes here.)"
+  echo "(The recorder daemon com.switchboard.cmux-closed-workspaces logs closes here.)"
   exec "${SHELL:-bash}"
 fi
 
@@ -89,12 +89,12 @@ import json, os, shlex, subprocess, sys
 try:
     import fcntl
 except ImportError:  # Windows: flock() over msvcrt, system/scripts/flock_compat.py
-    if os.environ.get("PM_OS_SCRIPTS_DIR"):
-        sys.path.insert(0, os.environ["PM_OS_SCRIPTS_DIR"])
+    if os.environ.get("SWITCHBOARD_SCRIPTS_DIR"):
+        sys.path.insert(0, os.environ["SWITCHBOARD_SCRIPTS_DIR"])
     import flock_compat as fcntl
 
 CMUX = os.environ.get("CMUX_BIN") or os.environ.get("CMUX") or "/Applications/cmux.app/Contents/Resources/bin/cmux"
-SKIP = os.path.expanduser(os.path.join(os.environ.get("PM_OS_ROOT") or "~/Development/pm-os", ".state", "cmux-skip-record"))
+SKIP = os.path.expanduser(os.path.join(os.environ.get("SWITCHBOARD_ROOT") or "~/Development/switchboard", ".state", "cmux-skip-record"))
 
 def mark_skip(target):
     # Tell the close-recorder daemon this is a launcher self-close, not a

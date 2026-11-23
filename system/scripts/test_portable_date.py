@@ -56,7 +56,7 @@ BASH = find_bash()
 def shell(body: str) -> subprocess.CompletedProcess:
     return subprocess.run([BASH, "-c", f'source "{MUX.as_posix()}"\n{body}'], capture_output=True, text=True,
                           encoding="utf-8", errors="replace", timeout=60,
-                          env={**os.environ, "PM_OS_TEST_SANDBOX": "1", "PM_OS_MUX": "none"})
+                          env={**os.environ, "SWITCHBOARD_TEST_SANDBOX": "1", "SWITCHBOARD_MUX": "none"})
 
 
 @unittest.skipUnless(BASH, "needs bash")

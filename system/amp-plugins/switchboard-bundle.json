@@ -1,0 +1,17 @@
+[
+  "auto-pilot-router",
+  "chrome-mcp-lease",
+  "cmux-lifecycle-reconcile",
+  "comms-triage-trigger",
+  "cos-finished",
+  "daily-rollup-trigger",
+  "switchboard-commands",
+  "review-lane",
+  "task-caffeinate",
+  "task-liveness",
+  "watched-docs-refresh",
+  "watched-slack-refresh",
+  "workspace-report",
+  "workstream-lifecycle",
+  "workstream-signals"
+]

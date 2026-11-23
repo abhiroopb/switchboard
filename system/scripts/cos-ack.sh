@@ -42,7 +42,7 @@ if (( $# == 0 )) || [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     exit $(( $# == 0 ? 2 : 0 ))
 fi
 
-ORIGIN="${PM_OS_DISPATCH_ORIGIN:-cos}"
+ORIGIN="${SWITCHBOARD_DISPATCH_ORIGIN:-cos}"
 CLOSE_IDS=()
 CLOSE_REASON=""
 RULES=()

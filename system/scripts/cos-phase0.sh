@@ -15,21 +15,21 @@
 # cmux shim (system/scripts/mux/cmux), which renames through wmux and keeps pin and
 # order in its sidecar (wmux has no pin or reorder RPC).
 #
-# A worker never takes the title: a "PM OS worker <task>" description, a
-# PM_OS_WORKER* variable, or a task worktree refuses `chrome` (exit 3), and an
+# A worker never takes the title: a "switchboard worker <task>" description, a
+# SWITCHBOARD_WORKER* variable, or a task worktree refuses `chrome` (exit 3), and an
 # unreadable tab list fails closed (exit 1). The Gmail send guard trusts the CoS
 # title, so this script is careful about who gets it.
 # Exit 0 ok, 1 failed, 2 usage, 3 refused.
 set -uo pipefail
 
-TITLE="${PM_OS_COS_TITLE:-🧭 CoS}"
-PY="${PM_OS_PYTHON:-python3}"
+TITLE="${SWITCHBOARD_COS_TITLE:-🧭 CoS}"
+PY="${SWITCHBOARD_PYTHON:-python3}"
 here="${BASH_SOURCE[0]//\\//}"
 if [[ "$here" == */* ]]; then here="${here%/*}"; else here="."; fi
 # shellcheck source=lib/mux.sh
 source "$here/lib/mux.sh"
 mux_init
-OWNER_TABS="${PM_OS_OWNER_TABS:-$here/owner_tabs.py}"
+OWNER_TABS="${SWITCHBOARD_OWNER_TABS:-$here/owner_tabs.py}"
 
 cmux_bin() {
   if [[ -n "${CMUX_BIN:-}" ]]; then echo "$CMUX_BIN"; return; fi
@@ -70,11 +70,11 @@ same_dir() {  # same_dir <a> <b>: both resolve to one directory
 do_chrome() {
   local claim=0
   [[ "${1:-}" == "--claim" ]] && claim=1
-  if [[ "${PM_OS_MUX:-none}" == "none" ]]; then
-    echo "chrome: no multiplexer here (PM_OS_MUX=none); nothing to rename"
+  if [[ "${SWITCHBOARD_MUX:-none}" == "none" ]]; then
+    echo "chrome: no multiplexer here (SWITCHBOARD_MUX=none); nothing to rename"
     return 0
   fi
-  if [[ -n "${PM_OS_WORKER:-}${PM_OS_WORKER_ID:-}${PM_OS_WORKER_TASK_ID:-}${PM_OS_WORKTREE:-}" ]]; then
+  if [[ -n "${SWITCHBOARD_WORKER:-}${SWITCHBOARD_WORKER_ID:-}${SWITCHBOARD_WORKER_TASK_ID:-}${SWITCHBOARD_WORKTREE:-}" ]]; then
     echo "chrome: refused, this is a worker session; only the CoS tab takes the CoS title" >&2
     return 3
   fi
@@ -99,7 +99,7 @@ do_chrome() {
     return 1
   fi
   desc="$(printf '%s' "$list" | json_query description "$ws")"
-  if [[ "$desc" == "PM OS worker "* ]]; then
+  if [[ "$desc" == "switchboard worker "* ]]; then
     echo "chrome: refused, $ws is a worker tab ($desc)" >&2
     return 3
   fi
@@ -117,14 +117,14 @@ do_chrome() {
     return 1
   fi
   if ! CMUX_QUIET=1 "$cmux" workspace-action --action move-top --workspace "$ws" >/dev/null 2>&1; then
-    echo "chrome: $ws registered as CoS and renamed \"$TITLE\", pinned; move-top failed ($PM_OS_MUX)"
+    echo "chrome: $ws registered as CoS and renamed \"$TITLE\", pinned; move-top failed ($SWITCHBOARD_MUX)"
     return 0
   fi
-  echo "chrome: $ws registered as CoS, renamed \"$TITLE\", pinned, moved to top ($PM_OS_MUX)"
+  echo "chrome: $ws registered as CoS, renamed \"$TITLE\", pinned, moved to top ($SWITCHBOARD_MUX)"
 }
 
 do_audit() {
-  [[ "${PM_OS_MUX:-none}" == "none" ]] && { echo "audit: no multiplexer here"; return 0; }
+  [[ "${SWITCHBOARD_MUX:-none}" == "none" ]] && { echo "audit: no multiplexer here"; return 0; }
   local cmux hits
   cmux="$(cmux_bin)"
   hits="$(CMUX_QUIET=1 "$cmux" workspace list --json 2>/dev/null | json_query folders)"
@@ -141,10 +141,10 @@ do_rearm() {
   root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
   case "$(uname -s 2>/dev/null)" in
     Darwin)
-      local plist="$HOME/Library/LaunchAgents/com.pm-os.command-center.plist"
+      local plist="$HOME/Library/LaunchAgents/com.switchboard.command-center.plist"
       if [[ -f "$plist" ]]; then
         launchctl load -w "$plist" 2>/dev/null || true
-        echo "rearm: launchd com.pm-os.command-center loaded"
+        echo "rearm: launchd com.switchboard.command-center loaded"
       else
         echo "rearm: $plist is missing; install the launchd jobs first" >&2
         rc=1
@@ -152,10 +152,10 @@ do_rearm() {
       ;;
     MINGW*|MSYS*|CYGWIN*)
       # Task Scheduler is the Windows launchd (system/windows/register-scheduled-tasks.ps1).
-      if MSYS2_ARG_CONV_EXCL='*' schtasks /Change /TN '\PM OS\com.pm-os.command-center' /ENABLE >/dev/null 2>&1; then
-        echo "rearm: scheduled task \\PM OS\\com.pm-os.command-center enabled"
+      if MSYS2_ARG_CONV_EXCL='*' schtasks /Change /TN '\switchboard\com.switchboard.command-center' /ENABLE >/dev/null 2>&1; then
+        echo "rearm: scheduled task \\switchboard\\com.switchboard.command-center enabled"
       else
-        echo "rearm: scheduled task \\PM OS\\com.pm-os.command-center not found; run system/windows/register-scheduled-tasks.ps1" >&2
+        echo "rearm: scheduled task \\switchboard\\com.switchboard.command-center not found; run system/windows/register-scheduled-tasks.ps1" >&2
         rc=1
       fi
       ;;

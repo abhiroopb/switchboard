@@ -1,4 +1,4 @@
-# PM OS runtime state and private material. The kit tracks code, prompts,
+# switchboard runtime state and private material. The kit tracks code, prompts,
 # skills and templates; everything a day of use produces stays local.
 
 # Shared state, person notes and secrets never go to GitHub
@@ -49,7 +49,7 @@ system/config/stakeholders.yaml
 !.amp/plugins/
 .amp/in/
 
-# Generated PM OS runtime state
+# Generated switchboard runtime state
 system/background-task-state.json
 system/background-task-attempts.json
 system/job-state.json
@@ -100,8 +100,8 @@ outputs/todo-refresh/
 outputs/inbox-media/
 
 # Organisation profile state written by system/scripts/apply-profile.py (per machine)
-.pm-os-kit/profile.json
-.pm-os-kit/profile-backup/
+.switchboard-kit/profile.json
+.switchboard-kit/profile-backup/
 
 # todo.json is private (AGENTS.md push policy); system/state/** above already ignores it, kept as a backstop
 system/state/todo.json

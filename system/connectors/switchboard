@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Entry point for the switchboard connector CLI (bash, macOS, Linux, WSL2). It runs
+# switchboard-shim.py, which serves `switchboard mail|calendar|drive|slack`
+# from the Google and Slack REST APIs with the owner's own tokens. The kit puts
+# this directory on PATH unless another CLI with the same name is already there.
+set -euo pipefail
+src="${BASH_SOURCE[0]}"
+while [ -L "$src" ]; do
+  dir="$(cd "$(dirname "$src")" && pwd)"
+  src="$(readlink "$src")"
+  [[ "$src" != /* ]] && src="$dir/$src"
+done
+here="$(cd "$(dirname "$src")" && pwd)"
+exec "${SWITCHBOARD_PYTHON:-python3}" "$here/switchboard-shim.py" "$@"

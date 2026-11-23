@@ -3,13 +3,13 @@
 
 Pages open without taking focus from the owner. macOS `open` activates the app it
 hands a page to; `open -g` loads it behind whatever the owner is using. This test
-scans the code PM OS runs on its own (scripts, plugins, hooks, daemons, skill
+scans the code switchboard runs on its own (scripts, plugins, hooks, daemons, skill
 scripts) for a macOS `open` call without `-g` and fails on each one.
 
 A foreground open is allowed only where the owner asked for it (they clicked a
 link): mark that line with a `focus-ok: <reason>` comment. The runtime
-counterpart for agent shell commands is the pm-os-guardrails `open-focus` rule
-(system/amp-plugins/pm-os/open-focus.test.ts).
+counterpart for agent shell commands is the switchboard-guardrails `open-focus` rule
+(system/amp-plugins/switchboard/open-focus.test.ts).
 
 Run: python3 system/scripts/test_background_open.py
 """
@@ -23,7 +23,7 @@ from pathlib import Path
 ROOT = Path(subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
                            cwd=Path(__file__).resolve().parent, check=True).stdout.strip())
 
-# Code PM OS runs without the owner typing the command.
+# Code switchboard runs without the owner typing the command.
 SCAN_DIRS = [
     "system/scripts",
     "system/bin",
@@ -31,7 +31,7 @@ SCAN_DIRS = [
     "system/claude-marketplace",
     "system/connectors",
     "system/windows",
-    "system/pm-os-kit",
+    "system/switchboard-kit",
     "daemon",
     "routines",
     ".agents/skills",

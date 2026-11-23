@@ -90,7 +90,7 @@ Morning shows today's P1 focus. End of day shows P1 items due within two days. W
 
 ## Calendar holds
 
-P0 and P1 items with a future due date get a hold on the dedicated secondary calendar `To-dos (PM OS)`, never on the primary calendar.
+P0 and P1 items with a future due date get a hold on the dedicated secondary calendar `To-dos (switchboard)`, never on the primary calendar.
 
 - The hold length is `estimate_min`, else the workstream's estimate, else 15 minutes.
 - The first slot is 1:00 PM Pacific on the due date, and later holds that day stagger in 15-minute steps. Every hold ends by 5:00 PM.

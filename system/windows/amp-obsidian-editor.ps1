@@ -6,14 +6,14 @@
 
 .DESCRIPTION
   Amp hands $AMP_EDITOR the clicked target (a file:// URI or a path).
-  When the target is a .md file under PM_OS_ROOT (the vault root), this
-  rewrites it to obsidian://open?vault=<PM_OS_VAULT_NAME>&file=<relative path
+  When the target is a .md file under SWITCHBOARD_ROOT (the vault root), this
+  rewrites it to obsidian://open?vault=<SWITCHBOARD_VAULT_NAME>&file=<relative path
   without .md> and opens it. Otherwise it opens the target as-is.
 
   Set in the user environment (install.ps1 does this):
     AMP_EDITOR = powershell -NoProfile -ExecutionPolicy Bypass -File <root>\system\windows\amp-obsidian-editor.ps1
-    PM_OS_ROOT = C:\Users\<you>\Development\pm-os   (or \\wsl$\<Distro>\home\<you>\Development\pm-os)
-    PM_OS_VAULT_NAME = pm-os                          (optional; default pm-os)
+    SWITCHBOARD_ROOT = C:\Users\<you>\Development\switchboard   (or \\wsl$\<Distro>\home\<you>\Development\switchboard)
+    SWITCHBOARD_VAULT_NAME = switchboard                          (optional; default switchboard)
 #>
 param(
   [Parameter(ValueFromRemainingArguments = $true)]
@@ -24,8 +24,8 @@ $ErrorActionPreference = "Stop"
 if (-not $Target) { exit 0 }
 $raw = ($Target -join " ")
 
-$vaultRoot = if ($env:PM_OS_VAULT_ROOT) { $env:PM_OS_VAULT_ROOT } else { $env:PM_OS_ROOT }
-$vaultName = if ($env:PM_OS_VAULT_NAME) { $env:PM_OS_VAULT_NAME } else { "pm-os" }
+$vaultRoot = if ($env:SWITCHBOARD_VAULT_ROOT) { $env:SWITCHBOARD_VAULT_ROOT } else { $env:SWITCHBOARD_ROOT }
+$vaultName = if ($env:SWITCHBOARD_VAULT_NAME) { $env:SWITCHBOARD_VAULT_NAME } else { "switchboard" }
 
 function To-LocalPath([string]$s) {
   if ($s -match '^file://') {
@@ -33,7 +33,7 @@ function To-LocalPath([string]$s) {
     $p = [Uri]::UnescapeDataString($u.AbsolutePath)
     # WSL paths arrive as file:///home/... ; map through \\wsl$ when a distro is known.
     if ($p -match '^/[^/]' -and $p -notmatch '^/[A-Za-z]:') {
-      $distro = if ($env:PM_OS_WSL_DISTRO) { $env:PM_OS_WSL_DISTRO } else { (wsl.exe -l -q 2>$null | Select-Object -First 1) }
+      $distro = if ($env:SWITCHBOARD_WSL_DISTRO) { $env:SWITCHBOARD_WSL_DISTRO } else { (wsl.exe -l -q 2>$null | Select-Object -First 1) }
       if ($distro) { return ("\\wsl$\" + $distro.Trim() + ($p -replace '/', '\')) }
       return $p
     }

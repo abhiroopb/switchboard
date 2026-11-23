@@ -3,7 +3,7 @@
 
 The terms come from a deny list that stays on the owner's machine, never from this file, so the
 check itself ships in the kit without naming any company. Default list: local/kit-deny-list.txt
-(gitignored); --deny-list PATH or PM_OS_KIT_DENY_LIST overrides it.
+(gitignored); --deny-list PATH or SWITCHBOARD_KIT_DENY_LIST overrides it.
 
   check-profile-leaks.py            errors only; exit 1 when any
   check-profile-leaks.py --all      also list warnings
@@ -15,7 +15,7 @@ Install mode (no --kit). Instruction surfaces (anything an agent reads as policy
 CLAUDE.md, adapters/, system/prompts/, skill and command files, sub-agent personas, routine CONTEXT
 files, config) must be clean of `term` rules: a hit there is an error. Everywhere else (scripts,
 tests, comments, history docs) a hit is a warning, listed with --all. On the company profile
-(PM_OS_PROFILE or .pm-os-kit/profile.json) the check skips the files that profile installed.
+(SWITCHBOARD_PROFILE or .switchboard-kit/profile.json) the check skips the files that profile installed.
 
 Kit mode (--kit), for a kit build or publisher, run on the built tree. Every text file is read,
 tests and vendored files included, and any `term` or `kit` hit is an error. Owner-local paths,
@@ -47,7 +47,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DENY_LIST_ENV = "PM_OS_KIT_DENY_LIST"
+DENY_LIST_ENV = "SWITCHBOARD_KIT_DENY_LIST"
 DEFAULT_DENY_LIST = "local/kit-deny-list.txt"
 INSTRUCTION = ["AGENTS.md", "CLAUDE.md", "HOME.md", "adapters/*", "system/prompts/*", ".agents/skills/*/SKILL.md",
                ".agents/skills/*/references/*", "sub-agents/*", "routines/*/CONTEXT.md", "routines/*/config.yaml",
@@ -55,9 +55,9 @@ INSTRUCTION = ["AGENTS.md", "CLAUDE.md", "HOME.md", "adapters/*", "system/prompt
                "system/claude-marketplace/plugins/*/agents/*", "templates/*", "system/chief-of-staff-prompt.md",
                "system/scheduled-jobs.yaml", "system/background-tasks.yaml"]
 SKIP = ["profiles/*", "docs/kit-*", "docs/profiles.md", "system/vendor/*", "*test*", "*/fixtures/*",
-        "system/scripts/check-profile-leaks.py", ".pm-os-kit/*", "workstreams/*", "notes/*", "people/*", "outputs/*"]
+        "system/scripts/check-profile-leaks.py", ".switchboard-kit/*", "workstreams/*", "notes/*", "people/*", "outputs/*"]
 # Kit mode reads these too, except the manifest (hashes only) and git internals.
-KIT_SKIP = [".pm-os-kit/source-manifest.json", ".git/*"]
+KIT_SKIP = [".switchboard-kit/source-manifest.json", ".git/*"]
 
 # Owner-local paths: they may hold anything on the owner's machine and must never reach a kit tree.
 OWNER_LOCAL = ["local/*", "system/config/private-workstreams.txt", "system/scripts/test_private_workstreams.py"]
@@ -156,7 +156,7 @@ def tracked() -> list[str]:
 
 def profile_files() -> set[str]:
     try:
-        rec = json.loads((ROOT / ".pm-os-kit" / "profile.json").read_text(encoding="utf-8"))
+        rec = json.loads((ROOT / ".switchboard-kit" / "profile.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return set()
     return set(rec.get("files") or []) if rec.get("profile") not in (None, "", "personal") else set()
@@ -196,8 +196,8 @@ def scan(kit: bool = False, deny: DenyList | None = None) -> tuple[list[dict], l
             text = (ROOT / rel).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
-        if not kit and rel in ("AGENTS.md", "adapters/SYSTEM.md") and "pm-os:profile-section:start" in text and installed:
-            text = text.split("pm-os:profile-section:start", 1)[0]
+        if not kit and rel in ("AGENTS.md", "adapters/SYSTEM.md") and "switchboard:profile-section:start" in text and installed:
+            text = text.split("switchboard:profile-section:start", 1)[0]
         rules = kit_rules if kit else deny.terms
         if not rules:
             continue

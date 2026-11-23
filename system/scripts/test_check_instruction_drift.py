@@ -27,9 +27,9 @@ class InstructionDriftSyntheticTests(unittest.TestCase):
         section, a heading plus a pointer, two pointers, or a restated calendar
         body outside the section are still flagged."""
         pointers = {
-            "Control-Plane Ownership": "- Control-Plane Ownership: see `~/Development/pm-os/AGENTS.md`.\n",
-            "Canonical Calendar Rule": "- Canonical Calendar Rule: see `~/Development/pm-os/AGENTS.md`.\n",
-            "Perspective Check": "- Perspective Check: see `~/Development/pm-os/AGENTS.md`.\n",
+            "Control-Plane Ownership": "- Control-Plane Ownership: see `~/Development/switchboard/AGENTS.md`.\n",
+            "Canonical Calendar Rule": "- Canonical Calendar Rule: see `~/Development/switchboard/AGENTS.md`.\n",
+            "Perspective Check": "- Perspective Check: see `~/Development/switchboard/AGENTS.md`.\n",
             "Already-Answered Pre-Check": "- Already-Answered Pre-Check: see the repo AGENTS.md.\n",
         }
         calendar_body = " ".join(group[0] for group in MODULE.CANONICAL_CALENDAR_TOKEN_GROUPS)
@@ -46,7 +46,7 @@ class InstructionDriftSyntheticTests(unittest.TestCase):
             "two-pointers": ("".join(pointers.values()) + pointers["Perspective Check"], ["more than one pointer line for Perspective Check"]),
             "body-without-heading": ("".join(pointers.values()) + calendar_body + "\n", ["restates the canonical calendar-sync rule body"]),
             "heading-line-is-not-a-pointer": (
-                "## Control-Plane Ownership (see `~/Development/pm-os/AGENTS.md`)\n" + "".join(
+                "## Control-Plane Ownership (see `~/Development/switchboard/AGENTS.md`)\n" + "".join(
                     text for name, text in pointers.items() if name != "Control-Plane Ownership"
                 ),
                 [],
@@ -195,7 +195,7 @@ class OwnerBrowserRuleCases(unittest.TestCase):
     """The switch and the written rule must agree. Throwaway folders, invented machine."""
 
     def run_check(self, env_line, rule):
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {"PM_OS_MACHINE": "INVENTEDBOX"}):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {"SWITCHBOARD_MACHINE": "INVENTEDBOX"}):
             repo = Path(tmp)
             (repo / "local" / "machines").mkdir(parents=True)
             (repo / "local" / "machines" / "INVENTEDBOX.env").write_text(env_line)
@@ -203,26 +203,26 @@ class OwnerBrowserRuleCases(unittest.TestCase):
             return MODULE.owner_browser_rule_findings(repo)
 
     def test_switch_off_needs_no_rule(self):
-        self.assertEqual(self.run_check("PM_OS_COMMS_TRIAGE=off\n", ""), [])
-        self.assertEqual(self.run_check("PM_OS_OWNER_BROWSER=off\n", ""), [])
+        self.assertEqual(self.run_check("SWITCHBOARD_COMMS_TRIAGE=off\n", ""), [])
+        self.assertEqual(self.run_check("SWITCHBOARD_OWNER_BROWSER=off\n", ""), [])
 
     def test_switch_on_without_a_rule_is_an_error(self):
-        findings = self.run_check("PM_OS_OWNER_BROWSER=brave\n", "")
+        findings = self.run_check("SWITCHBOARD_OWNER_BROWSER=brave\n", "")
         self.assertEqual(findings[0].severity, "error")
         self.assertIn("Scheduled jobs do not use", findings[0].message)
 
     def test_rule_missing_one_guard_is_named(self):
         tokens = [t for t in MODULE.OWNER_BROWSER_RULE_TOKENS if t != "Never buy, pay, transfer"]
-        findings = self.run_check("PM_OS_OWNER_BROWSER=brave\n", "On INVENTEDBOX: " + " ".join(tokens))
+        findings = self.run_check("SWITCHBOARD_OWNER_BROWSER=brave\n", "On INVENTEDBOX: " + " ".join(tokens))
         self.assertIn("Never buy, pay, transfer", findings[0].message)
 
     def test_rule_must_name_the_machine(self):
-        findings = self.run_check("PM_OS_OWNER_BROWSER=brave\n", " ".join(MODULE.OWNER_BROWSER_RULE_TOKENS))
+        findings = self.run_check("SWITCHBOARD_OWNER_BROWSER=brave\n", " ".join(MODULE.OWNER_BROWSER_RULE_TOKENS))
         self.assertIn("INVENTEDBOX", findings[0].message)
 
     def test_complete_rule_passes(self):
         rule = "On INVENTEDBOX: " + " ".join(MODULE.OWNER_BROWSER_RULE_TOKENS)
-        self.assertEqual(self.run_check("PM_OS_OWNER_BROWSER=brave\n", rule), [])
+        self.assertEqual(self.run_check("SWITCHBOARD_OWNER_BROWSER=brave\n", rule), [])
 
 
 if __name__ == "__main__":

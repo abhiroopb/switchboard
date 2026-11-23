@@ -20,7 +20,7 @@ How a build works (each step is pure until the last one writes into --out):
   4. Gate it: the deny lists, the private identifier guard, the public detectors and gitleaks, as
      the tier lists. A file under a `drop_on_hit` glob that fails the deny gate is left out and
      listed; any other failure stops the build. A stopped build writes nothing into --out.
-  5. Write the tree into --out, record the source revision in `.pm-os-kit/tier.json`, and commit
+  5. Write the tree into --out, record the source revision in `.switchboard-kit/tier.json`, and commit
      when --commit is given. Pushing is its own command and never forces.
 
 Globs use fnmatch, where `*` also crosses `/` (as in check-profile-leaks.py).
@@ -44,7 +44,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 try:
-    import yaml  # PyYAML ships with every PM OS install
+    import yaml  # PyYAML ships with every switchboard install
 except ImportError:  # pragma: no cover
     yaml = None
 
@@ -52,7 +52,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from scan_public import BINARY_OK, decode_for_scan, line_hits  # noqa: E402
 
-TIER_RECORD = ".pm-os-kit/tier.json"  # older builds kept their record in the tree; it never ships now
+TIER_RECORD = ".switchboard-kit/tier.json"  # older builds kept their record in the tree; it never ships now
 KNOWN_GATES = {"deny", "identifiers", "public", "secrets"}
 SKIP_GATES: set[str] = set()  # --skip-gate, for fix-up passes only; a build that skips a gate never commits
 BINARY_SNIFF = 8192
@@ -387,7 +387,7 @@ SCRIPTS = HERE.parents[1] / "system" / "scripts"  # the helpers ship beside this
 
 
 def leak_module(root: Path | None = None):
-    return _load_module("pm_os_check_profile_leaks", SCRIPTS / "check-profile-leaks.py")
+    return _load_module("switchboard_check_profile_leaks", SCRIPTS / "check-profile-leaks.py")
 
 
 def deny_hits(tree: Tree, deny_lists: list[Path], extra: list[tuple[str, re.Pattern]], skip: set[str],
@@ -431,7 +431,7 @@ def deny_hits(tree: Tree, deny_lists: list[Path], extra: list[tuple[str, re.Patt
 
 def identifier_hits(tree: Tree, root: Path) -> tuple[str, list[dict]]:
     """The private identifier guard over every file, binary included. Never returns a value."""
-    pid = _load_module("pm_os_private_identifiers", SCRIPTS / "private_identifiers.py")
+    pid = _load_module("switchboard_private_identifiers", SCRIPTS / "private_identifiers.py")
     try:
         listed = pid.load_list(root)
     except Exception as exc:  # an unreadable list fails closed
@@ -459,7 +459,7 @@ def write_tree(tree: Tree, out: Path) -> None:
 
 
 def gitleaks_hits(tree: Tree, config: Path | None = None) -> tuple[str, list[dict]]:
-    exe = os.environ.get("PM_OS_GITLEAKS") or shutil.which("gitleaks")
+    exe = os.environ.get("SWITCHBOARD_GITLEAKS") or shutil.which("gitleaks")
     if not exe:
         return "missing", []
     if config is not None and not config.is_file():
@@ -524,7 +524,7 @@ def run_gates(tree: Tree, tier: str, cfg: dict, rules: Rules, root: Path, meta: 
         result["gates"]["identifiers"] = {"status": status if not hits else "hit", "hits": hits}
         result["passed"] &= ok
     if "public" in gates:
-        scan = _load_module("pm_os_scan_public", HERE / "scan_public.py")
+        scan = _load_module("switchboard_scan_public", HERE / "scan_public.py")
         hits = scan.scan_tree({**tree, **meta_tree}, allow=tier_cfg.get("public_allow") or {})
         result["gates"]["public"] = {"status": "hit" if hits else "clean", "hits": hits}
         result["passed"] &= not hits
@@ -554,7 +554,7 @@ def withhold_paths(result: dict, tree: Tree, deny_lists: list[Path], rules: Rule
         rx_all += [rx for c, rx in rules.deny if c not in rules.skip_categories]
         flagged |= {rel for rel in tree if any(rx.search(rel) for rx in rx_all)}
     try:
-        pid = _load_module("pm_os_private_identifiers", SCRIPTS / "private_identifiers.py")
+        pid = _load_module("switchboard_private_identifiers", SCRIPTS / "private_identifiers.py")
         listed = pid.load_list(root)
         if listed is not None:
             flagged |= {rel for rel in tree if listed.kinds_in(rel)}
@@ -571,7 +571,7 @@ def withhold_paths(result: dict, tree: Tree, deny_lists: list[Path], rules: Rule
 
 # ---------------------------------------------------------------- finalize
 
-MANIFEST = ".pm-os-kit/source-manifest.json"
+MANIFEST = ".switchboard-kit/source-manifest.json"
 
 
 def finalize(tree: Tree, tier_cfg: dict, source_rev: str, overlaid: list[str]) -> None:

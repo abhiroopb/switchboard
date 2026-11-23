@@ -4,11 +4,11 @@
 set -euo pipefail
 
 # Keep the caller's PATH: on Windows, Task Scheduler gets Python only through
-# pm-os-env.sh (PM_OS_TOOL_PATH), and a rendered C:/... entry splits on ":".
+# switchboard-env.sh (SWITCHBOARD_TOOL_PATH), and a rendered C:/... entry splits on ":".
 export PATH="/opt/homebrew/bin:$HOME/.local/bin:$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
-PY="${PM_OS_PYTHON:-python3}"
+PY="${SWITCHBOARD_PYTHON:-python3}"
 
-REPO_ROOT="{{PM_OS_ROOT}}"
+REPO_ROOT="{{SWITCHBOARD_ROOT}}"
 TODO_CLI="$HOME/.agents/skills/todo/scripts/todo_cli.py"
 OUT_DIR="$REPO_ROOT/outputs/todo-refresh"
 LATEST="$OUT_DIR/latest.md"

@@ -32,7 +32,7 @@ Classification:
 
 Usage:
   workspace-session-state.py --workspace workspace:85
-  workspace-session-state.py --workstream pm-os-reliability
+  workspace-session-state.py --workstream switchboard-reliability
 
 Output: one JSON line. Exit 0 whenever a classification was produced
 (including unreachable); exit 2 on usage/environment errors.
@@ -40,7 +40,7 @@ Output: one JSON line. Exit 0 whenever a classification was produced
 Test fixtures (same shapes as command-center-digest.py):
   CC_WORKSPACES_JSON     replaces `cmux rpc workspace.list`
   CC_CMUX_SESSION_JSON   replaces the cmux session store
-  PM_OS_WORKSPACE_UPDATES_JSON  replaces workspace-updates.json
+  SWITCHBOARD_WORKSPACE_UPDATES_JSON  replaces workspace-updates.json
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ from lib.mux import runnable as _runnable  # Windows: the extensionless mux/cmux
 
 REPO_ROOT = Path(os.environ.get("REPO_ROOT") or Path(__file__).resolve().parents[2])
 CMUX_BIN = os.environ.get("CMUX_BIN", "/Applications/cmux.app/Contents/Resources/bin/cmux")
-CMUX_SESSION_STORE = Path(os.environ.get("PM_OS_CMUX_SESSION_JSON") or Path.home() / "Library" / "Application Support" / "cmux" / "session-com.cmuxterm.app.json")
+CMUX_SESSION_STORE = Path(os.environ.get("SWITCHBOARD_CMUX_SESSION_JSON") or Path.home() / "Library" / "Application Support" / "cmux" / "session-com.cmuxterm.app.json")
 
 # Statuses emit-workspace-update.py treats as settled (AUTO_CLOSE_STATUSES)
 # plus done-like variants. `active` is the only in-flight status.
@@ -184,7 +184,7 @@ def amp_agents() -> dict[str, dict]:
 
 
 def workstream_update(source_key: str) -> dict:
-    fixture = os.environ.get("PM_OS_WORKSPACE_UPDATES_JSON")
+    fixture = os.environ.get("SWITCHBOARD_WORKSPACE_UPDATES_JSON")
     path = Path(fixture) if fixture else REPO_ROOT / "system/state/sources/workspace-updates.json"
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -194,8 +194,8 @@ def workstream_update(source_key: str) -> dict:
 
 
 def normalize(text: str) -> str:
-    """Lowercase alnum-only, so '📮 Pm Os Reliability' and
-    '🔥 P0 · Pm Os Reliability' both match slug 'pm-os-reliability'."""
+    """Lowercase alnum-only, so '📮 Switchboard Reliability' and
+    '🔥 P0 · Switchboard Reliability' both match slug 'switchboard-reliability'."""
     return re.sub(r"[^a-z0-9]+", "", text.lower())
 
 
@@ -230,7 +230,7 @@ def classify(agent: dict | None, update_status: str) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--workspace", help="workspace ref, e.g. workspace:85")
-    parser.add_argument("--workstream", help="workstream slug, e.g. pm-os-reliability")
+    parser.add_argument("--workstream", help="workstream slug, e.g. switchboard-reliability")
     args = parser.parse_args()
     if not args.workspace and not args.workstream:
         parser.error("provide --workspace and/or --workstream")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One shared gate for every `pmos slack` caller on this machine.
+"""One shared gate for every `switchboard slack` caller on this machine.
 
 Why one gate: every Slack caller on this machine shares the same token and so the same
 per-method rate limits. When a Slack connector or proxy sits in between, a 429 can also
@@ -23,7 +23,7 @@ State (both under .state/, next to each other):
 
 * ``slack-token-buckets.json`` — per-method token buckets (``BUCKETS``) that
   pace this host's own calls under Slack's tiers before Slack has to. Every
-  reader calls ``acquire(call_cost(argv))`` before spawning ``pmos``; a denied
+  reader calls ``acquire(call_cost(argv))`` before spawning ``switchboard``; a denied
   acquire is a skip (or a short sleep), never a 429. A 429 for a method
   freezes only that method's bucket for Slack's ``Retry-After``
   (``freeze_from_blob``), so a search throttle no longer pauses channel and
@@ -33,9 +33,9 @@ State (both under .state/, next to each other):
   search bucket without writing the global cooldown.
 
 Callers that have no gate of their own use ``remaining()`` before spawning
-``pmos`` and ``record_rate_limit()`` after a ``rate_limited`` response; the four
+``switchboard`` and ``record_rate_limit()`` after a ``rate_limited`` response; the four
 collectors above keep their own cooldown logic and only ``journal_event()``.
-test_slack_backoff.py fails when a script invokes ``pmos slack``
+test_slack_backoff.py fails when a script invokes ``switchboard slack``
 without referencing this gate, unless it is on the explicit one-shot list.
 """
 from __future__ import annotations
@@ -249,7 +249,7 @@ USER_SCOPED_METHODS = frozenset({"assistant.search.context"})
 FREEZE_MIN_SEC = 5
 FREEZE_MAX_SEC = 30 * 60
 
-# `pmos slack <subcommand>` -> Slack methods the connector calls per
+# `switchboard slack <subcommand>` -> Slack methods the connector calls per
 # request. history/thread pay conversations.info every time: the
 # server re-checks channel privacy per request and refuses to trust cached
 # metadata, so there is nothing to cache on our side.
@@ -279,7 +279,7 @@ def json_argv(argv: list[str]) -> list[str]:
     """``argv`` plus ``--output-format json`` when its Slack subcommand takes it.
 
     Accepts the subcommand argv (``["thread", ...]``) or a full command
-    (``["pmos", "slack", "thread", ...]``). Leaves argv as it
+    (``["switchboard", "slack", "thread", ...]``). Leaves argv as it
     is when the flag is already present, the subcommand is a write, or the
     caller passes the whole payload with ``--json`` (then it sets
     ``"output_format": "json"`` inside that payload instead).
@@ -323,7 +323,7 @@ def _toon_module() -> Any:
 
 
 def loads(text: str | None) -> Any:
-    """Parse `pmos slack` stdout: JSON first, TOON as the fallback.
+    """Parse `switchboard slack` stdout: JSON first, TOON as the fallback.
 
     Raises ``json.JSONDecodeError`` (a ``ValueError``) when the text is
     neither, so callers keep their existing ``except json.JSONDecodeError``.
@@ -349,7 +349,7 @@ def buckets_file(backoff_file: Path | None = None) -> Path:
 
 
 def call_cost(argv: list[str]) -> dict[str, int]:
-    """Slack methods one `pmos slack <argv>` invocation will spend."""
+    """Slack methods one `switchboard slack <argv>` invocation will spend."""
     if not argv:
         return {}
     sub = argv[0]

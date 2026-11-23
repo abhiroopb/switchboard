@@ -609,7 +609,7 @@ PROMPT_SUBJECT = re.compile(
 
 def review_title(prose: str, prompt: str = "", workstream_name: str = "") -> str:
     """A for-review title that names the subject and the outcome, not the status word the report opened
-    with ("SCHEDULED, loaded: com.pm-os.oneshot…" and "Close-out marked" tell the owner nothing).
+    with ("SCHEDULED, loaded: com.switchboard.oneshot…" and "Close-out marked" tell the owner nothing).
     Heuristic: the subject comes from the ask (``the Ash Example DM``) or the report's own
     "already answered" clause; the outcome is the scheduled time, the answered state, or the first sentence;
     a numbered veto list adds ``N to veto``. Falls back to ``<Workstream>: <first sentence>``."""

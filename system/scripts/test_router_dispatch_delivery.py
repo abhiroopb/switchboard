@@ -18,7 +18,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-os.environ["PM_OS_TEST_SANDBOX"] = "1"
+os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ROUTER = REPO_ROOT / "system" / "scripts" / "router-dispatch.sh"
@@ -46,9 +46,9 @@ class RouterDeliveryPolicy(unittest.TestCase):
         (scripts / "publish-running-tasks-status.sh").write_text("exit 0\n", encoding="utf-8", newline="\n")
         self.args_log = root / "dispatch-args.jsonl"
         self.env = {k: v for k, v in os.environ.items()
-                    if not k.startswith(("PM_OS_WORKER", "PM_OS_DISPATCH", "WMUX", "CMUX_WORKSPACE", "CMUX_SURFACE"))}
-        self.env.update({"REPO_ROOT": str(root), "STUB_DISPATCH_ARGS": str(self.args_log), "PM_OS_DISPATCH_SYNC": "1",
-                         "PM_OS_TEST_SANDBOX": "1", "ROUTER_LOCK_DIR": str(root / "lock")})
+                    if not k.startswith(("SWITCHBOARD_WORKER", "SWITCHBOARD_DISPATCH", "WMUX", "CMUX_WORKSPACE", "CMUX_SURFACE"))}
+        self.env.update({"REPO_ROOT": str(root), "STUB_DISPATCH_ARGS": str(self.args_log), "SWITCHBOARD_DISPATCH_SYNC": "1",
+                         "SWITCHBOARD_TEST_SANDBOX": "1", "ROUTER_LOCK_DIR": str(root / "lock")})
 
     def tearDown(self) -> None:
         self._tmp.cleanup()
@@ -69,7 +69,7 @@ class RouterDeliveryPolicy(unittest.TestCase):
 
     def test_other_owner_asks_go_direct(self) -> None:
         # Wrong impl: direct only for start of day, nothing (auto) for the rest.
-        self.assertEqual(self.dispatched_delivery("Workstream: pm-os-maintenance\nfix the waiter"), "direct")
+        self.assertEqual(self.dispatched_delivery("Workstream: switchboard-maintenance\nfix the waiter"), "direct")
 
     def test_automation_keeps_an_explicit_digest(self) -> None:
         # Wrong impl: the owner-ask default overwrites a caller's explicit digest.

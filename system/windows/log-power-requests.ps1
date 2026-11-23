@@ -8,7 +8,7 @@
   admin prompt and only while the hold is live, so a hold that ends before anyone looks
   goes unnamed. This script closes that gap without changing any power
   setting: -Install copies this script to an admin-only folder,
-  C:\ProgramData\pm-os\power-log (Administrators and SYSTEM write, Users read), and
+  C:\ProgramData\switchboard\power-log (Administrators and SYSTEM write, Users read), and
   registers a scheduled task that runs that copy as SYSTEM every 10 minutes while the
   laptop is awake, appending one line per run to power-requests.log in the same folder.
   The task never runs the repo copy: the repo sits in a user-writable folder, and
@@ -18,16 +18,16 @@
 
   Each line: time, then one entry per held request, for example
     2000-01-01 05:10:02 +00:00 DISPLAY=browser.exe (Video Wake Lock) | SYSTEM=pwsh.exe
-  and "none" when nothing holds. PM OS's own holder shows as pwsh.exe while workers run.
+  and "none" when nothing holds. switchboard's own holder shows as pwsh.exe while workers run.
 
-  Install, status, and removal need an admin PowerShell opened in the pm-os folder:
-    cd <your pm-os folder>
+  Install, status, and removal need an admin PowerShell opened in the switchboard folder:
+    cd <your switchboard folder>
     pwsh -NoProfile -File system\windows\log-power-requests.ps1 -Install
     pwsh -NoProfile -File system\windows\log-power-requests.ps1 -Status
     pwsh -NoProfile -File system\windows\log-power-requests.ps1 -Uninstall
 
   Read the log from any prompt (no admin):
-    Get-Content C:\ProgramData\pm-os\power-log\power-requests.log -Tail 50
+    Get-Content C:\ProgramData\switchboard\power-log\power-requests.log -Tail 50
 
 .PARAMETER ParseFile
   Test hook: parse a saved `powercfg /requests` output instead of running powercfg.
@@ -41,9 +41,9 @@ param(
     [string]$ParseFile = ''
 )
 $ErrorActionPreference = 'Stop'
-$TaskName = 'PM OS power requests log'
+$TaskName = 'switchboard power requests log'
 $MaxBytes = 1MB
-$InstallDir = Join-Path $env:ProgramData 'pm-os\power-log'
+$InstallDir = Join-Path $env:ProgramData 'switchboard\power-log'
 
 function Test-Reparse([string]$path) {
     (Test-Path $path) -and [bool]((Get-Item -Force $path).Attributes -band [IO.FileAttributes]::ReparsePoint)

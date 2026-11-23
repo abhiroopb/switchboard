@@ -74,9 +74,9 @@ Nothing to do. `install-claude-code.sh` registers it as `chrome-devtools` on eve
 
 One switch turns on both. The signed-in tools stay idle until you choose to use them.
 
-1. **Turn it on.** `python3 system/scripts/owner_browser.py set brave`. It writes `PM_OS_OWNER_BROWSER=brave` to `local/machines/<MACHINE>.env`, which is gitignored.
+1. **Turn it on.** `python3 system/scripts/owner_browser.py set brave`. It writes `SWITCHBOARD_OWNER_BROWSER=brave` to `local/machines/<MACHINE>.env`, which is gitignored.
 2. **Register the tools.** Rerun `bash system/scripts/install-claude-code.sh`. It registers three MCP servers:
-   - `chrome-devtools` is the agent profile, a separate Brave in `%LOCALAPPDATA%\pm-os\agent-brave` on `127.0.0.1:9333`.
+   - `chrome-devtools` is the agent profile, a separate Brave in `%LOCALAPPDATA%\switchboard\agent-brave` on `127.0.0.1:9333`.
    - `chrome-devtools-owner` is the signed-in attach to your own Brave.
    - `chrome-devtools-headless` is the headless profile for scheduled jobs and screenshots.
 3. **Check the agent profile.** `python3 system/scripts/owner_browser.py agent start`, then `agent status`. Start a new Claude Code session and ask it to open `https://example.com` with the `chrome-devtools` tools and read the title. No dialog appears and your window keeps focus.
@@ -93,7 +93,7 @@ Until `owner_browser.py` supports these systems, you can register a separate vis
 
 ```
 claude mcp add -s user chrome-devtools-agent -- npx --yes chrome-devtools-mcp@<pinned version> \
-  --userDataDir="$HOME/.local/state/pm-os/agent-browser" --executablePath="<path to the browser>"
+  --userDataDir="$HOME/.local/state/switchboard/agent-browser" --executablePath="<path to the browser>"
 ```
 
 The pinned version is `CHROME_DEVTOOLS_MCP_VERSION` in `system/scripts/install-claude-code.sh`. This entry has none of the proxy's guards: no own-tabs filter, no focus guard and no refusal of cookie or storage reads. The rules below still apply, and you never sign that profile in to anything sensitive.
@@ -142,5 +142,5 @@ Known gap: a click that opens a new tab leaves that tab open and untracked.
 ## Troubleshooting
 
 - **Port 9222 answers with a 404.** Another browser with remote debugging on holds that port. Turn its remote debugging off, or rerun `install-claude-code.sh`.
-- **The agent profile does not start.** Run `python3 system/scripts/owner_browser.py agent status`. Brave must be installed in its usual folder, or `PM_OS_AGENT_BROWSER_EXE` must point at it.
+- **The agent profile does not start.** Run `python3 system/scripts/owner_browser.py agent status`. Brave must be installed in its usual folder, or `SWITCHBOARD_AGENT_BROWSER_EXE` must point at it.
 - **Signed-in calls say the browser is unreachable.** Your browser is closed, its remote debugging switch is off, or the Allow dialog was declined. Agents never fix this themselves. They ask you.

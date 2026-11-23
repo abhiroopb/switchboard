@@ -21,7 +21,7 @@ one run stopped partway through `!process 0 0`, so the module, callback, and !ob
 Live kd runs have preceded system crashes, though later cdb runs did not crash, so that link is unproven. Run any dump
 analysis offline at low priority.
 
-Windows only. `status` and `spawn` need no admin rights. `analyze` writes raw kd logs under LOCALAPPDATA/pm-os/leak-dump/out
+Windows only. `status` and `spawn` need no admin rights. `analyze` writes raw kd logs under LOCALAPPDATA/switchboard/leak-dump/out
 and refuses Dropbox, git, and the backed-up folders, because those logs hold kernel memory. Its stdout has no addresses.
 """
 from __future__ import annotations
@@ -334,7 +334,7 @@ def summarize(first_log: Path, second_log: Path) -> dict:
 
 
 def scratch_dir() -> Path:
-    return Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "pm-os" / "leak-dump" / "out"
+    return Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "switchboard" / "leak-dump" / "out"
 
 
 def unsafe_location(path: Path) -> str | None:
@@ -342,7 +342,7 @@ def unsafe_location(path: Path) -> str | None:
     resolved = path.resolve()
     if any(part.lower() == "dropbox" for part in resolved.parts):
         return "inside Dropbox"
-    if any(part in (".claude", ".pm-os") for part in resolved.parts):
+    if any(part in (".claude", ".switchboard") for part in resolved.parts):
         return "inside a backed-up folder"
     probe = resolved
     while not probe.exists() and probe != probe.parent:

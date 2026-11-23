@@ -2,7 +2,7 @@
 """End-to-end smoke test of the Claude dispatch path.
 
 The dispatch path was built for Amp and needed a durable fix for Claude. This drives
-real cmux tabs and real Claude workers against the test workstream `pm-os-smoke`
+real cmux tabs and real Claude workers against the test workstream `switchboard-smoke`
 (dispatch.py scaffolds it on the first run) and checks each mechanism CoS relies on:
 
   hook     the surface-context hook gives the live CoS tab the dispatch card
@@ -20,7 +20,7 @@ fails. Cleanup: the owner tab the test opened is closed; the workstream stays
 (its CONTEXT.md collects one close-out line per run).
 
 Usage: bash system/scripts/smoke-claude-dispatch.sh [--no-owner] [--timeout-min 12]
-Run it from a checkout of the pm-os repo; it uses that checkout's scripts and
+Run it from a checkout of the switchboard repo; it uses that checkout's scripts and
 the main checkout's ledger. It posts two short "smoke test" callbacks into the CoS tab.
 """
 
@@ -37,14 +37,14 @@ import time
 from pathlib import Path
 
 # SMOKE_ROOT runs the steps against another checkout (main), so the owner steps use the
-# owner-tab code that landed there and dispatch scaffolds pm-os-smoke on main, where
+# owner-tab code that landed there and dispatch scaffolds switchboard-smoke on main, where
 # dispatch.py looks for it; run from a worktree, new-workstream.py writes under the
-# worktree and dispatch routes the ask to pm-os-maintenance instead.
+# worktree and dispatch routes the ask to switchboard-maintenance instead.
 ROOT = Path(os.environ.get("SMOKE_ROOT") or subprocess.run(["git", "rev-parse", "--show-toplevel"],
             capture_output=True, text=True).stdout.strip() or ".")
 SCRIPTS = ROOT / "system" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
-SLUG = "pm-os-smoke"
+SLUG = "switchboard-smoke"
 CMUX = os.environ.get("CMUX_BIN") or "/Applications/cmux.app/Contents/Resources/bin/cmux"
 CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
 RESULTS: list[tuple[str, str, str]] = []
@@ -142,18 +142,18 @@ def worker_prompt(token: str, wait_for_steer: bool) -> str:
              "cmux agent message. When it arrives, put that second token in your report line too. If no steer "
              "arrives within 4 minutes, report with 'no steer' instead. " if wait_for_steer else "")
     return (f"Workstream: {SLUG}\n"
-            f"PM OS smoke test {token} (smoke-claude-dispatch.py, no real work). Do nothing except what follows. "
+            f"switchboard smoke test {token} (smoke-claude-dispatch.py, no real work). Do nothing except what follows. "
             f"Edit no files and read nothing beyond this prompt. {steer}"
             f"Report with report-to-cos.sh --status done and the line 'Smoke test {token} (no action needed)' plus the "
             f"steer token if you got one. Do not write a review note.")
 
 
 def step_hook(cos: dict) -> None:
-    hook = ROOT / "system" / "claude-marketplace" / "plugins" / "pm-os" / "hooks" / "surface-context.py"
+    hook = ROOT / "system" / "claude-marketplace" / "plugins" / "switchboard" / "hooks" / "surface-context.py"
     if not cos:
         return record("hook", False, "no CoS tab open")
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
-    env.update(CMUX_WORKSPACE_ID=str(cos["id"]), PM_OS_ROOT=str(ROOT),
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
+    env.update(CMUX_WORKSPACE_ID=str(cos["id"]), SWITCHBOARD_ROOT=str(ROOT),
                SURFACE_CONTEXT_STATE_DIR=str(ROOT / ".amp" / "in" / "smoke-surface-context"))
     out = subprocess.run([sys.executable, str(hook), "session-start"], input='{"session_id":"smoke"}',
                          capture_output=True, text=True, env=env, timeout=20)
@@ -270,8 +270,8 @@ def main() -> int:
                         help="owner: only the owner-tab steps (pair with SMOKE_ROOT=<main checkout>)")
     args = parser.parse_args()
     timeout_s = int(args.timeout_min * 60)
-    agent = sh("python3", str(SCRIPTS / "pm_os_agent.py")).stdout.strip()
-    record("agent knob", agent == "claude", f"pm_os_agent.py resolves {agent or '?'}")
+    agent = sh("python3", str(SCRIPTS / "switchboard_agent.py")).stdout.strip()
+    record("agent knob", agent == "claude", f"switchboard_agent.py resolves {agent or '?'}")
     if args.only != "owner":
         cos = cos_tab()
         step_hook(cos)

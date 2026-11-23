@@ -4,8 +4,8 @@ set -euo pipefail
 # ensure-p0-workspaces.sh -- make every open P0 to-do visible (and workable)
 # on the cmux board.
 #
-# Sidebar contract: workspace titles contain "P0 ·" so the pm-os sidebar
-# (system/cmux-sidebars/pm-os.swift) buckets them into the
+# Sidebar contract: workspace titles contain "P0 ·" so the switchboard sidebar
+# (system/cmux-sidebars/switchboard.swift) buckets them into the
 # "P0 to-dos" lane rendered between Idle and Background.
 #
 # Behavior (workstreams are woven into the P0s):
@@ -40,7 +40,7 @@ export REPO_ROOT
 # shellcheck source=../cmux-helpers.sh
 source "$REPO_ROOT/system/cmux-helpers.sh"
 
-TODO_JSON="${TODO_JSON:-$PM_OS_TODO_JSON}"
+TODO_JSON="${TODO_JSON:-$SWITCHBOARD_TODO_JSON}"
 TODO_CLI="$HOME/.agents/skills/todo/scripts/todo_cli.py"
 
 DRY_RUN="false"
@@ -324,7 +324,7 @@ while IFS= read -r slug; do
     prompt_file=$(write_launch_prompt_file "p0-ws-$slug" "$preamble
 $p0_header
 $startup")
-    if ! ws_ref=$(PM_OS_LAUNCH_SEED_FILE="$prompt_file" PM_OS_LAUNCH_SEED_HYDRATION="ensure-p0-fresh-seed" \
+    if ! ws_ref=$(SWITCHBOARD_LAUNCH_SEED_FILE="$prompt_file" SWITCHBOARD_LAUNCH_SEED_HYDRATION="ensure-p0-fresh-seed" \
         prepare_workspace "$slug" "$REPO_ROOT"); then
         log_error "Failed to prepare canonical P0 workspace for $slug"
         continue

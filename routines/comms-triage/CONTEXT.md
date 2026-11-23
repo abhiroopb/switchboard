@@ -1,7 +1,7 @@
 # Comms Triage Routine
 
 ## Purpose
-Use background collectors and megadesk state to pre-filter inbox noise, then handle only the human decisions: reply, archive, delegate, or capture follow-up work.
+Use background collectors and switchboard state to pre-filter inbox noise, then handle only the human decisions: reply, archive, delegate, or capture follow-up work.
 
 ## Status in this kit
 The Slack, Gmail, Google Docs, and GitHub collectors that feed this routine are not part of the kit's first release. They encode the owner's identity and channel maps line by line. Without them the CoS core reports "no comms candidates" and this workspace stays idle.

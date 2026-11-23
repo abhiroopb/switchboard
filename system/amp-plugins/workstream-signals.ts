@@ -9,21 +9,21 @@
 
 import type { PluginAPI } from '@ampcode/plugin'
 import {
-  PM_OS_REPO,
+  SWITCHBOARD_REPO,
   activeWorkspaceName,
   isHeadless,
   isPluginEnabled,
   logEvent,
   runDebouncedDetached,
   workstreamSlugFromContext,
-} from './pm-os/lib'
+} from './switchboard/lib'
 
 const PLUGIN = 'workstream-signals'
 const PER_WORKSTREAM_DEBOUNCE = 15 * 60
 
 export default function (amp: PluginAPI) {
   // The canonical owner owns signal writes; supplemental startup is read-only.
-  if (process.env.PM_OS_WORKER_ID) return
+  if (process.env.SWITCHBOARD_WORKER_ID) return
 
   let config: Record<string, unknown> = {}
   amp.configuration.subscribe(v => { config = v })
@@ -38,7 +38,7 @@ export default function (amp: PluginAPI) {
 
     const spawned = await runDebouncedDetached(
       PLUGIN, slug, PER_WORKSTREAM_DEBOUNCE,
-      'python3', [`${PM_OS_REPO}/system/scripts/build-workspace-signals.py`, slug],
+      'python3', [`${SWITCHBOARD_REPO}/system/scripts/build-workspace-signals.py`, slug],
       { label: `${PLUGIN}:${slug}` },
     )
     if (!spawned) return

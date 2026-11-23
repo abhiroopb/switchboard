@@ -4,7 +4,7 @@
 Run meeting operations as a live loop: scheduler health, pre-brief prep, post-ingest follow-through, and routing durable decisions into the right project context.
 
 ## Cadence
-Per meeting, or whenever the Megadesk promotes `meetings` to the top of the queue.
+Per meeting, or whenever the switchboard promotes `meetings` to the top of the queue.
 
 ## Start Here
 Read these first, in this order:

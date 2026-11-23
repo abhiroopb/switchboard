@@ -22,7 +22,7 @@ QUEUE = HERE / "report_queue.py"
 
 def row(task_id: str, finished: str, status: str = "done", **extra) -> dict:
     return {"id": task_id, "status": status, "origin": "cos", "finished_at": finished, "report_delivered": False,
-            "summary": f"summary of {task_id}", "workstream": extra.pop("workstream", "pm-os-maintenance"), **extra}
+            "summary": f"summary of {task_id}", "workstream": extra.pop("workstream", "switchboard-maintenance"), **extra}
 
 
 class ReportQueueTests(unittest.TestCase):
@@ -31,8 +31,8 @@ class ReportQueueTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.dir = Path(self.tmp.name)
         self.ledger = self.dir / "running-tasks.json"
-        self.env = {**os.environ, "RUNNING_TASKS_FILE": str(self.ledger), "PM_OS_STATE_DIR": str(self.dir),
-                    "PM_OS_TEST_SANDBOX": "1"}
+        self.env = {**os.environ, "RUNNING_TASKS_FILE": str(self.ledger), "SWITCHBOARD_STATE_DIR": str(self.dir),
+                    "SWITCHBOARD_TEST_SANDBOX": "1"}
 
     def write(self, *rows: dict) -> None:
         self.ledger.write_text(json.dumps({"tasks": list(rows)}), encoding="utf-8")
@@ -84,7 +84,7 @@ class ReportQueueTests(unittest.TestCase):
         self.write(row("rt-x", "2026-11-13T05:00:00Z", attempt_id="rt-x.a1", thread_id="t-1"))
         args = json.loads(self.run_queue("next", "--origin", "cos"))["args"]
         self.assertEqual(args, ["--task-id", "rt-x", "--origin", "cos", "--status", "done", "--wait-seconds", "0",
-                                "--workstream", "pm-os-maintenance", "--attempt-id", "rt-x.a1", "--thread-id", "t-1",
+                                "--workstream", "switchboard-maintenance", "--attempt-id", "rt-x.a1", "--thread-id", "t-1",
                                 "summary of rt-x"])
 
     def test_fold_settles_older_notices_of_a_kind(self) -> None:
@@ -106,7 +106,7 @@ class ReportQueueTests(unittest.TestCase):
         self.write(row("rt-1", "2026-11-13T05:00:00Z", workstream="daily-routines"),
                    row("auto-push-20261113-0455", "2026-11-13T04:55:00Z", status="blocked"))
         self.assertEqual(self.run_queue("waiting", "--origin", "cos"),
-                         "2 PM OS reports waiting for CoS: Daily Routines (done), 1 system notice")
+                         "2 switchboard reports waiting for CoS: Daily Routines (done), 1 system notice")
         self.write()
         self.assertEqual(self.run_queue("waiting", "--origin", "cos"), "")
 

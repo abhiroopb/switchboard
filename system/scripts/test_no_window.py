@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""No PM OS background process opens a terminal window on Windows.
+"""No switchboard background process opens a terminal window on Windows.
 
 A process started with DETACHED_PROCESS has no console, so each console program it runs
 (git, python, bash) gets a new console that Windows hands to Windows Terminal: one visible
@@ -240,7 +240,7 @@ class HelperTests(unittest.TestCase):
             with mock.patch.object(no_window, "is_windows", return_value=False):
                 self.assertFalse(no_window.install(force=True))
             with mock.patch.object(no_window, "is_windows", return_value=True), \
-                    mock.patch.dict(os.environ, {"PM_OS_NO_WINDOW": "off"}):
+                    mock.patch.dict(os.environ, {"SWITCHBOARD_NO_WINDOW": "off"}):
                 self.assertFalse(no_window.install(force=True))
             self.assertIs(subprocess.Popen.__init__, original)
         finally:
@@ -259,7 +259,7 @@ class HelperTests(unittest.TestCase):
             subprocess.Popen.__init__ = fake_init  # type: ignore[method-assign]
             no_window._installed = False
             with mock.patch.object(no_window, "is_windows", return_value=True), \
-                    mock.patch.dict(os.environ, {"PM_OS_NO_WINDOW": ""}):
+                    mock.patch.dict(os.environ, {"SWITCHBOARD_NO_WINDOW": ""}):
                 self.assertTrue(no_window.install(force=True))
             for call in (lambda: subprocess.run(["git", "status"]),
                          lambda: subprocess.Popen(["git"], creationflags=0x200),

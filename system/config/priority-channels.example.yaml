@@ -1,6 +1,6 @@
 # Slack channels watched by the comms pipeline. Copy to priority-channels.yaml
 # (git-ignored) and fill in your own channel IDs. Find an ID with
-# `pmos slack channels` or from the channel's "About" panel.
+# `switchboard slack channels` or from the channel's "About" panel.
 #
 # tier: 1 (every 5 min), 2 (every 15 min)
 # casual: never auto-create a workstream from messages here

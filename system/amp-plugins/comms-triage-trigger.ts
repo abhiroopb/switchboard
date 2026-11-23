@@ -20,7 +20,7 @@
 
 import type { PluginAPI } from '@ampcode/plugin'
 import {
-  PM_OS_REPO,
+  SWITCHBOARD_REPO,
   activeWorkspaceName,
   isHeadless,
   isPluginEnabled,
@@ -29,7 +29,7 @@ import {
   run,
   withinSeconds,
   writeState,
-} from './pm-os/lib'
+} from './switchboard/lib'
 
 const PLUGIN = 'comms-triage-trigger'
 const DEBOUNCE_SECONDS = 30 * 60
@@ -61,7 +61,7 @@ export default function (amp: PluginAPI) {
 
     // Synchronous on purpose: only a successful availability check burns the
     // debounce. This callback never focuses or selects a workspace.
-    const result = await run('bash', [`${PM_OS_REPO}/system/scripts/open-comms-triage.sh`, '--background'], { timeoutMs: 15_000 })
+    const result = await run('bash', [`${SWITCHBOARD_REPO}/system/scripts/open-comms-triage.sh`, '--background'], { timeoutMs: 15_000 })
     if (result.code === 0) {
       await writeState<TriageState>(PLUGIN, 'global', { lastFiredAt: new Date().toISOString() })
       await logEvent(PLUGIN, { action: 'fire', workspace: ws })

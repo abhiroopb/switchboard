@@ -21,8 +21,8 @@ set -uo pipefail
 TASK_ID="${1:?task id}"; DEST_REF="${2:?workspace ref}"; shift 2
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 SCRIPTS="$REPO_ROOT/system/scripts"
-STATE_DIR="${PM_OS_STATE_DIR:-$REPO_ROOT/system/state}"
-export PM_OS_STATE_DIR="$STATE_DIR"
+STATE_DIR="${SWITCHBOARD_STATE_DIR:-$REPO_ROOT/system/state}"
+export SWITCHBOARD_STATE_DIR="$STATE_DIR"
 POLL="${REPORT_TO_COS_WAITER_POLL:-15}"
 MAX_SECONDS="${REPORT_TO_COS_WAITER_MAX_SECONDS:-21600}"
 # Windows (Git Bash): each poll forks about 15 processes. One queue per tab replaces
@@ -100,10 +100,10 @@ else:
 # after the owner starts a new CoS tab, poll and notify the old tab, which never
 # goes idle, and hold the queue the new CoS should get.
 SOURCE_TYPE="$(python3 "$SCRIPTS/surface-registry.py" get "$ORIGIN" source_type 2>/dev/null || echo routine)"
-SOURCE_KEY="$(python3 "$SCRIPTS/surface-registry.py" get "$ORIGIN" source_key 2>/dev/null || echo megadesk)"
+SOURCE_KEY="$(python3 "$SCRIPTS/surface-registry.py" get "$ORIGIN" source_key 2>/dev/null || echo switchboard)"
 resolve_dest() {
     local ref=""
-    if [[ "$SOURCE_KEY" == "megadesk" && "${REPORT_TO_COS_NO_OWNER_TABS:-0}" != "1" ]]; then
+    if [[ "$SOURCE_KEY" == "switchboard" && "${REPORT_TO_COS_NO_OWNER_TABS:-0}" != "1" ]]; then
         ref="$(python3 "$SCRIPTS/owner_tabs.py" cos-target 2>/dev/null | json_field ref)"
     fi
     [[ -z "$ref" ]] && ref="$(find_workspace_ref_for_source_key "$SOURCE_TYPE" "$SOURCE_KEY" 2>/dev/null || true)"
@@ -139,7 +139,7 @@ while :; do
     # A sandboxed waiter outlives its test: Windows cannot delete a temp tree a
     # live process holds, so the ledger stays while the stub cmux is gone, and the
     # real shim must never take its place. Under the sandbox, no stub means stop.
-    if [[ "${PM_OS_TEST_SANDBOX:-0}" == "1" && ! -f "${CMUX_BIN:-}" ]]; then
+    if [[ "${SWITCHBOARD_TEST_SANDBOX:-0}" == "1" && ! -f "${CMUX_BIN:-}" ]]; then
         log "sandboxed and the stub cmux is gone; exiting"; exit 0
     fi
     skip_args=()
@@ -186,7 +186,7 @@ for a in json.load(sys.stdin).get("args") or []:
     else
         waiting="$(python3 "$SCRIPTS/report_queue.py" waiting --origin "$ORIGIN" ${skip_args[@]+"${skip_args[@]}"} 2>/dev/null)"
         if [[ -n "$waiting" && "$waiting" != "$notified" ]]; then
-            cmux_cmd notify --workspace "$DEST_REF" --title "PM OS" --body "$waiting" >/dev/null 2>&1                 && log "notified $DEST_REF: $waiting"
+            cmux_cmd notify --workspace "$DEST_REF" --title "switchboard" --body "$waiting" >/dev/null 2>&1                 && log "notified $DEST_REF: $waiting"
             notified="$waiting"
         fi
     fi

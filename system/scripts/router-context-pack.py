@@ -51,8 +51,8 @@ TITLE_NOISE = {"draft", "working", "copy", "final", "notes", "doc", "docs", "doc
 # An ask can name its owner without the exact name: a workstream path
 # ("workstreams/photo-book-kit/2026-01-15-...md"), a note that lives in a workstream
 # ("2026-01-15-example-note.md"), a slug written with its hyphens
-# ("pm-os-maintenance"), a shortened name ("Photo Kit" for "Photo Book Kit"), the name's
-# words in another form ("flyer and email skills" for "Flyer Skill"), or a PM OS
+# ("switchboard-maintenance"), a shortened name ("Photo Kit" for "Photo Book Kit"), the name's
+# words in another form ("flyer and email skills" for "Flyer Skill"), or a switchboard
 # script ("dispatch.py"). Each is named evidence (dispatch.py STRONG_EVIDENCE_PREFIXES).
 WORKSTREAM_PATH_RE = re.compile(r"(?<![a-z0-9_-])workstreams/([a-z0-9][a-z0-9-]*)(?=/|\b)", re.IGNORECASE)
 FILENAME_RE = re.compile(r"(?<![\w/.-])((?:[\w-]+/)*)([\w][\w.-]*\.(?:md|html|png|jpg|jpeg|gif|pdf|csv|json|yaml|txt))\b",
@@ -68,10 +68,10 @@ BRAND_TOKENS = {"acme", "example"}
 # Name words count only when they sit this close together in the ask, so a long prompt
 # that mentions "garden" in one paragraph and "swap" in another names nobody.
 NAME_WINDOW = 6
-# PM OS system and tooling work belongs to this owner (AGENTS.md, Conversation Routing).
-SYSTEM_OWNER = "pm-os-maintenance"
+# switchboard system and tooling work belongs to this owner (AGENTS.md, Conversation Routing).
+SYSTEM_OWNER = "switchboard-maintenance"
 SYSTEM_DIRS = ("system/scripts", "system/scripts/lib", "system", "system/prompts", "system/config",
-               "system/amp-plugins", "system/claude-marketplace/plugins/pm-os/hooks")
+               "system/amp-plugins", "system/claude-marketplace/plugins/switchboard/hooks")
 SYSTEM_FILES = {"agents.md", "claude.md"}
 # Files every workstream has: naming one names nobody.
 COMMON_FILES = {"context.md", "config.yaml", "readme.md", "skill.md", "index.html"}
@@ -87,9 +87,9 @@ QUOTED_SUBJECT_RE = re.compile(
     r"(?:[\"\u201c](?P<dq>[^\"\u201d]+)[\"\u201d]|'(?P<single>.+?)'(?=[\s.,;:)!?]|$))", re.IGNORECASE | re.DOTALL)
 # "do NOT deploy it to SiteBuilder" names no SiteBuilder owner.
 NEGATION_RE = re.compile(r"\b(?:not|never|no|dont|don't|without|avoid|except)\b(?:\W+\w+){0,3}\W*$", re.IGNORECASE)
-PM_OS_RE = re.compile(r"\bpm[ -]?os\b", re.IGNORECASE)
+SWITCHBOARD_RE = re.compile(r"\bswitchboard\b", re.IGNORECASE)
 SYSTEM_PHRASES = re.compile(r"\b(?:router|dispatch(?:er|ed)?\.py|owner tabs?|worker tabs?|cos tab|drift check|"
-                            r"pm-os-guardrails|report-to-cos|cmux workspace|launchd job)\b", re.IGNORECASE)
+                            r"switchboard-guardrails|report-to-cos|cmux workspace|launchd job)\b", re.IGNORECASE)
 
 
 def explicit_workstream(prompt: str) -> str:
@@ -221,7 +221,7 @@ def abbreviated_name(words: list[str], row: dict[str, Any]) -> str:
 
 
 def slug_literal(slug: str, text: str) -> bool:
-    """The slug written as itself ("pm-os-maintenance"), never as part of a longer
+    """The slug written as itself ("switchboard-maintenance"), never as part of a longer
     slug, a file name, or a repo path ("acme/photo-kit")."""
     if "-" not in slug:
         return False
@@ -256,7 +256,7 @@ def glob_escape(name: str) -> str:
 
 
 def named_system_files(prompt: str, root: Path | None) -> list[str]:
-    """PM OS scripts, prompts, and instruction files the ask names (dispatch.py,
+    """switchboard scripts, prompts, and instruction files the ask names (dispatch.py,
     review_surface.review_link, AGENTS.md), plus system phrases (router, owner tab)."""
     hits: list[str] = []
     for match in FILENAME_RE.finditer(prompt):
@@ -415,9 +415,9 @@ def rank_workstreams(prompt: str, rows: list[dict[str, Any]], routes: list[dict[
     directed = explicit_workstream(prompt)
     subject_hits = {str(r.get("slug") or ""): names_workstream(subject, r, root, live_slugs)
                     for r in rows if str(r.get("slug") or "") in live_slugs and subject.strip()}
-    if not any(subject_hits.values()) and PM_OS_RE.search(subject) and SYSTEM_OWNER in subject_hits:
-        # "PM OS should prevent this": the system itself, so its maintenance owner.
-        subject_hits[SYSTEM_OWNER] = "PM OS"
+    if not any(subject_hits.values()) and SWITCHBOARD_RE.search(subject) and SYSTEM_OWNER in subject_hits:
+        # "switchboard should prevent this": the system itself, so its maintenance owner.
+        subject_hits[SYSTEM_OWNER] = "switchboard"
     ranked: list[dict[str, Any]] = []
     count = max(len(rows), 1)
     for row in rows:
@@ -455,7 +455,7 @@ def rank_workstreams(prompt: str, rows: list[dict[str, Any]], routes: list[dict[
             evidence.append("note named: " + ", ".join(notes[slug][:3]))
         if slug == SYSTEM_OWNER and system_hits:
             score += SYSTEM_SCORE
-            evidence.append("PM OS system named: " + ", ".join(system_hits[:4]))
+            evidence.append("switchboard system named: " + ", ".join(system_hits[:4]))
 
         normalized_slug = slug.replace("-", " ")
         if normalized_slug and (normalized_slug in lowered or slug_literal(slug, lowered)):

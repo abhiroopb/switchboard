@@ -38,7 +38,7 @@ def _os_replace(src, dst):
             __import__("time").sleep(0.1)
 
 def binding_file(root):
-    state = Path(os.environ.get("PM_OS_STATE_DIR") or Path(root) / "system/state")
+    state = Path(os.environ.get("SWITCHBOARD_STATE_DIR") or Path(root) / "system/state")
     return Path(os.environ.get("WORKSTREAM_THREAD_BINDINGS_FILE") or state / "workstream-thread-bindings.json")
 
 

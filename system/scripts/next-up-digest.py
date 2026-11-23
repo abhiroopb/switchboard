@@ -303,7 +303,7 @@ ENVELOPES = {
         "posts the stored reply as shown from the owner's account, with the :robot_face: prefix on "
         "its first line (all AI-drafted messages carry the bot prefix; "
         "'no robot N' opts one draft out via triage_ledger.py no-robot --draft-id draft-N "
-        "--by owner), and marks it sent. Never post a reply through pmos slack directly."
+        "--by owner), and marks it sent. Never post a reply through switchboard slack directly."
     ),
 }
 

@@ -27,14 +27,14 @@ On macOS the tabs are cmux workspaces. On Windows they are wmux workspaces, driv
 - **Start and end of day.** `system/start-day.sh` builds the day's plan. The `closing-day` skill saves durable notes into the day's journal and each workstream's `CONTEXT.md`.
 - **Review notes.** Deliverables are Markdown notes in the workstream folder. The whole install folder is an Obsidian vault, so links open in place.
 - **Memory.** Durable context lives in files. Claude Code can also use its built-in memory or the claude-mem worker. Amp uses `amp-mem`.
-- **Connectors.** `system/connectors/pmos` gives the scripts Gmail, Calendar, Drive and Slack through your own OAuth apps. Without them, everything else still works.
+- **Connectors.** `system/connectors/switchboard` gives the scripts Gmail, Calendar, Drive and Slack through your own OAuth apps. Without them, everything else still works.
 
 ## Safety
 
-- **Hooks.** `.claude/hooks/pm-os-guardrails.py` (Claude Code) and `system/amp-plugins/pm-os-guardrails.ts` (Amp) check commands before they run.
+- **Hooks.** `.claude/hooks/switchboard-guardrails.py` (Claude Code) and `system/amp-plugins/switchboard-guardrails.ts` (Amp) check commands before they run.
 - **Sends.** A message to another person is drafted, shown in full, and sent only after you approve that exact text.
 - **Landing.** `dispatch.py finish` refuses a landing that tracks a private folder or adds a value from your private identifier list.
-- **Pushing.** There is no remote by default, and the automatic push is off unless `PM_OS_AUTO_PUSH=on`.
+- **Pushing.** There is no remote by default, and the automatic push is off unless `SWITCHBOARD_AUTO_PUSH=on`.
 
 ## Where things live
 

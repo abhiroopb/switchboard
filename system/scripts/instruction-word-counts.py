@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Word counts for every PM OS instruction surface, with deltas against a baseline.
+"""Word counts for every switchboard instruction surface, with deltas against a baseline.
 
-The weekly PM OS improvement pass (scheduled job ``weekly-pm-os-improvement``,
-spec in ``workstreams/pm-os-maintenance/weekly-improvement-routine.md``) runs
+The weekly switchboard improvement pass (scheduled job ``weekly-switchboard-improvement``,
+spec in ``workstreams/switchboard-maintenance/weekly-improvement-routine.md``) runs
 this first and last, so the review note carries measured before and after
 counts instead of estimates.
 
@@ -45,7 +45,7 @@ FILE_SURFACES: list[tuple[str, str]] = [
     ("external-replies.md", "system/prompts/external-replies.md"),
 ]
 
-SURFACE_HOOK = "system/claude-marketplace/plugins/pm-os/hooks/surface-context.py"
+SURFACE_HOOK = "system/claude-marketplace/plugins/switchboard/hooks/surface-context.py"
 
 
 def repo_root() -> Path:
@@ -84,11 +84,11 @@ def file_surface(root: Path, key: str, rel: str) -> dict[str, Any]:
 def launch_prompt_surface(root: Path) -> dict[str, Any]:
     rel = "system/scripts/dispatch.py launch_prompt()"
     try:
-        dispatch = load_module(root / "system/scripts/dispatch.py", "pm_os_dispatch_wordcount")
+        dispatch = load_module(root / "system/scripts/dispatch.py", "switchboard_dispatch_wordcount")
         row = {
             "id": "rt-wordcount000",
             "attempt_id": "rt-wordcount000.a1.000000",
-            "workstream": "pm-os-maintenance",
+            "workstream": "switchboard-maintenance",
             "origin": "cos",
             "prompt": "",
         }
@@ -103,7 +103,7 @@ def launch_prompt_surface(root: Path) -> dict[str, Any]:
 def hook_reminder_surface(root: Path) -> dict[str, Any]:
     rel = f"{SURFACE_HOOK} reminder()"
     try:
-        hook = load_module(root / SURFACE_HOOK, "pm_os_surface_context_wordcount")
+        hook = load_module(root / SURFACE_HOOK, "switchboard_surface_context_wordcount")
         return {"surface": "per-prompt hook reminder (cos)", "path": rel, "words": words(hook.reminder("cos"))}
     except Exception as exc:  # noqa: BLE001
         return {"surface": "per-prompt hook reminder (cos)", "path": rel, "words": None,

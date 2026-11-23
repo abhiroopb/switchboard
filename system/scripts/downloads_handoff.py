@@ -2,7 +2,7 @@
 """Hand a repo note to the owner through the Downloads folder, and keep it safe.
 
 The Downloads folder is ~/Downloads, or ~/Dropbox/Downloads when that is where a
-machine keeps it, or PM_OS_DOWNLOADS_DIR. A synced Downloads folder is shared with
+machine keeps it, or SWITCHBOARD_DOWNLOADS_DIR. A synced Downloads folder is shared with
 every other machine, so a file that lives only there can vanish when another device
 moves or deletes it, with no Recycle Bin entry here. So a hand-off file has one canonical copy
 in the repo, tracked in git, and Downloads gets a copy of it.
@@ -49,12 +49,12 @@ def repo_root(cwd: Path | None = None) -> Path:
     probe = subprocess.run(["git", "-C", str(cwd or Path.cwd()), "rev-parse", "--show-toplevel"],
                            capture_output=True, text=True, stdin=subprocess.DEVNULL)
     if probe.returncode or not probe.stdout.strip():
-        raise SystemExit("downloads_handoff: run inside a PM OS checkout")
+        raise SystemExit("downloads_handoff: run inside a switchboard checkout")
     return Path(probe.stdout.strip()).resolve()
 
 
 def downloads_dir() -> Path:
-    override = os.environ.get("PM_OS_DOWNLOADS_DIR", "").strip()
+    override = os.environ.get("SWITCHBOARD_DOWNLOADS_DIR", "").strip()
     if override:
         return Path(override).expanduser()
     home = Path.home()

@@ -1,6 +1,6 @@
 """fcntl.flock for Windows: the same names and semantics over msvcrt.locking.
 
-PM OS scripts lock with ``fcntl.flock(fd, fcntl.LOCK_EX)`` and friends. fcntl
+switchboard scripts lock with ``fcntl.flock(fd, fcntl.LOCK_EX)`` and friends. fcntl
 is Unix-only, so every caller imports it like this:
 
     try:
@@ -38,7 +38,7 @@ LOCK_EX = 2
 LOCK_NB = 4
 LOCK_UN = 8
 
-# Past the end of every file PM OS locks; below 2**31 because msvcrt.locking
+# Past the end of every file switchboard locks; below 2**31 because msvcrt.locking
 # reads the position as a 32-bit long.
 _LOCK_OFFSET = 0x7FFFFFFE
 _POLL_SECONDS = 0.05

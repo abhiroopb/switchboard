@@ -6,10 +6,10 @@ Every scripted CoS launch, including the auto-start at sign-in, runs with
 
 Covers cmux-helpers.sh (start-day's CoS line, the routine launch and resume lines),
 dispatch.py worker lines, system/scripts/launch-cos.sh against a stub multiplexer, and the
-com.pm-os.cos-autostart sign-in task. Wrong impls this catches: the flag on a worker,
+com.switchboard.cos-autostart sign-in task. Wrong impls this catches: the flag on a worker,
 routine, or Amp tab; a flag with no name that swallows the seed prompt; a launcher that
 opens a second CoS beside a live one; a sign-in task that is missing or kept alive.
-PM_OS_TEST_SANDBOX=1 and a stub CMUX_BIN: no live tab is ever reached.
+SWITCHBOARD_TEST_SANDBOX=1 and a stub CMUX_BIN: no live tab is ever reached.
 """
 from __future__ import annotations
 
@@ -62,9 +62,9 @@ READY = "❯ \n  ⏵⏵ bypass permissions on (shift+tab to cycle)"
 
 def helper(expr: str, **env: str) -> str:
     """Run `expr` in a bash that sourced cmux-helpers.sh; returns stdout."""
-    base = {k: v for k, v in os.environ.items() if not k.startswith(("PM_OS_COS", "CMUX", "WMUX"))}
-    base.update({"PM_OS_TEST_SANDBOX": "1", "PM_OS_AGENT": "claude", "REPO_ROOT": str(ROOT).replace("\\", "/"),
-                 "PM_OS_LOCAL_DIR": env.pop("PM_OS_LOCAL_DIR", str(ROOT / "no-such-local")), "PM_OS_MACHINE": "TESTBOX"})
+    base = {k: v for k, v in os.environ.items() if not k.startswith(("SWITCHBOARD_COS", "CMUX", "WMUX"))}
+    base.update({"SWITCHBOARD_TEST_SANDBOX": "1", "SWITCHBOARD_AGENT": "claude", "REPO_ROOT": str(ROOT).replace("\\", "/"),
+                 "SWITCHBOARD_LOCAL_DIR": env.pop("SWITCHBOARD_LOCAL_DIR", str(ROOT / "no-such-local")), "SWITCHBOARD_MACHINE": "TESTBOX"})
     base.update(env)
     proc = subprocess.run([BASH, "-c", f'source "{HELPERS.as_posix()}" >/dev/null 2>&1; {expr}'],
                           capture_output=True, text=True, encoding="utf-8", env=base, timeout=60)
@@ -74,8 +74,8 @@ def helper(expr: str, **env: str) -> str:
 
 class HelperLines(unittest.TestCase):
     def test_start_day_cos_line_has_named_remote_control(self) -> None:
-        line = helper("agent_interactive_command ultra megadesk")
-        self.assertTrue(line.startswith("PM_OS_COS_REMOTE_CONTROL_LAUNCH=1 claude "), line)
+        line = helper("agent_interactive_command ultra switchboard")
+        self.assertTrue(line.startswith("SWITCHBOARD_COS_REMOTE_CONTROL_LAUNCH=1 claude "), line)
         self.assertTrue(line.rstrip().endswith("--remote-control CoS"), line)
         self.assertIn("--dangerously-skip-permissions --model opus --effort high", line)
 
@@ -83,46 +83,46 @@ class HelperLines(unittest.TestCase):
         for expr in ("agent_interactive_command ultra", "agent_interactive_command ultra todo",
                      "agent_interactive_command ultra launchpad",
                      'local_amp_launch_command "$REPO_ROOT/routines/todo" ultra todo',
-                     'local_amp_launch_command "$REPO_ROOT/workstreams/pm-os-maintenance" ultra pm-os-maintenance',
+                     'local_amp_launch_command "$REPO_ROOT/workstreams/switchboard-maintenance" ultra switchboard-maintenance',
                      f'local_agent_resume_command "$REPO_ROOT/routines/todo" ultra {SESSION} todo'):
             line = helper(expr)
             self.assertNotIn("--remote-control", line, expr)
-            self.assertNotIn("PM_OS_COS_REMOTE_CONTROL_LAUNCH", line, expr)
+            self.assertNotIn("SWITCHBOARD_COS_REMOTE_CONTROL_LAUNCH", line, expr)
 
     def test_routine_launch_keeps_the_seed_prompt_after_the_name(self) -> None:
-        line = helper('PM_OS_LAUNCH_SEED_FILE="" local_amp_launch_command "$REPO_ROOT/routines/megadesk" ultra megadesk')
+        line = helper('SWITCHBOARD_LAUNCH_SEED_FILE="" local_amp_launch_command "$REPO_ROOT/routines/switchboard" ultra switchboard')
         match = re.search(r"--remote-control CoS (\S.*)$", line.strip())
         self.assertIsNotNone(match, line)
         self.assertNotRegex(match.group(1), r"^--", "the seed prompt must follow the explicit name")
-        self.assertIn("PM_OS_COS_REMOTE_CONTROL_LAUNCH=1 PM_OS_WORKSTREAM_SLUG=", line)
+        self.assertIn("SWITCHBOARD_COS_REMOTE_CONTROL_LAUNCH=1 SWITCHBOARD_WORKSTREAM_SLUG=", line)
 
     def test_routine_resume_carries_the_flag(self) -> None:
-        line = helper(f'local_agent_resume_command "$REPO_ROOT/routines/megadesk" ultra {SESSION} megadesk')
+        line = helper(f'local_agent_resume_command "$REPO_ROOT/routines/switchboard" ultra {SESSION} switchboard')
         self.assertIn(f"--resume {SESSION}", line)
         self.assertIn("--remote-control CoS", line)
 
     def test_kill_switch_and_amp(self) -> None:
         for value in ("off", "OFF", "0", "false", "no"):
-            self.assertNotIn("--remote-control", helper("agent_interactive_command ultra megadesk",
-                                                        PM_OS_COS_REMOTE_CONTROL=value))
-        self.assertEqual(helper("agent_interactive_command ultra megadesk", PM_OS_AGENT="amp").strip(), "amp -m ultra")
+            self.assertNotIn("--remote-control", helper("agent_interactive_command ultra switchboard",
+                                                        SWITCHBOARD_COS_REMOTE_CONTROL=value))
+        self.assertEqual(helper("agent_interactive_command ultra switchboard", SWITCHBOARD_AGENT="amp").strip(), "amp -m ultra")
 
     def test_kill_switch_in_the_machine_file(self) -> None:
         local = Path(tempfile.mkdtemp(prefix="launch-cos-local-"))
         self.addCleanup(shutil.rmtree, local, True)
         (local / "machines").mkdir()
-        (local / "machines" / "TESTBOX.env").write_text("PM_OS_COS_REMOTE_CONTROL=off\n", encoding="utf-8")
-        self.assertNotIn("--remote-control", helper("agent_interactive_command ultra megadesk", PM_OS_LOCAL_DIR=str(local)))
+        (local / "machines" / "TESTBOX.env").write_text("SWITCHBOARD_COS_REMOTE_CONTROL=off\n", encoding="utf-8")
+        self.assertNotIn("--remote-control", helper("agent_interactive_command ultra switchboard", SWITCHBOARD_LOCAL_DIR=str(local)))
         # The environment still wins over the file.
-        self.assertIn("--remote-control CoS", helper("agent_interactive_command ultra megadesk",
-                                                     PM_OS_LOCAL_DIR=str(local), PM_OS_COS_REMOTE_CONTROL="on"))
+        self.assertIn("--remote-control CoS", helper("agent_interactive_command ultra switchboard",
+                                                     SWITCHBOARD_LOCAL_DIR=str(local), SWITCHBOARD_COS_REMOTE_CONTROL="on"))
 
     def test_worker_lines_never_get_remote_control(self) -> None:
         import dispatch
-        row = {"id": "rt-x", "attempt_id": "rt-x.a1.000000", "workstream": "pm-os-maintenance", "worker_id": "w-1",
+        row = {"id": "rt-x", "attempt_id": "rt-x.a1.000000", "workstream": "switchboard-maintenance", "worker_id": "w-1",
                "worktree": str(ROOT), "mode": "ultra", "agent": "claude", "session_id": SESSION}
         self.assertNotIn("--remote-control", dispatch.launch_command_for(row))
-        self.assertNotIn("--remote-control", dispatch.launch_command_for({**row, "workstream": "megadesk"}))
+        self.assertNotIn("--remote-control", dispatch.launch_command_for({**row, "workstream": "switchboard"}))
 
 
 class Launcher(unittest.TestCase):
@@ -150,14 +150,14 @@ class Launcher(unittest.TestCase):
         return [json.loads(line) for line in self.log.read_text(encoding="utf-8").splitlines() if line.strip()]
 
     def run_launch(self, *args: str, **extra: str) -> subprocess.CompletedProcess:
-        env = {k: v for k, v in os.environ.items() if not k.startswith(("PM_OS_COS", "CMUX", "WMUX", "CLAUDE_"))}
-        env.update({"PM_OS_TEST_SANDBOX": "1", "PM_OS_AGENT": "claude", "CMUX_BIN": str(self.stub).replace("\\", "/"),
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("SWITCHBOARD_COS", "CMUX", "WMUX", "CLAUDE_"))}
+        env.update({"SWITCHBOARD_TEST_SANDBOX": "1", "SWITCHBOARD_AGENT": "claude", "CMUX_BIN": str(self.stub).replace("\\", "/"),
                     "STUB_STATE": str(self.state), "STUB_LOG": str(self.log), "COS_SURFACE_FILE": str(self.registration),
-                    "CC_CMUX_SESSION_JSON": str(self.tmp / "no-store.json"), "PM_OS_PYTHON": sys.executable.replace("\\", "/"),
-                    "PM_OS_STATE_DIR": str(self.tmp / "st"), "PYTHONIOENCODING": "utf-8",
+                    "CC_CMUX_SESSION_JSON": str(self.tmp / "no-store.json"), "SWITCHBOARD_PYTHON": sys.executable.replace("\\", "/"),
+                    "SWITCHBOARD_STATE_DIR": str(self.tmp / "st"), "PYTHONIOENCODING": "utf-8",
                     "COS_RESTORE_WAIT_SECONDS": "0", "COS_MUX_WAIT_SECONDS": "0",
-                    "LAUNCH_COS_LOCK_DIR": str(self.tmp / "lock"), "PM_OS_LOCAL_DIR": str(self.local),
-                    "PM_OS_MACHINE": "TESTBOX"})
+                    "LAUNCH_COS_LOCK_DIR": str(self.tmp / "lock"), "SWITCHBOARD_LOCAL_DIR": str(self.local),
+                    "SWITCHBOARD_MACHINE": "TESTBOX"})
         env.update(extra)
         return subprocess.run([BASH, LAUNCH.as_posix(), *args], capture_output=True, text=True, encoding="utf-8",
                               env=env, cwd=str(ROOT), timeout=120)
@@ -166,7 +166,7 @@ class Launcher(unittest.TestCase):
         proc = self.run_launch("--dry-run")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         line = proc.stdout.strip()
-        self.assertIn("PM_OS_COS_REMOTE_CONTROL_LAUNCH=1 claude --dangerously-skip-permissions", line)
+        self.assertIn("SWITCHBOARD_COS_REMOTE_CONTROL_LAUNCH=1 claude --dangerously-skip-permissions", line)
         self.assertTrue(line.endswith("--remote-control CoS CoS"), line)  # explicit name, then the CoS seed
         self.assertEqual(self.calls(), [])
 
@@ -207,15 +207,15 @@ class Launcher(unittest.TestCase):
         self.assertEqual(len([c for c in self.calls() if c and c[0] == "new-workspace"]), 1)
 
     def test_autostart_kill_switch(self) -> None:
-        proc = self.run_launch("--at-logon", PM_OS_COS_AUTOSTART="off")
+        proc = self.run_launch("--at-logon", SWITCHBOARD_COS_AUTOSTART="off")
         self.assertEqual(proc.returncode, 0)
-        self.assertIn("skipped: PM_OS_COS_AUTOSTART=off", proc.stdout)
+        self.assertIn("skipped: SWITCHBOARD_COS_AUTOSTART=off", proc.stdout)
         self.assertEqual(self.calls(), [])
 
     def test_autostart_kill_switch_in_the_machine_file(self) -> None:
-        (self.local / "machines" / "TESTBOX.env").write_text("PM_OS_COS_AUTOSTART=off\n", encoding="utf-8")
+        (self.local / "machines" / "TESTBOX.env").write_text("SWITCHBOARD_COS_AUTOSTART=off\n", encoding="utf-8")
         proc = self.run_launch("--at-logon")
-        self.assertIn("skipped: PM_OS_COS_AUTOSTART=off", proc.stdout)
+        self.assertIn("skipped: SWITCHBOARD_COS_AUTOSTART=off", proc.stdout)
         self.assertEqual(self.calls(), [])
 
     def test_restoring_wmux_with_no_tabs_opens_nothing(self) -> None:
@@ -251,8 +251,8 @@ class Launcher(unittest.TestCase):
 class SignInTask(unittest.TestCase):
     def test_cos_autostart_is_a_one_shot_logon_task(self) -> None:
         text = TASKS.read_text(encoding="utf-8")
-        job = re.search(r'@\{ Label = "com\.pm-os\.cos-autostart";[^\n]*\}', text)
-        self.assertIsNotNone(job, "com.pm-os.cos-autostart is not in the task list")
+        job = re.search(r'@\{ Label = "com\.switchboard\.cos-autostart";[^\n]*\}', text)
+        self.assertIsNotNone(job, "com.switchboard.cos-autostart is not in the task list")
         self.assertIn('Cmd = "bash system/scripts/launch-cos.sh --at-logon"', job.group(0))
         self.assertIn('Kind = "logon"', job.group(0))
         self.assertRegex(text, r'"logon"\s*\{\s*\n\s*\$t = New-ScheduledTaskTrigger -AtLogOn -User')

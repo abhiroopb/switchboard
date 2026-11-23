@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hidden consoles for PM OS background processes on Windows.
+"""Hidden consoles for switchboard background processes on Windows.
 
 Why: a
 process started with DETACHED_PROCESS has no console at all. Every console
@@ -26,7 +26,7 @@ Three ways in:
                         hidden console.
 
 test_no_window.py fails on any Windows spawn that uses DETACHED_PROCESS.
-Kill switch for install(): PM_OS_NO_WINDOW=off.
+Kill switch for install(): SWITCHBOARD_NO_WINDOW=off.
 """
 from __future__ import annotations
 
@@ -90,7 +90,7 @@ def install(force: bool = False) -> bool:
     global _installed
     if _installed:
         return True
-    if not is_windows() or os.environ.get("PM_OS_NO_WINDOW", "").lower() == "off":
+    if not is_windows() or os.environ.get("SWITCHBOARD_NO_WINDOW", "").lower() == "off":
         return False
     if not force and has_console():
         return False

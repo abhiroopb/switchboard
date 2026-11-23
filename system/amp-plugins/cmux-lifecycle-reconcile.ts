@@ -3,7 +3,7 @@
 import { execFile } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import type { PluginAPI } from '@ampcode/plugin'
-import { HOME, isPluginEnabled, logEvent } from './pm-os/lib'
+import { HOME, isPluginEnabled, logEvent } from './switchboard/lib'
 
 export const description = 'Re-stamps the cmux amp badge and re-sends the completion hook after fresh Amp idle evidence, bounded and fenced by the current thread and turn.'
 
@@ -116,7 +116,7 @@ export default function (amp: PluginAPI) {
   amp.configuration.subscribe(value => { config = value })
   const enabled = () => isPluginEnabled(config, 'cmux-lifecycle-reconcile')
   const cmux = process.env.CMUX_BIN ?? process.env.CMUX_AMP_CMUX_BIN ?? '/Applications/cmux.app/Contents/Resources/bin/cmux'
-  const store = process.env.PM_OS_CMUX_SESSION_JSON ?? process.env.CC_CMUX_SESSION_JSON ?? `${HOME}/Library/Application Support/cmux/session-com.cmuxterm.app.json`
+  const store = process.env.SWITCHBOARD_CMUX_SESSION_JSON ?? process.env.CC_CMUX_SESSION_JSON ?? `${HOME}/Library/Application Support/cmux/session-com.cmuxterm.app.json`
   const env = { ...process.env } as NodeJS.ProcessEnv
   delete env.AMP_API_KEY
   env.CMUX_AMP_PID ||= String(process.pid)

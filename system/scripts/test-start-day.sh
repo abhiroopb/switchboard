@@ -5,10 +5,10 @@
 #   1. Missing daily note  -> skeleton created exactly once, marker present
 #   2. Rerun               -> existing note never overwritten
 #   3. Hand-touched note   -> byte-for-byte unchanged
-#   4. megadesk_state_valid / megadesk_state_fresh shape+freshness checks
+#   4. switchboard_state_valid / switchboard_state_fresh shape+freshness checks
 #   5. No `amp upgrade` anywhere; update_amp wired in main
 #   6. No 300s plan polling; phase_4_verify_state wired; fan-out reachable
-#   7. Reused-Megadesk refresh prompt is guarded and non-fatal on deferral
+#   7. Reused-switchboard refresh prompt is guarded and non-fatal on deferral
 #   8. CoS launch prompts enforce list-with-headers digests, not chat tables
 #   9. Scheduled/background startup preserves cmux focus
 #   10. Start-day creates Launchpad and pins it directly below CoS
@@ -103,18 +103,18 @@ NOW_F="$FIXTURE/system/state/now.json"
 QUEUE_F="$FIXTURE/system/state/queue.json"
 echo '{"now": {"focus": "x"}}' > "$NOW_F"
 echo '{"queue": []}' > "$QUEUE_F"
-in_fixture 'megadesk_state_valid' \
+in_fixture 'switchboard_state_valid' \
     && pass "valid shape accepted" || fail "valid shape rejected"
-in_fixture 'START_EPOCH=$(date +%s); touch "$NOW_FILE" "$QUEUE_FILE"; megadesk_state_fresh' \
+in_fixture 'START_EPOCH=$(date +%s); touch "$NOW_FILE" "$QUEUE_FILE"; switchboard_state_fresh' \
     && pass "fresh mtime accepted" || fail "fresh mtime rejected"
 echo '{"wrong": true}' > "$QUEUE_F"
-in_fixture 'megadesk_state_valid' \
+in_fixture 'switchboard_state_valid' \
     && fail "invalid queue shape accepted" || pass "invalid queue shape rejected"
 echo '{"queue": []}' > "$QUEUE_F"
 touch -t 202601010000 "$NOW_F" "$QUEUE_F"
 # Reject means the comparison said no. A helper that errors also returns nonzero,
 # which passed this case on Windows while stat was broken, so stderr must stay empty.
-if in_fixture 'megadesk_state_fresh' 2>"$FIXTURE/fresh.err"; then
+if in_fixture 'switchboard_state_fresh' 2>"$FIXTURE/fresh.err"; then
     fail "stale mtime accepted as fresh"
 elif [[ -s "$FIXTURE/fresh.err" ]]; then
     fail "freshness check errored instead of comparing: $(cat "$FIXTURE/fresh.err")"
@@ -122,10 +122,10 @@ else
     pass "stale mtime rejected"
 fi
 touch "$QUEUE_F"
-in_fixture 'START_EPOCH=$(date +%s); touch "$QUEUE_FILE"; megadesk_state_fresh' 2>/dev/null \
+in_fixture 'START_EPOCH=$(date +%s); touch "$QUEUE_FILE"; switchboard_state_fresh' 2>/dev/null \
     && fail "one stale file accepted as fresh" || pass "one stale file rejected"
 rm -f "$NOW_F"
-in_fixture 'START_EPOCH=$(date +%s); megadesk_state_fresh' 2>"$FIXTURE/fresh.err" \
+in_fixture 'START_EPOCH=$(date +%s); switchboard_state_fresh' 2>"$FIXTURE/fresh.err" \
     && fail "missing state file accepted as fresh" || pass "missing state file rejected"
 [[ ! -s "$FIXTURE/fresh.err" ]] \
     && pass "missing state file reads as age zero, no error" \
@@ -139,7 +139,7 @@ if in_fixture '
     python3() { return 1; }
     derive_compat_plan() { :; }
     set_workspace_status() { :; }
-    publish_megadesk_status() { :; }
+    publish_switchboard_status() { :; }
     phase_4_verify_state
 ' > "$FIXTURE/verify.log" 2>&1 \
     && grep -Fq 'last write: 2026-01-01 00:00:00' "$FIXTURE/verify.log"; then
@@ -179,7 +179,7 @@ else
     fail "fan-out ordering broken in main()"
 fi
 
-echo "== 7. Reused Megadesk gets a bounded, guarded review =="
+echo "== 7. Reused switchboard gets a bounded, guarded review =="
 reuse_block=$(sed -n '/Reusing existing.*workspace without reset/,/^    fi$/p' "$START_DAY")
 echo "$reuse_block" | grep -q 'post_start_day_review' \
     && pass "reuse path delegates to the bounded review" || fail "reuse path misses the bounded review"
@@ -196,7 +196,7 @@ echo "$rotate_block" | grep -q 'COS_REF="\$new_ref"' \
     && pass "rotation repoints COS_REF at the new workspace" || fail "rotation leaves COS_REF on the old workspace"
 rotate_script="$REPO_ROOT/system/scripts/rotate-cos-thread.sh"
 bash -n "$rotate_script" && pass "rotate-cos-thread.sh parses" || fail "rotate-cos-thread.sh syntax error"
-rot_out=$(PM_OS_COS_ROTATION_DISABLED=1 bash "$rotate_script" 2>/dev/null | tail -1)
+rot_out=$(SWITCHBOARD_COS_ROTATION_DISABLED=1 bash "$rotate_script" 2>/dev/null | tail -1)
 [[ "$rot_out" == *'"status": "skipped"'* ]] \
     && pass "rotation kill switch skips cleanly" || fail "rotation kill switch did not skip: $rot_out"
 grep -q 'split-thread.sh' "$rotate_script" \
@@ -236,13 +236,13 @@ echo "== 11. Launchpad startup and pinned order =="
 grep -q 'routines=(todo launchpad comms-triage scheduled-jobs meetings)' \
     "$REPO_ROOT/system/scripts/ensure-routine-workspaces.sh" \
     && pass "start-day ensures Launchpad" || fail "start-day does not ensure Launchpad"
-grep -q 'top_pinned=("routine:megadesk" "routine:todo" "routine:launchpad" "routine:comms-triage")' \
+grep -q 'top_pinned=("routine:switchboard" "routine:todo" "routine:launchpad" "routine:comms-triage")' \
     "$REPO_ROOT/system/cmux-helpers.sh" \
     && pass "pinned order is CoS, To Do, Launchpad" || fail "pinned order is wrong"
 grep -q 'bottom_unpinned=("routine:scheduled-jobs" "routine:meetings")' \
     "$REPO_ROOT/system/cmux-helpers.sh" \
     && pass "Scheduled Jobs and Meetings sit unpinned at the bottom" || fail "Meetings is still pinned"
-grep -q '\[\[ "${PM_OS_MUX:-}" == "wmux" \]\] && return 0' "$REPO_ROOT/system/cmux-helpers.sh" \
+grep -q '\[\[ "${SWITCHBOARD_MUX:-}" == "wmux" \]\] && return 0' "$REPO_ROOT/system/cmux-helpers.sh" \
     && pass "the sidebar order is cmux only; wmux is left alone" || fail "wmux still gets an order"
 ! grep -q 'phase_5b_sidebar_order\|sidebar_order.py' "$REPO_ROOT/system/start-day.sh" \
     && pass "start of day logs no wmux drag plan" || fail "start of day still plans wmux drags"
@@ -275,7 +275,7 @@ done
 # errexit throughout the function and would hide precisely this regression.
 if START_DAY_REPO_ROOT="$FIXTURE" bash -c '
     source "$1"
-    publish_megadesk_status() { :; }
+    publish_switchboard_status() { :; }
     phase_4b_launch_routines
     FLAG_ALL=true
     WORKSTREAMS_FOUND=(first second)

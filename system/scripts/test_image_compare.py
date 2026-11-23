@@ -35,7 +35,7 @@ import review_surface  # noqa: E402
 os.environ["IMAGE_COMPARE_OPEN_DISABLED"] = "1"
 # Never add a tab to the real cmux either;
 # the cmux tests below mock _cmux_bin.
-os.environ["PM_OS_OPEN_VIA"] = "browser"
+os.environ["SWITCHBOARD_OPEN_VIA"] = "browser"
 
 PNG = (b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
        b"\x00\x00\x00\rIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82")
@@ -54,10 +54,10 @@ class _Vault(unittest.TestCase):
         self.wt = self.main / ".amp" / "worktrees" / "rt-abc"
         (self.wt / "workstreams" / "demo" / "assets").mkdir(parents=True)
         (self.main / "workstreams" / "other" / "assets").mkdir(parents=True)
-        self._env = {k: os.environ.get(k) for k in ("PM_OS_VAULT_ROOT", "PM_OS_COMPARE_ROOT", "PM_OS_WORKTREES_DIR")}
-        os.environ["PM_OS_VAULT_ROOT"] = str(self.main)
-        os.environ["PM_OS_COMPARE_ROOT"] = str(self.wt)
-        os.environ.pop("PM_OS_WORKTREES_DIR", None)
+        self._env = {k: os.environ.get(k) for k in ("SWITCHBOARD_VAULT_ROOT", "SWITCHBOARD_COMPARE_ROOT", "SWITCHBOARD_WORKTREES_DIR")}
+        os.environ["SWITCHBOARD_VAULT_ROOT"] = str(self.main)
+        os.environ["SWITCHBOARD_COMPARE_ROOT"] = str(self.wt)
+        os.environ.pop("SWITCHBOARD_WORKTREES_DIR", None)
 
     def tearDown(self):
         for k, v in self._env.items():
@@ -208,8 +208,8 @@ class Opener(_Vault):
         rec = self.tmp / "rec.sh"
         rec.write_text(f'#!/bin/sh\necho "$1" >> "{self.log}"\n')
         rec.chmod(0o755)
-        self._open_env = {k: os.environ.get(k) for k in ("PM_OS_OPEN_CMD", "IMAGE_COMPARE_OPEN_DISABLED")}
-        os.environ["PM_OS_OPEN_CMD"] = str(rec)
+        self._open_env = {k: os.environ.get(k) for k in ("SWITCHBOARD_OPEN_CMD", "IMAGE_COMPARE_OPEN_DISABLED")}
+        os.environ["SWITCHBOARD_OPEN_CMD"] = str(rec)
         os.environ.pop("IMAGE_COMPARE_OPEN_DISABLED", None)
 
     def tearDown(self):
@@ -291,14 +291,14 @@ class Opener(_Vault):
 class ReviewSurfaceCompare(unittest.TestCase):
     def setUp(self):
         self.tmp = pathlib.Path(tempfile.mkdtemp(prefix="imgcmp-rs-")).resolve()
-        self._saved = os.environ.get("PM_OS_VAULT_ROOT")
-        os.environ["PM_OS_VAULT_ROOT"] = str(self.tmp)
+        self._saved = os.environ.get("SWITCHBOARD_VAULT_ROOT")
+        os.environ["SWITCHBOARD_VAULT_ROOT"] = str(self.tmp)
 
     def tearDown(self):
         if self._saved is None:
-            os.environ.pop("PM_OS_VAULT_ROOT", None)
+            os.environ.pop("SWITCHBOARD_VAULT_ROOT", None)
         else:
-            os.environ["PM_OS_VAULT_ROOT"] = self._saved
+            os.environ["SWITCHBOARD_VAULT_ROOT"] = self._saved
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_image_refs_keep_order_labels_and_skip_drafts_and_hosted(self):
@@ -324,7 +324,7 @@ class ReviewSurfaceCompare(unittest.TestCase):
 
     @posix_only
     def test_report_text_leads_with_the_compare_link_and_is_stable(self):
-        text = ("Note obsidian://open?vault=pm-os&file=workstreams/d/n. Covers /x/a.png and /x/b.png ⏎ "
+        text = ("Note obsidian://open?vault=switchboard&file=workstreams/d/n. Covers /x/a.png and /x/b.png ⏎ "
                 "[Compare 2 images](file:///v/workstreams/d/assets/compare/p.html)")
         out = review_surface.report_text(text)
         lines = out.splitlines()
@@ -433,7 +433,7 @@ class ReviewSurfaceCompare(unittest.TestCase):
 
 
 class DefaultOpener(unittest.TestCase):
-    """PM OS Kit: the page opens with each OS's own opener, and a machine with no
+    """switchboard Kit: the page opens with each OS's own opener, and a machine with no
     way to open it (a headless Linux box) prints the path instead of failing."""
 
     def test_each_platform(self) -> None:
@@ -477,14 +477,14 @@ class DefaultOpener(unittest.TestCase):
         self.assertEqual(calls, [((str(page),), {})])
 
     def test_open_page_runs_background_open_on_macos(self) -> None:
-        """The real open path (no PM_OS_OPEN_CMD) runs `open -g <page>`."""
+        """The real open path (no SWITCHBOARD_OPEN_CMD) runs `open -g <page>`."""
         from unittest import mock
         with tempfile.TemporaryDirectory() as tmp:
             root = pathlib.Path(tmp)
             subprocess.run(["git", "init", "-q", str(root)], check=True)
             page = root / "compare.html"
             page.write_text("<html></html>")
-            env = {k: v for k, v in os.environ.items() if k not in ("PM_OS_OPEN_CMD", "IMAGE_COMPARE_OPEN_DISABLED")}
+            env = {k: v for k, v in os.environ.items() if k not in ("SWITCHBOARD_OPEN_CMD", "IMAGE_COMPARE_OPEN_DISABLED")}
             ran: list[list[str]] = []
             real_run = subprocess.run
 
@@ -506,12 +506,12 @@ class DefaultOpener(unittest.TestCase):
 
     def _mac_env(self) -> dict:
         return {k: v for k, v in os.environ.items()
-                if k not in ("PM_OS_OPEN_CMD", "IMAGE_COMPARE_OPEN_DISABLED", "PM_OS_OPEN_VIA",
-                             "PM_OS_OPEN_CHROME", "PM_OS_OPEN_WORKSPACE")}
+                if k not in ("SWITCHBOARD_OPEN_CMD", "IMAGE_COMPARE_OPEN_DISABLED", "SWITCHBOARD_OPEN_VIA",
+                             "SWITCHBOARD_OPEN_CHROME", "SWITCHBOARD_OPEN_WORKSPACE")}
 
     def test_chrome_default_browser_is_not_handed_the_page(self) -> None:
         """Chrome raises itself on every external open, -g or not. With no cmux, a Chrome-family default
-        browser gets no page; the link stays. PM_OS_OPEN_CHROME=1 opens it."""
+        browser gets no page; the link stays. SWITCHBOARD_OPEN_CHROME=1 opens it."""
         from unittest import mock
         with tempfile.TemporaryDirectory() as tmp:
             root = pathlib.Path(tmp)
@@ -539,7 +539,7 @@ class DefaultOpener(unittest.TestCase):
                     ran.append(cmd)
                     return subprocess.CompletedProcess(cmd, 0, "", "")
                 return real_run(cmd, **k)
-            with mock.patch.dict(os.environ, {**self._mac_env(), "PM_OS_OPEN_CHROME": "1"}, clear=True), \
+            with mock.patch.dict(os.environ, {**self._mac_env(), "SWITCHBOARD_OPEN_CHROME": "1"}, clear=True), \
                  mock.patch.object(image_compare.sys, "platform", "darwin"), \
                  mock.patch.object(review_surface, "resolve_local_path", side_effect=lambda p, *a: p), \
                  mock.patch.object(image_compare, "_cmux_bin", return_value=None), \
@@ -580,7 +580,7 @@ class DefaultOpener(unittest.TestCase):
                 if cmd[1] == "new-surface":
                     return subprocess.CompletedProcess(cmd, 0, "OK surface:7 pane:1 workspace:9\n", "")
                 return subprocess.CompletedProcess(cmd, 0, "", "")
-            with mock.patch.dict(os.environ, {**self._mac_env(), "PM_OS_OPEN_WORKSPACE": "workspace:9"}, clear=True), \
+            with mock.patch.dict(os.environ, {**self._mac_env(), "SWITCHBOARD_OPEN_WORKSPACE": "workspace:9"}, clear=True), \
                  mock.patch.object(image_compare.sys, "platform", "darwin"), \
                  mock.patch.object(review_surface, "resolve_local_path", side_effect=lambda p, *a: p), \
                  mock.patch.object(image_compare, "main_root", return_value=root), \
@@ -643,7 +643,7 @@ class DefaultOpener(unittest.TestCase):
             page = root / "compare.html"
             page.write_text("<html></html>")
             env = {k: v for k, v in os.environ.items()
-                   if k not in ("PM_OS_OPEN_CMD", "IMAGE_COMPARE_OPEN_DISABLED", "PM_OS_OPEN_COLD_BROWSER")}
+                   if k not in ("SWITCHBOARD_OPEN_CMD", "IMAGE_COMPARE_OPEN_DISABLED", "SWITCHBOARD_OPEN_COLD_BROWSER")}
             with mock.patch.dict(os.environ, env, clear=True), \
                  mock.patch.object(image_compare.sys, "platform", "darwin"), \
                  mock.patch.object(review_surface, "resolve_local_path", side_effect=lambda p, *a: p), \
@@ -657,7 +657,7 @@ class DefaultOpener(unittest.TestCase):
                 # Running browser, or the explicit override, opens as usual.
                 with mock.patch.object(image_compare, "_macos_app_running", return_value=True):
                     self.assertIsNone(image_compare._browser_cold(page))
-                with mock.patch.dict(os.environ, {"PM_OS_OPEN_COLD_BROWSER": "1"}):
+                with mock.patch.dict(os.environ, {"SWITCHBOARD_OPEN_COLD_BROWSER": "1"}):
                     self.assertIsNone(image_compare._browser_cold(page))
                 self.assertIsNone(image_compare._browser_cold(root / "image.png"))
 
@@ -708,7 +708,7 @@ class DefaultOpener(unittest.TestCase):
             rec.write_text("#!/bin/sh\necho \"$@\" >> \"$(dirname \"$0\")/opened.log\"\n")
             rec.chmod(0o755)
             env = {k: v for k, v in os.environ.items() if k != "IMAGE_COMPARE_OPEN_DISABLED"}
-            env.update({"PM_OS_OPEN_CMD": str(rec), "PM_OS_VAULT_ROOT": str(main)})
+            env.update({"SWITCHBOARD_OPEN_CMD": str(rec), "SWITCHBOARD_VAULT_ROOT": str(main)})
             with mock.patch.dict(os.environ, env, clear=True), \
                  mock.patch.object(review_surface, "resolve_local_path", side_effect=lambda p, *a: p):
                 first = image_compare.open_page(str(wt_page), cwd=main)
@@ -724,7 +724,7 @@ class DefaultOpener(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             page = pathlib.Path(tmp) / "compare.html"
             page.write_text("<html></html>")
-            env = {k: v for k, v in os.environ.items() if k not in ("PM_OS_OPEN_CMD", "IMAGE_COMPARE_OPEN_DISABLED")}
+            env = {k: v for k, v in os.environ.items() if k not in ("SWITCHBOARD_OPEN_CMD", "IMAGE_COMPARE_OPEN_DISABLED")}
             with mock.patch.dict(os.environ, env, clear=True), \
                  mock.patch.object(image_compare, "_default_opener", return_value=None), \
                  mock.patch.object(review_surface, "resolve_local_path", side_effect=lambda p, *a: p):
@@ -745,14 +745,14 @@ class OffMacOpener(unittest.TestCase):
     macOS-without-cmux rule holds there too. A Chromium-family default browser
     (Chrome, Edge, Brave) raises its window when handed a page, so it gets no
     page and the link stays; Linux under Wayland keeps xdg-open because the
-    compositor refuses focus; PM_OS_OPEN_VIA=wmux opts into the wmux browser
+    compositor refuses focus; SWITCHBOARD_OPEN_VIA=wmux opts into the wmux browser
     panel. Wrong impls: startfile to Edge (steals focus from the wmux composer);
     a URL folded by Path into `https:/…`; wmux used without the opt-in."""
 
     def _env(self, **extra) -> dict:
         env = {k: v for k, v in os.environ.items()
-               if k not in ("PM_OS_OPEN_CMD", "IMAGE_COMPARE_OPEN_DISABLED", "PM_OS_OPEN_VIA",
-                            "PM_OS_OPEN_CHROME", "WAYLAND_DISPLAY", "DISPLAY", "WSL_DISTRO_NAME")}
+               if k not in ("SWITCHBOARD_OPEN_CMD", "IMAGE_COMPARE_OPEN_DISABLED", "SWITCHBOARD_OPEN_VIA",
+                            "SWITCHBOARD_OPEN_CHROME", "WAYLAND_DISPLAY", "DISPLAY", "WSL_DISTRO_NAME")}
         env.update(extra)
         return env
 
@@ -801,7 +801,7 @@ class OffMacOpener(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root, page = self._root(tmp)
             for progid, env in (("FirefoxHTML-308046B0AF4A39CB", self._env()),
-                                ("MSEdgeHTM", self._env(PM_OS_OPEN_CHROME="1"))):
+                                ("MSEdgeHTM", self._env(SWITCHBOARD_OPEN_CHROME="1"))):
                 started: list = []
                 patches = self._patches(root, "win32", "nt") + [
                     mock.patch.object(image_compare, "_windows_default_browser", return_value=progid),
@@ -915,7 +915,7 @@ class OffMacOpener(unittest.TestCase):
                 mock.patch.object(image_compare.subprocess, "run", side_effect=run),
                 mock.patch.object(image_compare.os, "startfile", create=True,
                                   side_effect=AssertionError("must not startfile"))]
-            out = self._run(patches, self._env(PM_OS_OPEN_VIA="wmux"),
+            out = self._run(patches, self._env(SWITCHBOARD_OPEN_VIA="wmux"),
                             lambda: image_compare.open_page(str(page), cwd=root, force=True))
             self.assertTrue(out["opened"], out)
             self.assertEqual(out["via"], "wmux")

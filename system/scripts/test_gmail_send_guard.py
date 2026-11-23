@@ -29,17 +29,17 @@ ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 import gmail_send_guard as guard  # noqa: E402
 
-_spec = importlib.util.spec_from_file_location("pmos_shim", ROOT / "system" / "connectors" / "pmos-shim.py")
-pmos_shim = importlib.util.module_from_spec(_spec)
+_spec = importlib.util.spec_from_file_location("switchboard_shim", ROOT / "system" / "connectors" / "switchboard-shim.py")
+switchboard_shim = importlib.util.module_from_spec(_spec)
 assert _spec.loader is not None
-_spec.loader.exec_module(pmos_shim)
+_spec.loader.exec_module(switchboard_shim)
 
 _mux_spec = importlib.util.spec_from_file_location("cmux_shim", ROOT / "system" / "scripts" / "mux" / "cmux-shim.py")
 cmux_shim = importlib.util.module_from_spec(_mux_spec)
 assert _mux_spec.loader is not None
 _mux_spec.loader.exec_module(cmux_shim)
 
-HOOK = ROOT / ".claude" / "hooks" / "pm-os-guardrails.py"
+HOOK = ROOT / ".claude" / "hooks" / "switchboard-guardrails.py"
 SESSION = "11111111-2222-3333-4444-555555555555"
 COS_ID = "ws-cos"
 TO = "invented.person@example.com"
@@ -88,11 +88,11 @@ class Base(unittest.TestCase):
         self._environ = dict(os.environ)
         self.addCleanup(self._restore)
         for key in list(os.environ):
-            if key.startswith("PM_OS_WORKER") or key in ("PM_OS_WORKTREE", "PM_OS_GMAIL_SEND", "WMUX_SURFACE_ID", "CMUX_SURFACE_ID",
-                                                         "PM_OS_TEST_SANDBOX"):
+            if key.startswith("SWITCHBOARD_WORKER") or key in ("SWITCHBOARD_WORKTREE", "SWITCHBOARD_GMAIL_SEND", "WMUX_SURFACE_ID", "CMUX_SURFACE_ID",
+                                                         "SWITCHBOARD_TEST_SANDBOX"):
                 del os.environ[key]
-        os.environ.update({"PM_OS_STATE_HOME": str(self.dir / "state"), "CLAUDE_CODE_ENTRYPOINT": "cli", "CLAUDE_CODE_SESSION_ID": SESSION,
-                           "CMUX_WORKSPACE_ID": COS_ID, "PM_OS_CONNECTORS_DIR": str(self.dir / "connectors")})
+        os.environ.update({"SWITCHBOARD_STATE_HOME": str(self.dir / "state"), "CLAUDE_CODE_ENTRYPOINT": "cli", "CLAUDE_CODE_SESSION_ID": SESSION,
+                           "CMUX_WORKSPACE_ID": COS_ID, "SWITCHBOARD_CONNECTORS_DIR": str(self.dir / "connectors")})
         self.cwd = self.dir / "main"
         (self.cwd / ".git").mkdir(parents=True)
         self._cwd = os.getcwd()
@@ -101,7 +101,7 @@ class Base(unittest.TestCase):
         self.tabs = [{"id": COS_ID, "title": "🧭 CoS", "description": ""},
                      {"id": "ws-lp", "custom_title": "🚀 Launchpad", "description": ""},
                      {"id": "ws-jobs", "title": "⏰ Scheduled Jobs", "description": ""},
-                     {"id": "ws-w", "title": "📊 PM OS Maintenance 2", "description": "PM OS worker rt-1"}]
+                     {"id": "ws-w", "title": "📊 Switchboard Maintenance 2", "description": "switchboard worker rt-1"}]
         for name, stub in (("list_workspaces", lambda: self.tabs), ("main_root", lambda: self.dir), ("machine_name", lambda: "TESTBOX"),
                            ("claude_home", lambda: self.dir / "claude")):
             self.addCleanup(setattr, guard, name, getattr(guard, name))
@@ -129,26 +129,26 @@ class Flag(Base):
 
     def test_environment_cannot_turn_it_on(self) -> None:
         guard.write_setting("off")
-        os.environ["PM_OS_GMAIL_SEND"] = "on"
+        os.environ["SWITCHBOARD_GMAIL_SEND"] = "on"
         self.assertFalse(guard.enabled())
 
     def test_environment_can_turn_it_off(self) -> None:
-        os.environ["PM_OS_GMAIL_SEND"] = "off"
+        os.environ["SWITCHBOARD_GMAIL_SEND"] = "off"
         self.assertFalse(guard.enabled())
 
     def test_environment_cannot_move_the_flag_file(self) -> None:
         guard.write_setting("off")
         other = self.dir / "elsewhere" / "machines"
         other.mkdir(parents=True)
-        (other / "FAKE.env").write_text("PM_OS_GMAIL_SEND=on\n", encoding="utf-8")
-        os.environ.update({"PM_OS_LOCAL_DIR": str(other.parent), "PM_OS_MACHINE": "FAKE", "PM_OS_ROOT": str(other.parent.parent)})
+        (other / "FAKE.env").write_text("SWITCHBOARD_GMAIL_SEND=on\n", encoding="utf-8")
+        os.environ.update({"SWITCHBOARD_LOCAL_DIR": str(other.parent), "SWITCHBOARD_MACHINE": "FAKE", "SWITCHBOARD_ROOT": str(other.parent.parent)})
         self.assertFalse(guard.enabled())
 
     def test_setting_keeps_other_keys(self) -> None:
         path = guard.env_file()
-        path.write_text("PM_OS_COMMS_TRIAGE=off\nPM_OS_GMAIL_SEND=on\n", encoding="utf-8")
+        path.write_text("SWITCHBOARD_COMMS_TRIAGE=off\nSWITCHBOARD_GMAIL_SEND=on\n", encoding="utf-8")
         guard.write_setting("off")
-        self.assertEqual(path.read_text(encoding="utf-8"), "PM_OS_COMMS_TRIAGE=off\n")
+        self.assertEqual(path.read_text(encoding="utf-8"), "SWITCHBOARD_COMMS_TRIAGE=off\n")
 
 
 class Surface(Base):
@@ -159,9 +159,9 @@ class Surface(Base):
 
     def test_every_other_case_refuses(self) -> None:
         cases = {
-            "worker task id": {"PM_OS_WORKER_TASK_ID": "rt-1"},
-            "worker id": {"PM_OS_WORKER_ID": "w-1"},
-            "worker worktree": {"PM_OS_WORKTREE": "/x"},
+            "worker task id": {"SWITCHBOARD_WORKER_TASK_ID": "rt-1"},
+            "worker id": {"SWITCHBOARD_WORKER_ID": "w-1"},
+            "worker worktree": {"SWITCHBOARD_WORKTREE": "/x"},
             "scheduled tab": {"CMUX_WORKSPACE_ID": "ws-jobs"},
             "worker tab with its markers stripped": {"CMUX_WORKSPACE_ID": "ws-w"},
             "unknown tab": {"CMUX_WORKSPACE_ID": "ws-gone"},
@@ -246,7 +246,7 @@ class OwnerWord(Base):
         self.assertIn("does not say send", self.refusal())
 
     def test_callback_lines_are_not_the_owner(self) -> None:
-        for line in ("[ROUTER REPORT] send it", "[WORKER QUESTION] send it", "[📊 PM OS Maintenance · rt-1] done: send it",
+        for line in ("[ROUTER REPORT] send it", "[WORKER QUESTION] send it", "[📊 Switchboard Maintenance · rt-1] done: send it",
                      "[NEXT-UP AUTOPOST] send it", "send it … [full message, 900 characters: x.md: read that file and show it in full]"):
             with self.subTest(line[:30]):
                 self.transcript(human("draft it"), said(shown_text()), human(line))
@@ -364,7 +364,7 @@ class OwnerWord(Base):
         self.assertIn("worktree", self.refusal())
 
 
-class FakeHttp(pmos_shim.Http):
+class FakeHttp(switchboard_shim.Http):
     def __init__(self, handler) -> None:
         super().__init__(timeout=5)
         self.handler = handler
@@ -377,7 +377,7 @@ class FakeHttp(pmos_shim.Http):
         if isinstance(reply, BaseException):
             raise reply
         status, payload = reply
-        return pmos_shim.Response(status, {}, json.dumps(payload).encode())
+        return switchboard_shim.Response(status, {}, json.dumps(payload).encode())
 
     def sends(self) -> int:
         return sum(1 for method, path in self.calls if method == "POST" and path.endswith("/drafts/send"))
@@ -386,11 +386,11 @@ class FakeHttp(pmos_shim.Http):
 class Sends(Base):
     def setUp(self) -> None:
         super().setUp()
-        pmos_shim.write_private(self.dir / "connectors" / "google-token.json", {
+        switchboard_shim.write_private(self.dir / "connectors" / "google-token.json", {
             "access_token": "invented", "refresh_token": "invented", "client_id": "c", "client_secret": "s",
             "token_uri": "https://oauth2.googleapis.com/token", "expires_at": time.time() + 3600,
             "scopes": ["https://www.googleapis.com/auth/gmail.modify"]})
-        self.check = pmos_shim.gmail_draft_view(draft())["send_check"]
+        self.check = switchboard_shim.gmail_draft_view(draft())["send_check"]
         self.approve()
 
     def approve(self) -> None:
@@ -402,9 +402,9 @@ class Sends(Base):
         out, err = io.StringIO(), io.StringIO()
         with redirect_stdout(out), redirect_stderr(err):
             try:
-                code = pmos_shim.Shim(http=http).dispatch(["mail", "send", "--draft-id", draft_id,
+                code = switchboard_shim.Shim(http=http).dispatch(["mail", "send", "--draft-id", draft_id,
                                                          "--expect-hash", check or self.check])
-            except pmos_shim.ShimError as error:
+            except switchboard_shim.ShimError as error:
                 print(str(error), file=sys.stderr)
                 code = error.code
         return code, out.getvalue(), err.getvalue(), http
@@ -438,23 +438,23 @@ class Sends(Base):
 
     def test_worker_session_posts_nothing(self) -> None:
         """Fails with the guard removed: the POST reaches /drafts/send."""
-        os.environ["PM_OS_WORKER_TASK_ID"] = "rt-1"
+        os.environ["SWITCHBOARD_WORKER_TASK_ID"] = "rt-1"
         code, _, err, http = self.run_send(self.happy)
         self.assertEqual(http.sends(), 0, "a worker session reached the Gmail send endpoint")
-        self.assertEqual(code, pmos_shim.SEND_REFUSED)
+        self.assertEqual(code, switchboard_shim.SEND_REFUSED)
         self.assertIn("worker", err)
         self.assertEqual(http.calls, [], "the refusal must come before any network call")
 
     def test_flag_off_posts_nothing(self) -> None:
         guard.write_setting("off")
         code, _, err, http = self.run_send(self.happy)
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_REFUSED, 0))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_REFUSED, 0))
         self.assertIn("draft-only", err)
 
     def test_owner_did_not_say_send_posts_nothing(self) -> None:
         self.transcript(said(shown_text()), human("looks fine, leave it for now"))
         code, _, _, http = self.run_send(self.happy)
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_REFUSED, 0))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_REFUSED, 0))
 
     def test_an_untitled_cos_tab_refusal_names_every_step_of_the_next_send(self) -> None:
         # An untitled CoS tab ("Workspace 3") must get one refusal that names every step,
@@ -462,7 +462,7 @@ class Sends(Base):
         self.tabs.append({"id": "ws-3", "title": "Workspace 3", "description": ""})
         os.environ["CMUX_WORKSPACE_ID"] = "ws-3"
         code, _, err, http = self.run_send(self.happy)
-        self.assertEqual((code, http.sends(), http.calls), (pmos_shim.SEND_REFUSED, 0, []))
+        self.assertEqual((code, http.sends(), http.calls), (switchboard_shim.SEND_REFUSED, 0, []))
         for needle in ("(workspace 3) is not CoS or Launchpad", "bash system/scripts/cos-phase0.sh chrome",
                        "Nothing was sent", 'retry now: their "send it" still counts',
                        "print the draft again verbatim from show", 'says "send it" in a new message'):
@@ -471,7 +471,7 @@ class Sends(Base):
     def test_an_owner_word_refusal_names_the_show_then_send_steps(self) -> None:
         self.transcript(said(shown_text()), human("why did that fail?"))
         code, _, err, http = self.run_send(self.happy)
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_REFUSED, 0))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_REFUSED, 0))
         self.assertIn("does not say send", err)
         self.assertIn("print the draft again verbatim from show", err)
         self.assertIn('says "send it" in a new message', err)
@@ -480,23 +480,23 @@ class Sends(Base):
     def test_refusals_the_steps_cannot_fix_carry_no_retry_advice(self) -> None:
         # "fix that and retry now" must never reach a worker,
         # a machine with sending off, or a refusal a fresh "send it" cannot cure.
-        cases = {"worker": lambda: os.environ.__setitem__("PM_OS_WORKER_TASK_ID", "rt-1"),
+        cases = {"worker": lambda: os.environ.__setitem__("SWITCHBOARD_WORKER_TASK_ID", "rt-1"),
                  "sending off": lambda: guard.write_setting("off")}
         for name, arrange in cases.items():
             with self.subTest(name):
                 arrange()
                 code, _, err, http = self.run_send(self.happy)
-                self.assertEqual((code, http.sends()), (pmos_shim.SEND_REFUSED, 0))
+                self.assertEqual((code, http.sends()), (switchboard_shim.SEND_REFUSED, 0))
                 self.assertNotIn("retry now", err)
                 self.assertNotIn("print the draft again", err)
-                os.environ.pop("PM_OS_WORKER_TASK_ID", None)
+                os.environ.pop("SWITCHBOARD_WORKER_TASK_ID", None)
                 guard.write_setting("on")
         self.assertEqual(guard.next_send_steps("this session's transcript was not found, so the owner's word is unproven"), "")
 
     def test_the_same_turn_retry_after_fixing_the_tab_sends(self) -> None:
         self.tabs.append({"id": "ws-3", "title": "Workspace 3", "description": ""})
         os.environ["CMUX_WORKSPACE_ID"] = "ws-3"
-        self.assertEqual(self.run_send(self.happy)[0], pmos_shim.SEND_REFUSED)
+        self.assertEqual(self.run_send(self.happy)[0], switchboard_shim.SEND_REFUSED)
         self.tabs[-1]["custom_title"] = "🧭 CoS"
         code, _, err, http = self.run_send(self.happy)
         self.assertEqual((code, http.sends()), (0, 1), err)
@@ -505,40 +505,40 @@ class Sends(Base):
         self.transcript(said(shown_text()), human("send it"))
         self.assertEqual(self.run_send(self.happy)[0], 0)
         code, _, err, http = self.run_send(self.happy)
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_REFUSED, 0))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_REFUSED, 0))
         self.assertIn("already went to a send", err)
 
     def test_changed_draft_posts_nothing(self) -> None:
         def edited(method, path, url):
             return 200, draft(body="Hi Sam, an edited note.")
         code, _, err, http = self.run_send(edited)
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_REFUSED, 0))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_REFUSED, 0))
         self.assertIn("changed since it was shown", err)
 
     def test_added_bcc_changes_the_check(self) -> None:
-        self.assertNotEqual(self.check, pmos_shim.gmail_draft_view(draft(bcc="quiet@example.com"))["send_check"])
+        self.assertNotEqual(self.check, switchboard_shim.gmail_draft_view(draft(bcc="quiet@example.com"))["send_check"])
 
     def test_attachments_are_refused(self) -> None:
         with_file = draft()
         with_file["message"]["payload"]["parts"] = [{"mimeType": "application/pdf", "filename": "invented.pdf",
                                                      "body": {"size": 9, "attachmentId": "a1"}}]
-        check = pmos_shim.gmail_draft_view(with_file)["send_check"]
+        check = switchboard_shim.gmail_draft_view(with_file)["send_check"]
         code, _, err, http = self.run_send(lambda m, p, u: (200, with_file), check=check)
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_REFUSED, 0))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_REFUSED, 0))
         self.assertIn("attachments", err)
 
     def test_html_links_and_a_differing_html_part_must_be_shown(self) -> None:
-        view = pmos_shim.gmail_draft_view(multipart("Words.", '<p>Other words <a href="https://invented.example/x">here</a></p>'))
+        view = switchboard_shim.gmail_draft_view(multipart("Words.", '<p>Other words <a href="https://invented.example/x">here</a></p>'))
         self.assertEqual(view["links"], ["https://invented.example/x"])
-        bare = pmos_shim.gmail_draft_view(multipart("Words.", '<a href=https://invented.example/bare>x</a><img src="https://invented.example/i.png">'))
+        bare = switchboard_shim.gmail_draft_view(multipart("Words.", '<a href=https://invented.example/bare>x</a><img src="https://invented.example/i.png">'))
         self.assertEqual(bare["links"], ["https://invented.example/bare", "https://invented.example/i.png"])
         self.assertIn("Other words", view["html_body"])
-        same = pmos_shim.gmail_draft_view(multipart("Same words.", "<p>Same words.</p>"))
+        same = switchboard_shim.gmail_draft_view(multipart("Same words.", "<p>Same words.</p>"))
         self.assertEqual(same["html_body"], "")
 
     def test_gone_draft_refuses(self) -> None:
         code, _, err, http = self.run_send(lambda m, p, u: (404, {"error": {"message": "Not Found"}}))
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_REFUSED, 0))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_REFUSED, 0))
         self.assertIn("already sent or deleted", err)
 
     def test_google_refusal_is_not_retried(self) -> None:
@@ -554,7 +554,7 @@ class Sends(Base):
 
         def handler(method, path, url):
             if method == "POST" and path.endswith("/drafts/send"):
-                return pmos_shim.HttpError(0, "timed out after 5s")
+                return switchboard_shim.HttpError(0, "timed out after 5s")
             if method == "GET" and "/drafts/" in path:
                 return (200, draft()) if draft_alive else (404, {"error": {"message": "Not Found"}})
             if method == "GET" and path.endswith("/messages"):
@@ -570,7 +570,7 @@ class Sends(Base):
 
     def test_timeout_reports_unknown_checks_sent_and_never_retries(self) -> None:
         code, _, err, http = self.run_send(self.timeout_then([]))
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_UNKNOWN, 1))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_UNKNOWN, 1))
         self.assertIn("unknown", err)
         self.assertTrue(any(m == "GET" and p.endswith("/messages") for m, p in http.calls), "Sent was not checked")
         self.assertEqual(self.log_rows()[-1]["event"], "unknown")
@@ -581,7 +581,7 @@ class Sends(Base):
                 return ConnectionResetError("dropped")
             return self.timeout_then([])(method, path, url)
         code, _, _, http = self.run_send(handler)
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_UNKNOWN, 1))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_UNKNOWN, 1))
 
     def test_timeout_with_the_message_in_sent_reports_it(self) -> None:
         code, out, _, http = self.run_send(self.timeout_then([self.in_sent()]))
@@ -591,16 +591,16 @@ class Sends(Base):
     def test_an_earlier_reply_in_the_thread_is_not_this_send(self) -> None:
         # Same subject and recipient, different words: not "Sent".
         code, _, _, http = self.run_send(self.timeout_then([self.in_sent(body="An earlier reply.", message_id="old-1")]))
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_UNKNOWN, 1))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_UNKNOWN, 1))
 
     def test_an_old_message_with_the_same_words_is_not_this_send(self) -> None:
         code, _, _, http = self.run_send(self.timeout_then([self.in_sent(age=100, message_id="old-1")]))
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_UNKNOWN, 1))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_UNKNOWN, 1))
 
     def test_rerun_in_the_same_turn_checks_sent_and_never_says_nothing_was_sent(self) -> None:
         self.run_send(self.timeout_then([]))
         code, _, err, http = self.run_send(self.timeout_then([]))
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_UNKNOWN, 0))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_UNKNOWN, 0))
         self.assertTrue(any(m == "GET" and p.endswith("/messages") for m, p in http.calls), "Sent was not checked")
         self.assertNotIn("Nothing was sent", err)
 
@@ -619,19 +619,19 @@ class Sends(Base):
     def test_rerun_with_the_draft_consumed_and_nothing_in_sent_never_says_not_sent(self) -> None:
         self.run_send(self.timeout_then([]))
         code, _, err, http = self.run_send(self.timeout_then([], draft_alive=False))
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_UNKNOWN, 0))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_UNKNOWN, 0))
         self.assertIn("unknown", err)
 
     def test_a_new_draft_with_the_same_text_after_unknown_does_not_send(self) -> None:
         self.run_send(self.timeout_then([]))
         code, _, err, http = self.run_send(self.timeout_then([]), draft_id="d2")
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_UNKNOWN, 0))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_UNKNOWN, 0))
         self.assertIn("no known outcome", err)
 
     def test_rerun_soon_after_unknown_refuses(self) -> None:
         self.run_send(self.timeout_then([]))
         code, _, err, http = self.run_send(self.timeout_then([]))
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_UNKNOWN, 0))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_UNKNOWN, 0))
         self.assertIn("no known outcome", err)
 
     def test_rerun_after_the_settle_window_can_send(self) -> None:
@@ -647,7 +647,7 @@ class Sends(Base):
 
     def test_process_death_mid_send_checks_sent_first(self) -> None:
         guard.log_send({"draft_id": "d1", "to": TO, "subject": SUBJECT, "event": "attempt", "epoch": time.time() - 30,
-                        "send_check": self.check, "body_sha": pmos_shim.gmail_body_sha(BODY)})
+                        "send_check": self.check, "body_sha": switchboard_shim.gmail_body_sha(BODY)})
         code, _, _, http = self.run_send(self.timeout_then([self.in_sent()]))
         self.assertEqual((code, http.sends()), (0, 0))
 
@@ -657,7 +657,7 @@ class Sends(Base):
         self.addCleanup(setattr, guard, "log_send", guard.log_send)
         guard.log_send = nope
         code, _, err, http = self.run_send(self.happy)
-        self.assertEqual((code, http.sends()), (pmos_shim.SEND_REFUSED, 0))
+        self.assertEqual((code, http.sends()), (switchboard_shim.SEND_REFUSED, 0))
 
     def test_a_log_failure_after_the_send_still_reports_sent(self) -> None:
         real = guard.log_send
@@ -678,7 +678,7 @@ class Sends(Base):
         http = FakeHttp(self.happy)
         out = io.StringIO()
         with redirect_stdout(out):
-            pmos_shim.Shim(http=http).dispatch(["mail", "show", "--draft-id", "d1"])
+            switchboard_shim.Shim(http=http).dispatch(["mail", "show", "--draft-id", "d1"])
         payload = json.loads(out.getvalue())
         self.assertEqual(payload["send_check"], self.check)
         self.assertIn(f"Send check: {self.check}", payload["result"])
@@ -692,23 +692,23 @@ class Sends(Base):
     def test_doctor_reports_the_flag(self) -> None:
         out = io.StringIO()
         with redirect_stdout(out):
-            code = pmos_shim.Shim(http=FakeHttp(self.probes)).dispatch(["doctor"])
+            code = switchboard_shim.Shim(http=FakeHttp(self.probes)).dispatch(["doctor"])
         self.assertEqual(code, 0)
         self.assertIn("mail send: on", out.getvalue())
         guard.write_setting("off")
         out = io.StringIO()
         with redirect_stdout(out):
-            pmos_shim.Shim(http=FakeHttp(self.probes)).dispatch(["doctor"])
+            switchboard_shim.Shim(http=FakeHttp(self.probes)).dispatch(["doctor"])
         self.assertIn("mail send: off", out.getvalue())
 
     def test_doctor_fails_when_the_flag_is_on_and_the_token_cannot_send(self) -> None:
-        pmos_shim.write_private(self.dir / "connectors" / "google-token.json", {
+        switchboard_shim.write_private(self.dir / "connectors" / "google-token.json", {
             "access_token": "invented", "refresh_token": "invented", "client_id": "c", "client_secret": "s",
             "token_uri": "https://oauth2.googleapis.com/token", "expires_at": time.time() + 3600,
             "scopes": ["https://www.googleapis.com/auth/gmail.readonly"]})
         out = io.StringIO()
         with redirect_stdout(out):
-            code = pmos_shim.Shim(http=FakeHttp(self.probes)).dispatch(["doctor"])
+            code = switchboard_shim.Shim(http=FakeHttp(self.probes)).dispatch(["doctor"])
         self.assertEqual(code, 1)
         self.assertIn("mail send: FAIL", out.getvalue())
 
@@ -717,9 +717,9 @@ class Hook(unittest.TestCase):
     """Runs the real Claude Code hook the way the harness does."""
 
     def decide(self, command: str, tool: str = "Bash", worker: bool = True, cwd: str | None = None) -> str | None:
-        env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER") and k != "PM_OS_WORKTREE"}
+        env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER") and k != "SWITCHBOARD_WORKTREE"}
         if worker:
-            env["PM_OS_WORKER_TASK_ID"] = "rt-1"
+            env["SWITCHBOARD_WORKER_TASK_ID"] = "rt-1"
         with tempfile.TemporaryDirectory() as tmp:
             (Path(tmp) / ".git").mkdir()
             payload = {"tool_name": tool, "tool_input": {"command": command}, "cwd": cwd or tmp}
@@ -728,19 +728,19 @@ class Hook(unittest.TestCase):
         return json.loads(out)["hookSpecificOutput"]["permissionDecision"] if out.strip() else None
 
     def test_worker_sends_are_denied(self) -> None:
-        for command in ("pmos mail send --draft-id d --expect-hash h",
-                        "pmos mail --timeout 30 send --draft-id d",
-                        "PM_OS_WORKER_TASK_ID= pmos mail send --draft-id d",
-                        "env -u PM_OS_WORKER_TASK_ID pmos mail send --draft-id d",
-                        "python3 system/connectors/pmos-shim.py mail send --draft-id d",
-                        "python -X utf8 system/connectors/pmos-shim.py mail send --draft-id d",
-                        'bash -c "pmos mail send --draft-id d"',
-                        "pmos.exe mail send --draft-id d",
-                        "time pmos mail send --draft-id d",
-                        "cd /tmp && /c/x/system/connectors/pmos mail send-now --to a"):
+        for command in ("switchboard mail send --draft-id d --expect-hash h",
+                        "switchboard mail --timeout 30 send --draft-id d",
+                        "SWITCHBOARD_WORKER_TASK_ID= switchboard mail send --draft-id d",
+                        "env -u SWITCHBOARD_WORKER_TASK_ID switchboard mail send --draft-id d",
+                        "python3 system/connectors/switchboard-shim.py mail send --draft-id d",
+                        "python -X utf8 system/connectors/switchboard-shim.py mail send --draft-id d",
+                        'bash -c "switchboard mail send --draft-id d"',
+                        "switchboard.exe mail send --draft-id d",
+                        "time switchboard mail send --draft-id d",
+                        "cd /tmp && /c/x/system/connectors/switchboard mail send-now --to a"):
             with self.subTest(command):
                 self.assertEqual(self.decide(command), "deny")
-        self.assertEqual(self.decide("& pmos mail send --draft-id d", tool="PowerShell"), "deny")
+        self.assertEqual(self.decide("& switchboard mail send --draft-id d", tool="PowerShell"), "deny")
 
     def test_worker_cannot_change_the_flag(self) -> None:
         self.assertEqual(self.decide("python3 system/scripts/gmail_send_guard.py --set on"), "deny")
@@ -748,21 +748,21 @@ class Hook(unittest.TestCase):
         self.assertIsNone(self.decide("python3 system/scripts/gmail_send_guard.py --check"))
 
     def test_worker_drafts_reads_and_quotes_pass(self) -> None:
-        for command in ("pmos mail draft --body hi --to-recipient a@example.com",
-                        "pmos mail show --draft-id d",
-                        "pmos mail search --query send",
-                        "grep -n 'pmos mail send' AGENTS.md",
-                        "bash report-to-cos.sh --status done 'CoS runs pmos mail send --draft-id d'"):
+        for command in ("switchboard mail draft --body hi --to-recipient a@example.com",
+                        "switchboard mail show --draft-id d",
+                        "switchboard mail search --query send",
+                        "grep -n 'switchboard mail send' AGENTS.md",
+                        "bash report-to-cos.sh --status done 'CoS runs switchboard mail send --draft-id d'"):
             with self.subTest(command):
                 self.assertIsNone(self.decide(command))
 
     def test_cos_is_left_to_the_connector(self) -> None:
-        self.assertIsNone(self.decide("pmos mail send --draft-id d --expect-hash h", worker=False))
+        self.assertIsNone(self.decide("switchboard mail send --draft-id d --expect-hash h", worker=False))
 
     def test_worktree_checkout_denied_without_markers(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             (Path(tmp) / ".git").write_text("gitdir: elsewhere\n", encoding="utf-8")
-            self.assertEqual(self.decide("pmos mail send --draft-id d", worker=False, cwd=tmp), "deny")
+            self.assertEqual(self.decide("switchboard mail send --draft-id d", worker=False, cwd=tmp), "deny")
 
     def test_raw_api_send_denied_everywhere(self) -> None:
         for worker in (True, False):

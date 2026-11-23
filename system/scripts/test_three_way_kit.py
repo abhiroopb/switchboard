@@ -24,7 +24,7 @@ if HELPER.exists():  # docs/kit-port never ships in the kit, and this test does
 
 @unittest.skipIf(kit is None, "docs/kit-port is not in a kit tree")
 class ThreeWayTests(unittest.TestCase):
-    VALUES = {"PM_OS_ROOT": "C:/Home/owner/pm-os", "OWNER_FIRST": "Pat"}
+    VALUES = {"SWITCHBOARD_ROOT": "C:/Home/owner/switchboard", "OWNER_FIRST": "Pat"}
 
     def setUp(self) -> None:
         tmp = tempfile.TemporaryDirectory()
@@ -48,28 +48,28 @@ class ThreeWayTests(unittest.TestCase):
         return (self.out / "tree" / rel).read_bytes().decode("utf-8")
 
     def test_edits_on_both_sides_merge_and_values_become_placeholders(self) -> None:
-        self.put("base", "a.py", "one\ntwo\nthree\nfour\nfive\nroot = {{PM_OS_ROOT}}\n")
-        self.put("ours", "a.py", "ONE\ntwo\nthree\nfour\nfive\nroot = {{PM_OS_ROOT}}\n")
-        self.put("theirs", "a.py", "one\r\ntwo\r\nthree\r\nfour\r\nFIVE\r\nroot = C:/Home/owner/pm-os\r\n")
+        self.put("base", "a.py", "one\ntwo\nthree\nfour\nfive\nroot = {{SWITCHBOARD_ROOT}}\n")
+        self.put("ours", "a.py", "ONE\ntwo\nthree\nfour\nfive\nroot = {{SWITCHBOARD_ROOT}}\n")
+        self.put("theirs", "a.py", "one\r\ntwo\r\nthree\r\nfour\r\nFIVE\r\nroot = C:/Home/owner/switchboard\r\n")
         report = self.run_merge()
         self.assertEqual(report["clean"], ["a.py"])
-        self.assertEqual(self.merged("a.py"), "ONE\ntwo\nthree\nfour\nFIVE\nroot = {{PM_OS_ROOT}}\n")
+        self.assertEqual(self.merged("a.py"), "ONE\ntwo\nthree\nfour\nFIVE\nroot = {{SWITCHBOARD_ROOT}}\n")
 
     def test_git_bash_and_backslash_paths_are_reverse_rendered(self) -> None:
-        self.put("theirs", "b.md", "/c/Home/owner/pm-os and C:\\Home\\owner\\pm-os, Pat\n")
+        self.put("theirs", "b.md", "/c/Home/owner/switchboard and C:\\Home\\owner\\switchboard, Pat\n")
         self.assertEqual(self.run_merge()["added"], ["b.md"])
-        self.assertEqual(self.merged("b.md"), "{{PM_OS_ROOT}} and {{PM_OS_ROOT}}, {{OWNER_FIRST}}\n")
+        self.assertEqual(self.merged("b.md"), "{{SWITCHBOARD_ROOT}} and {{SWITCHBOARD_ROOT}}, {{OWNER_FIRST}}\n")
 
     def test_home_comes_from_the_exports_root_not_this_machine(self) -> None:
         self.put("theirs", "c.plist", "C:/Home/owner/.claude and C:/Users/pat/.claude\n")
-        self.VALUES = {"PM_OS_ROOT": "C:/Users/pat/Dropbox/pm-os"}
+        self.VALUES = {"SWITCHBOARD_ROOT": "C:/Users/pat/Dropbox/switchboard"}
         self.run_merge()
         self.assertEqual(self.merged("c.plist"), "C:/Home/owner/.claude and {{HOME}}/.claude\n")
 
     def test_the_install_record_stays_out_of_the_tree(self) -> None:
-        self.put("theirs", ".pm-os-kit/install.json", "{}\n")
-        self.assertEqual(self.run_merge()["skipped"], [".pm-os-kit/install.json"])
-        self.assertFalse((self.out / "tree" / ".pm-os-kit").exists())
+        self.put("theirs", ".switchboard-kit/install.json", "{}\n")
+        self.assertEqual(self.run_merge()["skipped"], [".switchboard-kit/install.json"])
+        self.assertFalse((self.out / "tree" / ".switchboard-kit").exists())
 
     def test_same_line_conflict_keeps_all_three_sides(self) -> None:
         self.put("base", "c.py", "flag = 0\n")

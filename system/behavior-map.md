@@ -1,12 +1,12 @@
-# PM OS behavior map
+# switchboard behavior map
 
-Canonical control-plane map for PM OS. Use this file to decide where behavior belongs before editing any prompt, skill, or script.
+Canonical control-plane map for switchboard. Use this file to decide where behavior belongs before editing any prompt, skill, or script.
 
 ## Ownership model
 
 | Behavior type | Canonical owner | Examples | Notes |
 |---|---|---|---|
-| Shared cross-runtime policy | `AGENTS.md` | boundaries, operating rules, output philosophy | Source of truth for PM OS behavior |
+| Shared cross-runtime policy | `AGENTS.md` | boundaries, operating rules, output philosophy | Source of truth for switchboard behavior |
 | Claude repo adapter | `CLAUDE.md` in repo root | imports shared policy, tiny Claude-specific notes | Should stay thin |
 | Claude home adapter and runtime | `~/.claude/CLAUDE.md`, `~/.claude/settings*.json`, hooks | personal startup behavior, Claude-only hooks, tool permissions | Not the source of shared repo behavior |
 | Deterministic automation | scripts, daemons, scheduled jobs, state rebuilders | queue rebuilds, calendar sync, recurrence materialization | Never prompt-only |
@@ -17,7 +17,7 @@ Canonical control-plane map for PM OS. Use this file to decide where behavior be
 ## Key decisions
 
 ### Policy source of truth
-- Shared PM OS behavior belongs in repo-owned files.
+- Shared switchboard behavior belongs in repo-owned files.
 - Local home-directory surfaces are adapters and deployment targets.
 - If a rule should affect both Amp and Claude in this repo, change the repo-owned surface first.
 

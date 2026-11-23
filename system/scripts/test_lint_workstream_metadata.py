@@ -63,7 +63,7 @@ class WorkstreamMetadataLintTests(unittest.TestCase):
 
     def test_unquoted_colon_space_in_next_step_is_reported_not_fatal(self) -> None:
         # An unquoted "... non-urgent: watch ..." value raises a ScannerError,
-        # which must not abort rebuild-megadesk-state.py for every workstream.
+        # which must not abort rebuild-switchboard-state.py for every workstream.
         from workstream_metadata import load_workstream_metadata
 
         with tempfile.TemporaryDirectory() as temp_dir:

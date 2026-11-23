@@ -1,29 +1,29 @@
 ---
 name: drafting-docs
-description: "Primary writing and document skill. Use when creating, drafting, writing, formatting, building, composing, reviewing, or producing review notes, strategy docs, PRDs, reports, summaries, customer-facing content, or any written document output. Default output is a Markdown note in the pm-os Obsidian vault; Google Docs only when {{OWNER_FIRST}} asks for one. Also use when converting, publishing, or moving any markdown file to Google Docs on request. Owns prose-quality standards and the customer-facing legal-requirements workflow."
+description: "Primary writing and document skill. Use when creating, drafting, writing, formatting, building, composing, reviewing, or producing review notes, strategy docs, PRDs, reports, summaries, customer-facing content, or any written document output. Default output is a Markdown note in the switchboard Obsidian vault; Google Docs only when {{OWNER_FIRST}} asks for one. Also use when converting, publishing, or moving any markdown file to Google Docs on request. Owns prose-quality standards and the customer-facing legal-requirements workflow."
 ---
 
 # Drafting Docs
 
-Write review notes and documents as Markdown inside the pm-os Obsidian vault (`~/Development/pm-os`, opened in Obsidian as vault `pm-os`). Create a Google Doc from the template (`YOUR_DOC_TEMPLATE_ID`) only when {{OWNER_FIRST}} explicitly asks for a Doc. After creating a new document on either surface, review it against the sub-agents by default, synthesize the feedback, and flag conflicts between reviewers.
+Write review notes and documents as Markdown inside the switchboard Obsidian vault (`~/Development/switchboard`, opened in Obsidian as vault `switchboard`). Create a Google Doc from the template (`YOUR_DOC_TEMPLATE_ID`) only when {{OWNER_FIRST}} explicitly asks for a Doc. After creating a new document on either surface, review it against the sub-agents by default, synthesize the feedback, and flag conflicts between reviewers.
 
 ## Review surface
 
-Policy: Obsidian is the reader and wiki for PM OS. Markdown replaces Google Docs as the default review surface.
+Policy: Obsidian is the reader and wiki for switchboard. Markdown replaces Google Docs as the default review surface.
 
 - When {{OWNER_FIRST}} must review data, a specification, a report, a recommendation, or any long text, write it as a Markdown note inside the vault and hand them the note (see "Markdown review-note workflow" below). The note is the deliverable, not backing storage.
-- Pass the note to the completion contract as `--review-artifact <vault-relative path or obsidian:// URI>` on `emit-workspace-update.py`, and name the same note in the `report-to-cos.sh` summary. Both boundaries resolve the note to `obsidian://open?vault=pm-os&file=<path>` and reject a note that does not exist inside the vault.
-- Create a Google Doc (template workflow below, never a blank Doc) only when {{OWNER_FIRST}} asks for a Doc, or when the artifact must be shared with people outside PM OS. Use a hosted site (your publishing tool) only when {{OWNER_FIRST}} asks for it or the review needs visualization or interaction.
+- Pass the note to the completion contract as `--review-artifact <vault-relative path or obsidian:// URI>` on `emit-workspace-update.py`, and name the same note in the `report-to-cos.sh` summary. Both boundaries resolve the note to `obsidian://open?vault=switchboard&file=<path>` and reject a note that does not exist inside the vault.
+- Create a Google Doc (template workflow below, never a blank Doc) only when {{OWNER_FIRST}} asks for a Doc, or when the artifact must be shared with people outside switchboard. Use a hosted site (your publishing tool) only when {{OWNER_FIRST}} asks for it or the review needs visualization or interaction.
 - Existing collaborative Google Docs stay where they are. Edit them with targeted changes only (see "New doc vs. editing an existing doc"). Do not migrate them to Markdown unless {{OWNER_FIRST}} asks.
 
 ## Markdown review-note workflow
 
 1. **Location.** Cross-cutting reviews go to `outputs/reviews/<YYYY-MM-DD>-<slug>.md`. Work owned by one workstream goes in that workstream's folder (for example `workstreams/<slug>/triage-briefs/` or `workstreams/<slug>/drafts/`). Never write review notes to `/tmp` or outside the repo; the gate rejects them.
-2. **Frontmatter.** Start with YAML frontmatter Obsidian renders as properties. The five standard properties every vault note carries are `title`, `date`, `status` (`draft` | `to review` | `reviewed` | `approved`), `workstream`, and `tags`; review notes add `task_id` when routed and `sources` (list of URLs or repo-relative paths). Start new review notes from `templates/review-note-template.md` (core Templates plugin, or `obsidian vault=pm-os create name=<slug> template=review-note-template`); daily notes use `templates/daily-note-template.md`. The saved search "Open reviews" (`path:outputs/reviews [status:"to review"]`) depends on the exact `status` value.
+2. **Frontmatter.** Start with YAML frontmatter Obsidian renders as properties. The five standard properties every vault note carries are `title`, `date`, `status` (`draft` | `to review` | `reviewed` | `approved`), `workstream`, and `tags`; review notes add `task_id` when routed and `sources` (list of URLs or repo-relative paths). Start new review notes from `templates/review-note-template.md` (core Templates plugin, or `obsidian vault=switchboard create name=<slug> template=review-note-template`); daily notes use `templates/daily-note-template.md`. The saved search "Open reviews" (`path:outputs/reviews [status:"to review"]`) depends on the exact `status` value.
 3. **Body.** One H1 title, then a short "Ask" or "Summary" block written per "Overview and summary sections" below, then H2 sections. Apply the Writing Standards and Writing Voice sections below. Use tables for comparisons and bullets for lists. Standard Markdown `---` thematic breaks are allowed in vault notes (the horizontal-rule ban in "Document Structure" is Google Docs-specific); prefer headings for section breaks anyway.
 4. **Links.** Use native relative Markdown links to other repo files (`[CONTEXT](../../workstreams/<slug>/CONTEXT.md)`) and plain URLs for external sources. Do not introduce `[[wikilinks]]` in files that other tooling reads. Link text follows "Inline links" below.
 5. **Media.** Reference images and PDFs by relative path; never copy or re-encode source media. Show every image the note discusses inline with a relative embed (`![Cover option 1](assets/cover-1.png)`), one per option in the order the options are listed, instead of describing it. Under each embed, at most a short factual label (size, source) or a decision caveat ("crop cuts heads", "reuse needs owner OK"). A chat reply or report about the same images gives one compare-page link first, built with `python3 system/scripts/image_compare.py build` into the workstream's `assets/compare/`, then links each file as `[Cover option 1](file:///abs/path.png)`. Link the compare page from the note too, as a relative link (`assets/compare/<page>.html`) that resolves in the worktree before landing and on main after. Whoever shares the page opens it on the owner's machine with `python3 system/scripts/image_compare.py open <path>` (or `build --open`) and names the path in one line. The page opens in an unselected cmux browser tab, never through `open` or `open -g`, so it never steals focus.
-6. **Hand-off pointer.** Show the vault-relative Markdown path as plain text. On the next line, emit `[Open in Obsidian](<click target>) · [obsidian:// link](obsidian://open?vault=pm-os&file=<encoded path without .md>)`. The click target opens the note in Obsidian, in the background when Obsidian's window is at least half visible and in front when it is covered, because a background open behind cmux on one screen showed nothing. In Claude Code inside cmux it is `pmos-obsidian://open?vault=pm-os&file=<encoded path without .md>`, which the background-only PM OS Obsidian Link handler opens and which makes that choice itself; cmux would send a `file://….md` link to its own Markdown viewer and an `obsidian://` link to Obsidian in the front. In the Amp TUI (0.0.1793332853 opens only http(s) and `file://`) it is `file://{{PM_OS_ROOT}}/<encoded path>.md`, which `$AMP_EDITOR` (`system/scripts/amp-obsidian-editor.sh`) routes to `open -g obsidian://…`. The `obsidian://` URI stays the stored pointer for the CoS Review app and digests. `python3 system/scripts/review_surface.py` (`review_link`) renders this exact line; prefer it over hand-writing. URL-encode the path, including spaces and parentheses. Keep the links on their own line, without surrounding prose or trailing punctuation. Never emit a bare URI or shorten any part of a link target. Shorten prose before the pointer instead. Apply this rule to workstream replies, workspace reports, and CoS digests. Run `python3 system/scripts/review_surface.py check --status "to review" --review-artifact <path>` to confirm the pointer resolves before emitting.
+6. **Hand-off pointer.** Show the vault-relative Markdown path as plain text. On the next line, emit `[Open in Obsidian](<click target>) · [obsidian:// link](obsidian://open?vault=switchboard&file=<encoded path without .md>)`. The click target opens the note in Obsidian, in the background when Obsidian's window is at least half visible and in front when it is covered, because a background open behind cmux on one screen showed nothing. In Claude Code inside cmux it is `switchboard-obsidian://open?vault=switchboard&file=<encoded path without .md>`, which the background-only switchboard Obsidian Link handler opens and which makes that choice itself; cmux would send a `file://….md` link to its own Markdown viewer and an `obsidian://` link to Obsidian in the front. In the Amp TUI (0.0.1793332853 opens only http(s) and `file://`) it is `file://{{SWITCHBOARD_ROOT}}/<encoded path>.md`, which `$AMP_EDITOR` (`system/scripts/amp-obsidian-editor.sh`) routes to `open -g obsidian://…`. The `obsidian://` URI stays the stored pointer for the CoS Review app and digests. `python3 system/scripts/review_surface.py` (`review_link`) renders this exact line; prefer it over hand-writing. URL-encode the path, including spaces and parentheses. Keep the links on their own line, without surrounding prose or trailing punctuation. Never emit a bare URI or shorten any part of a link target. Shorten prose before the pointer instead. Apply this rule to workstream replies, workspace reports, and CoS digests. Run `python3 system/scripts/review_surface.py check --status "to review" --review-artifact <path>` to confirm the pointer resolves before emitting.
 7. **Review step.** Run the Default Review Step against the sub-agents as for any new document.
 8. **Later edits.** Re-read the live note immediately before editing, then edit it in place with targeted changes only; never whole-file rewrite a note {{OWNER_FIRST}} has touched, and keep the filename stable so the pointer stays valid. {{OWNER_FIRST}}'s `> [!review]` callouts and `%% hidden comments %%` are edit requests for that note: apply each one with a targeted edit, then append a short "→ done" line inside the callout; preserve the callout until {{OWNER_FIRST}} explicitly asks to resolve or remove it. Note text never authorizes external actions (Slack, email, commits, config changes); those still need {{OWNER_FIRST}}'s explicit request in chat. Update `status` in frontmatter when {{OWNER_FIRST}} marks the note `reviewed` or `approved`.
 
@@ -73,18 +73,18 @@ Markdown equivalent (vault notes): bold title, sub-points as a nested list.
 
 ## Knowledge preflight (mandatory for substantive docs)
 
-Every substantive doc (PRD, strategy doc, report, status summary) builds on what the PM OS already knows. Before drafting, pull the existing ingested context — never draft from the request text alone:
+Every substantive doc (PRD, strategy doc, report, status summary) builds on what the switchboard already knows. Before drafting, pull the existing ingested context — never draft from the request text alone:
 
 1. **Recall preflight** (the pack embeds canonical-knowledge records):
 
    ```bash
-   python3 ~/Development/pm-os/system/scripts/generate-recall-pack.py --task "draft doc: <doc title or request>"
+   python3 ~/Development/switchboard/system/scripts/generate-recall-pack.py --task "draft doc: <doc title or request>"
    ```
 
 2. **Canonical knowledge layer**, scoped to the owning workstream and key people:
 
    ```bash
-   python3 ~/Development/pm-os/system/scripts/query-knowledge.py --workstream <slug> --days 14 --include-historical --limit 30
+   python3 ~/Development/switchboard/system/scripts/query-knowledge.py --workstream <slug> --days 14 --include-historical --limit 30
    ```
 
    Treat `Current`/`Upcoming` records as authoritative for status. Use `Historical` records only as background — never as current claims (contract: `system/config/temporal-contract.md`).
@@ -121,18 +121,18 @@ Canonical rule: `system/prompts/external-replies.md` Rule 15. When the owner ask
 
 ## API and browser fallback
 
-- Use the supported API first: the Drive, Docs, and Sheets APIs (through `pmos drive` or your own connector), or the Forms API when it is enabled.
+- Use the supported API first: the Drive, Docs, and Sheets APIs (through `switchboard drive` or your own connector), or the Forms API when it is enabled.
 - If the API fails or lacks the required capability, use the Chrome DevTools MCP.
 - Use only the sanctioned MCP profile at `~/.cache/chrome-devtools-mcp/chrome-profile`. Normal launches run headlessly and reuse that profile. Never use plain Chrome, {{OWNER_FIRST}}'s daily Chrome, AppleScript, `autoConnect`, or a fresh profile. A machine rule in `local/agents-local.md` wins over this on the machine it names.
 - Open every automation page with `background: true`, never set `bringToFront: true` in `select_page`, and close every automation tab when the task finishes.
-- If Google authentication expires, stop and report the blocker to CoS. Use `PM_OS_BROWSER_OK=1` only after CoS coordinates a one-time visible MCP sign-in with {{OWNER_FIRST}}. Then verify the same Google Doc through two complete headless MCP launch/stop cycles without a sign-in redirect.
+- If Google authentication expires, stop and report the blocker to CoS. Use `SWITCHBOARD_BROWSER_OK=1` only after CoS coordinates a one-time visible MCP sign-in with {{OWNER_FIRST}}. Then verify the same Google Doc through two complete headless MCP launch/stop cycles without a sign-in redirect.
 - Forms, Sheets, and dialog interfaces support direct DOM automation. Google Docs canvas work often requires menu and keyboard commands.
 - Re-verify the artifact after every UI change. Prefer an API read-back; otherwise, inspect the resulting UI state.
 - Give manual instructions only after both the API and Chrome DevTools paths fail.
 
 ## Workflow (Google Doc, on explicit request only)
 
-The steps name Google Docs API operations. Run them through `pmos drive` or any Docs API client you trust.
+The steps name Google Docs API operations. Run them through `switchboard drive` or any Docs API client you trust.
 
 1. **Copy your template** (`YOUR_DOC_TEMPLATE_ID`, personalize here) with the Drive API `files.copy`, named after the document. With no template, create an empty doc and apply the house style below.
 2. **Read the copy** with `documents.get` and note the template's named styles. They are the source of truth for fonts, sizes, colors and spacing.
@@ -149,7 +149,7 @@ The steps name Google Docs API operations. Run them through `pmos drive` or any 
 
 For every newly created document, run a sub-agent review after the first complete draft is in place.
 
-- Use the most relevant reviewer set from `~/Development/pm-os/sub-agents/`
+- Use the most relevant reviewer set from `~/Development/switchboard/sub-agents/`
 - At minimum, include the reviewers that best match the doc type and audience
 - Synthesize common feedback, flag conflicts between reviewers, and surface the highest-priority changes
 - If the user asks for a lightweight pass, keep the review concise rather than skipping it entirely
@@ -231,7 +231,7 @@ These apply to every document and piece of content this skill produces:
 
 ## Brand and design source
 
-Your organization's brand guidelines are the default brand and design source. Keep a PM OS encoding of them under `references/brand/` and read it before any doc that names a brand, carries charts, diagrams, images, or logos, or is customer-facing. Do not copy its tables here.
+Your organization's brand guidelines are the default brand and design source. Keep a switchboard encoding of them under `references/brand/` and read it before any doc that names a brand, carries charts, diagrams, images, or logos, or is customer-facing. Do not copy its tables here.
 
 - Pick the brand per that file when the organization has more than one brand.
 - Apply the brand voice and terminology rules from that file.
@@ -260,7 +260,7 @@ If your organization has legal review rules for customer-facing content, keep th
   - **Counter-example.** A plan item that reads "D1 reminders flag on, templates in every account, D0 copy parity. Sam, Priya. Mar 3." has a code, owners and a date, and no sentence. A request for "a short plan" means fewer items, not a word-count cut that leaves fragments like this.
   - **Model item.** "**Overdue reminders** (D1). Turn on the reminders flag and add the approval step to every account, so each household reviews a reminder before it sends. Sam and Priya, by March 3."
   - In a Google Doc the lead is bold text inside a native list item; on Slack it is `*bold*` inside a `rich_text_list` item; in Markdown and chat it is `**bold**` at the start of the bullet.
-- **Messages link every reference and @mention every person.** Every message drafted for {{OWNER_FIRST}} (Slack DM, channel post, thread reply, Comms Triage draft, GitHub PR body or comment, Linear, Jira, Confluence, Google Doc comment, email) links inline to every thread, message, PR, issue, doc, or session it refers to (Slack `<https://url|anchor>`, GitHub PR URL, Linear or Jira URL, Google Doc URL; never "the draft PR" or "yesterday's message" without the link) and writes every person it names as the surface's native mention (Slack `<@Uxxxx>` via `pmos slack people`, GitHub `@handle`, the tool's @mention elsewhere) with two or three words saying who they are on first mention when the recipient may not know them; a name the recipient would not recognise is dropped or becomes a role. Email uses full names with no @mention but still links. Any file, reference, section, step, or shorthand a message names (`ref 05`, `SKILL.md`, "the design doc", "step 7", "the size test") links to the actual artifact (GitHub file URL at the PR head or the PR files anchor, Google Doc heading URL, Confluence anchor) and spells out the full file or section name on first mention; shorthand with no link never ships in an external message. Any internal team, process, or tool that has a short link (an intranet short link or equivalent) is linked that way on first mention. Canonical text: `system/prompts/external-replies.md` Rule 4 item 6.
+- **Messages link every reference and @mention every person.** Every message drafted for {{OWNER_FIRST}} (Slack DM, channel post, thread reply, Comms Triage draft, GitHub PR body or comment, Linear, Jira, Confluence, Google Doc comment, email) links inline to every thread, message, PR, issue, doc, or session it refers to (Slack `<https://url|anchor>`, GitHub PR URL, Linear or Jira URL, Google Doc URL; never "the draft PR" or "yesterday's message" without the link) and writes every person it names as the surface's native mention (Slack `<@Uxxxx>` via `switchboard slack people`, GitHub `@handle`, the tool's @mention elsewhere) with two or three words saying who they are on first mention when the recipient may not know them; a name the recipient would not recognise is dropped or becomes a role. Email uses full names with no @mention but still links. Any file, reference, section, step, or shorthand a message names (`ref 05`, `SKILL.md`, "the design doc", "step 7", "the size test") links to the actual artifact (GitHub file URL at the PR head or the PR files anchor, Google Doc heading URL, Confluence anchor) and spells out the full file or section name on first mention; shorthand with no link never ships in an external message. Any internal team, process, or tool that has a short link (an intranet short link or equivalent) is linked that way on first mention. Canonical text: `system/prompts/external-replies.md` Rule 4 item 6.
 - **Exact status words, sourced numbers.** Describe each thing in the state it is actually in: drafted, suggested, scheduled, approved, or sent. Never write that something happened before it did ("Here is the draft for your review", not "Your reminder went out" while it waits for approval). Every number about a product comes from a source you can cite, quoted as that source states it, and any footnote or disclosure the source requires travels with the number wherever it appears.
 - **Table cells with multiple requirements or behaviors:** use native Google Docs bullets with one complete sentence per bullet. Never compress checklist-like content into dense semicolon-chained prose, and never use clipped sentence fragments in explanatory cells.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The CoS queue ranks real work, never scaffold text (2026-11-08, rt-00000000003c).
 
-now.json's top card was pm-os-maintenance "Complete and verify the initial request", left from an
+now.json's top card was switchboard-maintenance "Complete and verify the initial request", left from an
 E2E smoke test, and the meetings card asked the owner to verify automation that never ran on this
 install. Each test names the wrong implementation it catches.
 """
@@ -18,10 +18,10 @@ from unittest import mock
 
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
-SPEC = importlib.util.spec_from_file_location("rebuild_megadesk_next_step_test", SCRIPTS / "rebuild-megadesk-state.py")
-megadesk = importlib.util.module_from_spec(SPEC)
-sys.modules[SPEC.name] = megadesk
-SPEC.loader.exec_module(megadesk)
+SPEC = importlib.util.spec_from_file_location("rebuild_switchboard_next_step_test", SCRIPTS / "rebuild-switchboard-state.py")
+switchboard = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = switchboard
+SPEC.loader.exec_module(switchboard)
 
 from workstream_metadata import NO_OPEN_STEP, load_workstream_metadata, parse_context  # noqa: E402
 
@@ -93,11 +93,11 @@ class QueueRanksRealWork(Tree):
             "meetings": {"updated_at": None, "items": []}, "knowledge": {},
         }
         with (
-            mock.patch.object(megadesk, "derive_sources", return_value=derived),
-            mock.patch.object(megadesk, "build_calendar_context", return_value={"available_focus_minutes": None, "minutes_until_next_event": None, "upcoming": []}),
-            mock.patch.object(megadesk.comms_triage_setting, "enabled", return_value=False),
+            mock.patch.object(switchboard, "derive_sources", return_value=derived),
+            mock.patch.object(switchboard, "build_calendar_context", return_value={"available_focus_minutes": None, "minutes_until_next_event": None, "upcoming": []}),
+            mock.patch.object(switchboard.comms_triage_setting, "enabled", return_value=False),
         ):
-            return megadesk.build_queue(self.root, state, self.root / "todo.json", persist_sources=False)
+            return switchboard.build_queue(self.root, state, self.root / "todo.json", persist_sources=False)
 
     def test_a_scaffold_workstream_never_becomes_the_now_card(self) -> None:
         # Wrong impl: the 2026-11-08 queue, with the smoke test placeholder on top at score 95.
@@ -125,7 +125,7 @@ class QueueRanksRealWork(Tree):
         self.workstream("maintenance", SCAFFOLD_STEPS)
         todo = {"id": "t1", "title": "Renew the maintenance contract", "priority": "P1", "status": "open", "workstream": "maintenance",
                 "requires_user": True}
-        with mock.patch.object(megadesk, "todo_matches_workstream", return_value=True):
+        with mock.patch.object(switchboard, "todo_matches_workstream", return_value=True):
             _, now = self.build(todos=[todo])
         self.assertEqual(now["now"]["title"], "Renew the maintenance contract")
         self.assertTrue(now["now"]["requires_user"])
@@ -140,7 +140,7 @@ class QueueRanksRealWork(Tree):
 
 class MeetingsCardNeverAsksToVerifyAutomation(Tree):
     def card(self, source: dict) -> dict:
-        return megadesk.build_meetings_routine_card(self.root, source)
+        return switchboard.build_meetings_routine_card(self.root, source)
 
     def test_an_install_with_no_collector_is_quiet(self) -> None:
         # Wrong impl: updated_at null reads as stale, so Windows asks the owner to verify a

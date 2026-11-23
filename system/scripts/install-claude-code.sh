@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Set up Claude Code for PM OS on macOS, Linux, or Windows (Git for Windows bash).
+# Set up Claude Code for switchboard on macOS, Linux, or Windows (Git for Windows bash).
 #
 # One command does every Claude-specific step that the Amp path does not cover:
 #
@@ -11,12 +11,12 @@
 #                  changes nothing. --memory claude-mem installs claude-mem
 #                  (pinned, telemetry off, worker autostart off) and registers
 #                  the worker as a service the OS owns:
-#                    macOS    launchd  com.pm-os.claude-mem  (system/launchd/)
-#                    Linux    systemd  ~/.config/systemd/user/pm-os-claude-mem.service
-#                    Windows  Task Scheduler  \PM OS\com.pm-os.claude-mem
+#                    macOS    launchd  com.switchboard.claude-mem  (system/launchd/)
+#                    Linux    systemd  ~/.config/systemd/user/switchboard-claude-mem.service
+#                    Windows  Task Scheduler  \switchboard\com.switchboard.claude-mem
 #                                             (system/windows/register-scheduled-tasks.ps1)
-#   3. plugins     the official plugins PM OS relies on, plus the PM OS plugin
-#                  itself (pm-os@pm-os-local) from the marketplace folder
+#   3. plugins     the official plugins switchboard relies on, plus the switchboard plugin
+#                  itself (switchboard@switchboard-local) from the marketplace folder
 #                  system/claude-marketplace. Its hooks run the Amp plugin
 #                  modules through Bun, so guardrails, liveness, and reports
 #                  behave the same in Claude Code and in Amp.
@@ -32,8 +32,8 @@
 #                  built-in memory on, permission prompt on. (Step 3 still
 #                  records the plugin under enabledPlugins in the same file.)
 #   6. trust       records Claude Code's folder trust in ~/.claude.json for the
-#                  PM OS folder and the task worktrees folder
-#                  (PM_OS_WORKTREES_DIR), so a new worker pane does not stop at
+#                  switchboard folder and the task worktrees folder
+#                  (SWITCHBOARD_WORKTREES_DIR), so a new worker pane does not stop at
 #                  "Do you trust the files in this folder?". --no-folder-trust
 #                  skips it.
 #
@@ -55,15 +55,15 @@
 # blocked call prints the manual command and the script moves on.
 #
 # Environment:
-#   PM_OS_PYTHON          python interpreter (default python3, then py -3 on Windows)
+#   SWITCHBOARD_PYTHON          python interpreter (default python3, then py -3 on Windows)
 #   CLAUDE_MEM_VERSION    claude-mem version to install (default below)
 #   CLAUDE_CLI_TIMEOUT    seconds before one `claude plugin|mcp` call is abandoned (default 120)
 #
-# Requirements: claude on PATH. bun for the PM OS plugin hooks and the memory
+# Requirements: claude on PATH. bun for the switchboard plugin hooks and the memory
 # worker. npx (Node 18+) for memory and chrome-devtools.
 # Missing optional tools skip their step with a one-line note and the install
 # command for the OS, never a prompt. Kill switch for the plugin hooks:
-# ~/.claude/pm-os-plugin-config.json {"pm-os-bridge.disabled": true}.
+# ~/.claude/switchboard-plugin-config.json {"switchboard-bridge.disabled": true}.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -78,8 +78,8 @@ FOLDER_TRUST=1    # --no-folder-trust: leave ~/.claude.json alone
 CLAUDE_CLI_TIMEOUT="${CLAUDE_CLI_TIMEOUT:-120}"
 CLAUDE_MEM_VERSION="${CLAUDE_MEM_VERSION:-15.8.1}"
 PLUGINS=(claude-md-management frontend-design hookify playground receipts security-guidance)
-PM_OS_MARKETPLACE_NAME="pm-os-local"
-PM_OS_PLUGIN="pm-os@${PM_OS_MARKETPLACE_NAME}"
+SWITCHBOARD_MARKETPLACE_NAME="switchboard-local"
+SWITCHBOARD_PLUGIN="switchboard@${SWITCHBOARD_MARKETPLACE_NAME}"
 CHROME_DEVTOOLS_MCP_VERSION="1.9.0"
 
 while [ $# -gt 0 ]; do
@@ -166,10 +166,10 @@ case "$(uname -s)" in
   *) OS=other ;;
 esac
 
-# Python: PM_OS_PYTHON wins. Git for Windows has no python3, so fall back to the
+# Python: SWITCHBOARD_PYTHON wins. Git for Windows has no python3, so fall back to the
 # py launcher there.
-if [ -n "${PM_OS_PYTHON:-}" ]; then
-  PY="$PM_OS_PYTHON"
+if [ -n "${SWITCHBOARD_PYTHON:-}" ]; then
+  PY="$SWITCHBOARD_PYTHON"
 elif python3 --version >/dev/null 2>&1; then
   PY=python3
 elif py -3 --version >/dev/null 2>&1; then
@@ -206,7 +206,7 @@ if command -v bun >/dev/null 2>&1; then
   HAVE_BUN=1
 fi
 
-say "PM OS root:  $ROOT"
+say "switchboard root:  $ROOT"
 say "home:        $HOME_DIR"
 say "os:          $OS"
 say "python:      $PY"
@@ -214,7 +214,7 @@ say "claude:      $(claude --version 2>/dev/null | head -1)"
 if [ "$HAVE_BUN" = 1 ]; then
   say "bun:         $(bun --version 2>/dev/null | head -1)"
 else
-  say "bun:         missing. The PM OS plugin hooks and the memory worker need it: $(bun_hint)"
+  say "bun:         missing. The switchboard plugin hooks and the memory worker need it: $(bun_hint)"
 fi
 [ "$DRY" = 1 ] && say "mode:        dry run (nothing is written)"
 
@@ -319,14 +319,14 @@ else
     mkdir -p "$ROOT/system/state/logs"
     case "$OS" in
       macos)
-        run bash "$ROOT/system/scripts/install-launchd.sh" $([ "$DRY" = 1 ] && echo --dry-run) com.pm-os.claude-mem
+        run bash "$ROOT/system/scripts/install-launchd.sh" $([ "$DRY" = 1 ] && echo --dry-run) com.switchboard.claude-mem
         ;;
       linux)
         unit_dir="$HOME_DIR/.config/systemd/user"
-        unit="$unit_dir/pm-os-claude-mem.service"
+        unit="$unit_dir/switchboard-claude-mem.service"
         bun_dir="$(dirname "$(command -v bun)")"
         unit_text="[Unit]
-Description=PM OS claude-mem worker (Claude Code memory)
+Description=switchboard claude-mem worker (Claude Code memory)
 After=default.target
 
 [Service]
@@ -344,15 +344,15 @@ StandardError=append:$ROOT/system/state/logs/claude-mem.err.log
 WantedBy=default.target
 "
         if [ "$DRY" = 1 ]; then
-          printf '  would  write %s and systemctl --user enable --now pm-os-claude-mem.service\n' "$unit"
+          printf '  would  write %s and systemctl --user enable --now switchboard-claude-mem.service\n' "$unit"
         else
           mkdir -p "$unit_dir"
           printf '%s' "$unit_text" > "$unit"
           say "  write  $unit"
           if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
             systemctl --user daemon-reload
-            systemctl --user enable --now pm-os-claude-mem.service
-            systemctl --user --no-pager --lines=0 status pm-os-claude-mem.service || true
+            systemctl --user enable --now switchboard-claude-mem.service
+            systemctl --user --no-pager --lines=0 status switchboard-claude-mem.service || true
           else
             note "systemd user session not available; start the worker with: bash $ROOT/system/scripts/claude-mem-worker.sh &"
           fi
@@ -362,13 +362,13 @@ WantedBy=default.target
         ps1="$ROOT/system/windows/register-scheduled-tasks.ps1"
         win_ps1="$(cygpath -w "$ps1" 2>/dev/null || printf '%s' "$ps1")"
         win_root="$(cygpath -w "$ROOT" 2>/dev/null || printf '%s' "$ROOT")"
-        ps_args=(-NoProfile -ExecutionPolicy Bypass -File "$win_ps1" -PmOsRoot "$win_root" -Labels com.pm-os.claude-mem)
+        ps_args=(-NoProfile -ExecutionPolicy Bypass -File "$win_ps1" -SwitchboardRoot "$win_root" -Labels com.switchboard.claude-mem)
         [ "$DRY" = 1 ] && ps_args+=(-DryRun)
         if command -v powershell.exe >/dev/null 2>&1; then
           run powershell.exe "${ps_args[@]}"
-          [ "$DRY" = 0 ] && run powershell.exe -NoProfile -Command "Start-ScheduledTask -TaskPath '\PM OS\' -TaskName 'com.pm-os.claude-mem'"
+          [ "$DRY" = 0 ] && run powershell.exe -NoProfile -Command "Start-ScheduledTask -TaskPath '\switchboard\' -TaskName 'com.switchboard.claude-mem'"
         else
-          note "powershell.exe not found; from PowerShell run: powershell -ExecutionPolicy Bypass -File \"$win_ps1\" -PmOsRoot \"$win_root\" -Labels com.pm-os.claude-mem"
+          note "powershell.exe not found; from PowerShell run: powershell -ExecutionPolicy Bypass -File \"$win_ps1\" -SwitchboardRoot \"$win_root\" -Labels com.switchboard.claude-mem"
         fi
         ;;
       *)
@@ -403,31 +403,31 @@ else
     fi
   fi
 
-  # The PM OS plugin: the marketplace folder lives in this repo, so the
+  # The switchboard plugin: the marketplace folder lives in this repo, so the
   # install reads from disk and needs no network. Hooks run through Bun.
   MARKETPLACE_DIR="$ROOT/system/claude-marketplace"
   if [ ! -f "$MARKETPLACE_DIR/.claude-plugin/marketplace.json" ]; then
-    note "PM OS plugin: $MARKETPLACE_DIR/.claude-plugin/marketplace.json missing, skipped"
+    note "switchboard plugin: $MARKETPLACE_DIR/.claude-plugin/marketplace.json missing, skipped"
   else
     claude_capture plugin marketplace list
     marketplaces="$CLAUDE_OUT"
-    if printf '%s' "$marketplaces" | grep -q "$PM_OS_MARKETPLACE_NAME"; then
-      note "marketplace $PM_OS_MARKETPLACE_NAME already added"
+    if printf '%s' "$marketplaces" | grep -q "$SWITCHBOARD_MARKETPLACE_NAME"; then
+      note "marketplace $SWITCHBOARD_MARKETPLACE_NAME already added"
     else
       run claude_cli plugin marketplace add "$MARKETPLACE_DIR" --scope user || note "marketplace add failed; rerun: claude plugin marketplace add $MARKETPLACE_DIR"
     fi
-    if printf '%s' "$installed" | grep -q "$PM_OS_PLUGIN"; then
-      note "$PM_OS_PLUGIN already installed"
+    if printf '%s' "$installed" | grep -q "$SWITCHBOARD_PLUGIN"; then
+      note "$SWITCHBOARD_PLUGIN already installed"
     else
-      run claude_cli plugin install "$PM_OS_PLUGIN" --scope user || note "$PM_OS_PLUGIN install failed; rerun: claude plugin install $PM_OS_PLUGIN"
+      run claude_cli plugin install "$SWITCHBOARD_PLUGIN" --scope user || note "$SWITCHBOARD_PLUGIN install failed; rerun: claude plugin install $SWITCHBOARD_PLUGIN"
     fi
     if [ "$HAVE_BUN" = 0 ]; then
-      note "$PM_OS_PLUGIN hooks need bun; until it is installed ($(bun_hint)) the hooks exit without acting"
+      note "$SWITCHBOARD_PLUGIN hooks need bun; until it is installed ($(bun_hint)) the hooks exit without acting"
     fi
-    note "kill switch: $HOME_DIR/.claude/pm-os-plugin-config.json  {\"pm-os-bridge.disabled\": true}"
+    note "kill switch: $HOME_DIR/.claude/switchboard-plugin-config.json  {\"switchboard-bridge.disabled\": true}"
     # A reinstall restores the installed plugin's hooks.json, so apply the Windows hook profile again.
     if [ "$OS" = windows ] && [ -f "$ROOT/system/windows/apply-hook-profile.py" ]; then
-      run "${PM_OS_PYTHON:-python3}" "$ROOT/system/windows/apply-hook-profile.py" || note "hook profile not applied; rerun: python3 system/windows/apply-hook-profile.py"
+      run "${SWITCHBOARD_PYTHON:-python3}" "$ROOT/system/windows/apply-hook-profile.py" || note "hook profile not applied; rerun: python3 system/windows/apply-hook-profile.py"
     fi
   fi
 fi
@@ -447,7 +447,7 @@ if [ "$SKIP_MCP" = 1 ]; then
 elif [ "$NESTED" = 1 ]; then
   note "skipped inside Claude Code; from a plain terminal run: bash \"$ROOT/system/scripts/install-claude-code.sh\""
 else
-  # A machine with PM_OS_OWNER_BROWSER in local/machines/<MACHINE>.env drives a real Brave
+  # A machine with SWITCHBOARD_OWNER_BROWSER in local/machines/<MACHINE>.env drives a real Brave
   # through owner_browser.py (rule: local/agents-local.md): chrome-devtools is the agent
   # profile, a separate Brave signed in to nothing that needs no click, and
   # chrome-devtools-owner is the owner's own signed-in Brave, through its Allow dialog,
@@ -499,7 +499,7 @@ fi
 
 # ---------------------------------------------------------------- 5. settings
 step "settings -> $HOME_DIR/.claude/settings.json"
-# PM OS runs its sessions with permission prompts bypassed; the plugin hooks are the
+# switchboard runs its sessions with permission prompts bypassed; the plugin hooks are the
 # guardrail. Undo: remove permissions.defaultMode and skipDangerousModePermissionPrompt.
 # Deliberate default, not an oversight: bypassPermissions here and
 # --dangerously-skip-permissions on worker tabs (dispatch.py launch_command_for) stay on,
@@ -567,7 +567,7 @@ text = path.read_text(encoding="utf-8") if path.exists() else ""
 data = json.loads(text) if text.strip() else {}
 env = data.setdefault("env", {})
 want_env = {"DISABLE_AUTOUPDATER": "1", "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"}
-# Workers run with the permission prompt skipped; the PM OS plugin hooks are
+# Workers run with the permission prompt skipped; the switchboard plugin hooks are
 # the guardrail (git add -A, force push, rm -rf outside /tmp are still blocked).
 want_top = {"skipDangerousModePermissionPrompt": True}
 changed = any(env.get(k) != v for k, v in want_env.items()) or any(data.get(k) != v for k, v in want_top.items())
@@ -582,10 +582,10 @@ fi
 # ---------------------------------------------------------------- 6. folder trust
 # A worker pane opens in a folder Claude Code has not seen; its trust prompt
 # blocks the pane until someone answers it (on Windows the worktrees live under
-# %LOCALAPPDATA%, outside the PM OS folder). Both
+# %LOCALAPPDATA%, outside the switchboard folder). Both
 # folders are recorded; each task worktree sits under the second one.
 step "folder trust -> $HOME_DIR/.claude.json"
-WT_DIR="${PM_OS_WORKTREES_DIR:-$ROOT/.amp/worktrees}"
+WT_DIR="${SWITCHBOARD_WORKTREES_DIR:-$ROOT/.amp/worktrees}"
 trust_paths=("$ROOT" "$WT_DIR")
 if [ "$OS" = windows ] && command -v cygpath >/dev/null 2>&1; then
   # Drive forms. Which one Claude Code keys by on Windows is on the v7 verify
@@ -647,7 +647,7 @@ if added:
     # use a unique temp file, and re-read just before the swap so a write by a
     # running Claude Code in between is kept.
     mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o600
-    fd, tmp = tempfile.mkstemp(prefix=path.name + ".", suffix=".pm-os-tmp", dir=str(path.parent))
+    fd, tmp = tempfile.mkstemp(prefix=path.name + ".", suffix=".switchboard-tmp", dir=str(path.parent))
     try:
         os.close(fd)
         os.chmod(tmp, mode)
@@ -676,10 +676,10 @@ fi
 # ---------------------------------------------------------------- verify
 step "verify"
 if [ "$MEMORY" = "claude-mem" ]; then
-  MEM_PLUGIN=" (+ claude-mem@thedotmack, ${PM_OS_PLUGIN})"
+  MEM_PLUGIN=" (+ claude-mem@thedotmack, ${SWITCHBOARD_PLUGIN})"
   MEM_CHECK="  ${PY} system/scripts/check-claude-mem.py --quiet    # worker health, telemetry off, autostart off"
 else
-  MEM_PLUGIN=" (+ ${PM_OS_PLUGIN}; no claude-mem, built-in memory kept)"
+  MEM_PLUGIN=" (+ ${SWITCHBOARD_PLUGIN}; no claude-mem, built-in memory kept)"
   MEM_CHECK="  # memory: Claude Code built-in, nothing to check"
 fi
 cat <<EOF
@@ -688,15 +688,15 @@ cat <<EOF
   ${PY} system/scripts/install-claude-skills.py --check --skip-missing
 ${MEM_CHECK}
   claude -p "Which instruction files are loaded, and what bot attribution prefix do they require?"
-  # PM OS plugin hooks (needs bun). Expect "permissionDecision": "deny":
+  # switchboard plugin hooks (needs bun). Expect "permissionDecision": "deny":
   echo '{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"git add -A"},"session_id":"t","cwd":"/tmp"}' \\
-    | bun system/claude-marketplace/plugins/pm-os/hooks/amp-bridge.ts pre-tool-use
+    | bun system/claude-marketplace/plugins/switchboard/hooks/amp-bridge.ts pre-tool-use
 EOF
 if [ "$MEMORY" = "claude-mem" ]; then
   case "$OS" in
-    macos)   say "  launchctl print gui/\$(id -u)/com.pm-os.claude-mem | head -5" ;;
-    linux)   say "  systemctl --user status pm-os-claude-mem.service" ;;
-    windows) say "  Get-ScheduledTask -TaskPath '\\PM OS\\' -TaskName com.pm-os.claude-mem   (PowerShell)" ;;
+    macos)   say "  launchctl print gui/\$(id -u)/com.switchboard.claude-mem | head -5" ;;
+    linux)   say "  systemctl --user status switchboard-claude-mem.service" ;;
+    windows) say "  Get-ScheduledTask -TaskPath '\\switchboard\\' -TaskName com.switchboard.claude-mem   (PowerShell)" ;;
   esac
 fi
 [ "$DRY" = 1 ] && say "" && say "Dry run only. Rerun without --dry-run to apply."

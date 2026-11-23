@@ -6,7 +6,7 @@ Usage:
   python3 system/scripts/sheet-cell-comment.py post --sheet <url> --cell C9 --comment '<text>' [--expect '<cell text>']
   python3 system/scripts/sheet-cell-comment.py post --sheet <url> --spec comments.json [--dry-run] [--no-robot]
 
-Why: the Drive API (and `pmos drive comment-add`) cannot anchor a comment to a Sheets cell; an
+Why: the Drive API (and `switchboard drive comment-add`) cannot anchor a comment to a Sheets cell; an
 API comment lands file-level. the owner's own feedback on a shared sheet is one comment per cell, anchored on that cell
 (rule: system/prompts/external-replies.md Rule 15). This script opens `<sheet>/edit?gid=<gid>#gid=<gid>&range=<A1>`
 in a background tab of the sanctioned profile through the shared launcher (one lease, MCP stopped on exit), checks
@@ -131,7 +131,7 @@ def load_items(args):
 
 
 def list_comments(file_id):
-    run = subprocess.run(['pmos', 'drive', 'comments', '--file-id-or-url', file_id,
+    run = subprocess.run(['switchboard', 'drive', 'comments', '--file-id-or-url', file_id,
                           '--all-pages'], capture_output=True, text=True, timeout=120)
     if run.returncode:
         raise RuntimeError('comments failed: ' + (run.stderr or run.stdout)[:400])
@@ -256,7 +256,7 @@ def cmd_post(args):
             raise RuntimeError('Profile lease busy after bounded wait')
         p.start_child()
         g.rpc(p, 'initialize', dict(protocolVersion='2024-11-05', capabilities={},
-                                    clientInfo=dict(name='pm-os-sheet-cell-comment', version='1')))
+                                    clientInfo=dict(name='switchboard-sheet-cell-comment', version='1')))
         p.send(dict(jsonrpc='2.0', method='notifications/initialized'))
         existing = list_comments(file_id)  # another run may have posted while this one waited for the lease
         for item in list(todo):

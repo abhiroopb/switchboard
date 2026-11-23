@@ -33,7 +33,7 @@ LAUNCHER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'chrome-mcp-
 spec = importlib.util.spec_from_file_location('chrome_session', LAUNCHER)
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
-HANDLE = os.environ.get('PM_OS_GITHUB_LOGIN', '{{OWNER_USER}}')
+HANDLE = os.environ.get('SWITCHBOARD_GITHUB_LOGIN', '{{OWNER_USER}}')
 ARTIFACTS = os.path.join(ROOT, '.amp', 'in', 'artifacts')
 ids = itertools.count(1)
 
@@ -93,7 +93,7 @@ EDITOR_INFO = '''() => {
   if (!form) return {form: false};
   ta.scrollIntoView(); ta.focus();
   const fi = form.querySelector('input[type=file]');
-  if (fi) { fi.setAttribute('aria-label', 'PMOS-PR-BODY-FILE-INPUT'); fi.style.opacity = '1'; fi.style.position = 'static'; fi.style.width = '200px'; fi.style.height = '24px'; fi.removeAttribute('hidden'); }
+  if (fi) { fi.setAttribute('aria-label', 'SWITCHBOARD-PR-BODY-FILE-INPUT'); fi.style.opacity = '1'; fi.style.position = 'static'; fi.style.width = '200px'; fi.style.height = '24px'; fi.removeAttribute('hidden'); }
   return {form: true, textareaLen: (ta?.value || '').length, fileInput: !!fi};
 }'''
 
@@ -137,7 +137,7 @@ def close_automation_tabs(p):
 
 def find_uid(snapshot_text):
     for line in snapshot_text.splitlines():
-        if 'PMOS-PR-BODY-FILE-INPUT' in line:
+        if 'SWITCHBOARD-PR-BODY-FILE-INPUT' in line:
             match = re.search(r'uid=(\S+)', line)
             if match:
                 return match.group(1)
@@ -167,7 +167,7 @@ def run(args):
             raise RuntimeError('Profile lease busy after bounded wait')
         log('lease_acquired', phase=args.phase, roots=p.filesystem_roots)
         p.start_child()
-        rpc(p, 'initialize', dict(protocolVersion='2024-11-05', capabilities={}, clientInfo=dict(name='pm-os-github-pr-images', version='1')))
+        rpc(p, 'initialize', dict(protocolVersion='2024-11-05', capabilities={}, clientInfo=dict(name='switchboard-github-pr-images', version='1')))
         p.send(dict(jsonrpc='2.0', method='notifications/initialized'))
         page_id = max(page_ids(text_of(tool(p, 'new_page', dict(url=args.pr, background=True)))))
         deadline = time.monotonic() + 60

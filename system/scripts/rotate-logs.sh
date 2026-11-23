@@ -5,9 +5,9 @@ set -euo pipefail
 # shellcheck source=lib/mux.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/mux.sh"
 
-readonly PM_OS="${PM_OS_DIR:-${PM_OS_ROOT:-$HOME/Development/pm-os}}"
-readonly STATE_DIR="$PM_OS/.state"
-readonly SYSTEM_LOG_DIR="$PM_OS/system/logs"
+readonly SWITCHBOARD="${SWITCHBOARD_DIR:-${SWITCHBOARD_ROOT:-$HOME/Development/switchboard}}"
+readonly STATE_DIR="$SWITCHBOARD/.state"
+readonly SYSTEM_LOG_DIR="$SWITCHBOARD/system/logs"
 # What this script deletes under .state on purpose is declared, with every other
 # scheduled pruner's paths, in system/config/state-pruned.txt: the context
 # snapshots dir (newest 14 kept) and the rotated copy of each *.log (`<log>.1`,
@@ -15,7 +15,7 @@ readonly SYSTEM_LOG_DIR="$PM_OS/system/logs"
 # leaves those paths out of its .state count. The dir and the suffix are derived
 # from our rows there so the file stays the only place they are named; if the
 # rows are missing or malformed we stop before touching anything.
-readonly STATE_PRUNED_FILE="$PM_OS/system/config/state-pruned.txt"
+readonly STATE_PRUNED_FILE="$SWITCHBOARD/system/config/state-pruned.txt"
 snapshot_rel=''
 rotated_glob=''
 gz_glob=''
@@ -34,7 +34,7 @@ fi
 readonly ROTATED_SUFFIX="${rotated_glob#\*.log}"
 readonly SNAPSHOT_DIR="$STATE_DIR/$snapshot_rel"
 readonly PLUGIN_LOG_DIR="$HOME/.agents/.amp-plugin-logs"
-readonly PLUGIN_EVENTS="$PLUGIN_LOG_DIR/pm-os-events.jsonl"
+readonly PLUGIN_EVENTS="$PLUGIN_LOG_DIR/switchboard-events.jsonl"
 readonly AMP_MEM_DIR="$HOME/.amp/memory"
 readonly AMP_MEM_LIVE_DB="$AMP_MEM_DIR/amp-mem.db"
 readonly MAX_BYTES=$((2 * 1024 * 1024))
@@ -63,7 +63,7 @@ rotate_if_needed() {
 }
 
 # system/state/events.jsonl is an append-only fact stream (workspace updates,
-# queue refreshes, notifications) consumed by the Megadesk dispatcher, so —
+# queue refreshes, notifications) consumed by the switchboard dispatcher, so —
 # unlike a plain log — recent history must stay in place after rotation.
 # events_stream.py archives the full file, keeps the newest lines, and holds
 # an exclusive flock the writers share, so no concurrently appended event can
@@ -73,7 +73,7 @@ trim_events_stream() {
     local out
 
     [[ -f "$stream" ]] || return 0
-    if ! out=$(python3 "$PM_OS/system/scripts/events_stream.py" trim \
+    if ! out=$(python3 "$SWITCHBOARD/system/scripts/events_stream.py" trim \
         --state-dir "$(dirname "$stream")" --max-bytes "$MAX_BYTES"); then
         printf 'WARNING: events stream trim failed for %s\n' "$stream" >&2
         return 0
@@ -99,11 +99,11 @@ done < <(find "$SYSTEM_LOG_DIR" -maxdepth 1 -type f -name '*.log' -print0)
 # a rotation between ticks loses nothing.
 while IFS= read -r -d '' log_file; do
     rotate_if_needed "$log_file"
-done < <(find "$PM_OS/system/state/logs" -maxdepth 1 -type f -name '*.log' -print0 2>/dev/null)
+done < <(find "$SWITCHBOARD/system/state/logs" -maxdepth 1 -type f -name '*.log' -print0 2>/dev/null)
 
 rotate_if_needed /tmp/crex-autosave.log
 
-trim_events_stream "$PM_OS/system/state/events.jsonl"
+trim_events_stream "$SWITCHBOARD/system/state/events.jsonl"
 
 if [[ -d "$SNAPSHOT_DIR" ]]; then
     while IFS= read -r old_snapshot; do

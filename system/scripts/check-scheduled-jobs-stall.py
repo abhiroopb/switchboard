@@ -95,7 +95,7 @@ STATES: dict[str, tuple[str, list[str], str]] = {
         "a because a dialog is the usual cause"),
     "empty": (
         "it is idle with an empty input box, so dispatch is failing somewhere else",
-        ["dispatch a pm-os-maintenance worker to read system/logs/comms-fastpath.log",
+        ["dispatch a switchboard-maintenance worker to read system/logs/comms-fastpath.log",
          "run bash daemon/comms-prompt.sh flush by hand",
          "wait one more tick"],
         "a because the fastpath log names the failing step"),
@@ -318,8 +318,8 @@ def send_alert(text: str, at: datetime) -> bool:
         return True
     stamp = at.astimezone(TZ).strftime("%Y%m%d-%H%M")
     cmd = ["bash", str(REPORT_SCRIPT), "--task-id", f"scheduled-jobs-stall-{stamp}", "--origin", "cos",
-           "--workstream", "pm-os-maintenance", "--status", "blocked", "--urgent", "--create-if-missing", text]
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
+           "--workstream", "switchboard-maintenance", "--status", "blocked", "--urgent", "--create-if-missing", text]
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
     env["REPORT_TO_COS_NO_HOOKS"] = "1"
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=180)

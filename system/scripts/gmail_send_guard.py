@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Who may send email through `pmos mail send`, and when.
+"""Who may send email through `switchboard mail send`, and when.
 
-The owner can turn on direct Gmail sends for a machine. PM OS then sends
+The owner can turn on direct Gmail sends for a machine. switchboard then sends
 an email only after the owner says send for that exact text in the current conversation.
-pmos-shim.py asks this module before every send and sends nothing on any refusal. Every check
+switchboard-shim.py asks this module before every send and sends nothing on any refusal. Every check
 fails closed:
 
-  flag      PM_OS_GMAIL_SEND=on in local/machines/<MACHINE>.env on main's checkout. Default
+  flag      SWITCHBOARD_GMAIL_SEND=on in local/machines/<MACHINE>.env on main's checkout. Default
             off, so the kit and other machines stay draft-only. The process environment can
             only turn it off, and it cannot move the file.
   surface   An attended Claude Code session in the CoS or Launchpad tab. A worker session or
@@ -25,9 +25,9 @@ What this does not do: it is a gate on the sanctioned path, not a sandbox. It st
 a scheduled job, or an injected instruction that uses the tools as they are meant to be used.
 An agent runs as the owner, so one that sets out to defeat it is outside it: typing into the CoS
 pane with raw wmux, forging the session id and a transcript file, spoofing CMUX_WORKSPACE_ID in a
-process with no pane, pointing PM_OS_STATE_HOME at an empty ledger, or writing its own HTTP call
+process with no pane, pointing SWITCHBOARD_STATE_HOME at an empty ledger, or writing its own HTTP call
 with the owner's token. The Claude hook denies the obvious forms
-(.claude/hooks/pm-os-guardrails.py).
+(.claude/hooks/switchboard-guardrails.py).
 
   gmail_send_guard.py              print on or off
   gmail_send_guard.py --check      say whether this surface may send; sends nothing
@@ -54,9 +54,9 @@ REPO = HERE.parents[1]
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
-KEY = "PM_OS_GMAIL_SEND"
+KEY = "SWITCHBOARD_GMAIL_SEND"
 ON_VALUES = {"on", "1", "true", "yes", "enabled"}
-SEND_SURFACES = {"cos", "megadesk", "launchpad"}
+SEND_SURFACES = {"cos", "launchpad"}
 OWNER_PROMPT_SOURCES = {"typed", "queued"}
 INJECTED_WINDOW_SECONDS = 24 * 3600
 UNKNOWN_SETTLE_SECONDS = 600
@@ -81,7 +81,7 @@ _HOLD_RE = re.compile(r"\b(?:don'?t|do not|never|not yet|hold|wait|instead|actua
 
 
 # ------------------------------------------------------------------------ paths
-# Fixed on purpose: PM_OS_LOCAL_DIR, PM_OS_MACHINE and CLAUDE_CONFIG_DIR must not let one command
+# Fixed on purpose: SWITCHBOARD_LOCAL_DIR, SWITCHBOARD_MACHINE and CLAUDE_CONFIG_DIR must not let one command
 # turn the flag on or move the guard to another transcript folder. Tests patch these functions.
 
 def main_root() -> Path:
@@ -194,7 +194,7 @@ def surface_refusal(env: Mapping[str, str] | None = None, cwd: str | None = None
     cwd = os.getcwd() if cwd is None else cwd
     if not enabled(env):
         return f"sending is off on this machine ({KEY} is not on in {env_file().name}); this machine stays draft-only"
-    if any(value and (key.startswith("PM_OS_WORKER") or key == "PM_OS_WORKTREE") for key, value in env.items()):
+    if any(value and (key.startswith("SWITCHBOARD_WORKER") or key == "SWITCHBOARD_WORKTREE") for key, value in env.items()):
         return "this is a worker session; workers park the text as a Gmail draft and show it verbatim in their report"
     if in_worktree(cwd):
         return "this runs inside a task worktree; workers park the text as a Gmail draft"
@@ -213,7 +213,7 @@ def surface_refusal(env: Mapping[str, str] | None = None, cwd: str | None = None
     own = next((w for w in tabs if str(w.get("id") or "").upper() == own_id.upper()), None)
     if own is None:
         return "this tab is not in the tab list, so this surface is unproven"
-    if str(own.get("description") or "").startswith("PM OS worker "):
+    if str(own.get("description") or "").startswith("switchboard worker "):
         return "this tab is a worker tab; workers park the text as a Gmail draft"
     if tab_name(own) not in SEND_SURFACES:
         return (f"this tab ({tab_name(own) or 'untitled'}) {TAB_TITLE_REFUSAL}. If the owner runs CoS in this tab, "
@@ -284,7 +284,7 @@ def injected_times(env: Mapping[str, str] | None = None) -> dict[str, list[float
     nothing about what the owner typed in CoS. An entry with no known pane counts everywhere."""
     env = os.environ if env is None else env
     own = env.get("WMUX_SURFACE_ID") or env.get("CMUX_SURFACE_ID") or ""
-    path = Path(env.get("PM_OS_STATE_HOME") or Path.home() / ".pm-os") / "injected-prompts.jsonl"
+    path = Path(env.get("SWITCHBOARD_STATE_HOME") or Path.home() / ".switchboard") / "injected-prompts.jsonl"
     times: dict[str, list[float]] = {}
     try:
         lines = path.read_text(encoding="utf-8").splitlines()

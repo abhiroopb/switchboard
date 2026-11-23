@@ -20,7 +20,7 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 import scoped_test_env  # noqa: E402
 
-KEY = "PM_OS_SCOPED_TEST_ENV_PROBE"
+KEY = "SWITCHBOARD_SCOPED_TEST_ENV_PROBE"
 
 
 class IsolatedLoadTests(unittest.TestCase):

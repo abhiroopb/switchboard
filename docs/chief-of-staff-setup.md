@@ -4,16 +4,16 @@ A file-based convention for managing parallel AI agent workstreams via [cmux](ht
 
 ## Current Operating Model
 
-- PM OS pins two dispatch surfaces at the top: `🧭 CoS`, then `🚀 Launchpad`. Todo and Comms Triage follow them.
+- switchboard pins two dispatch surfaces at the top: `🧭 CoS`, then `🚀 Launchpad`. Todo and Comms Triage follow them.
 - CoS is the reporting hub. It receives next-up posts, scheduled output, comms drafts, and unsolicited workspace reports.
 - Launchpad is the quiet work console. It pulls current state when {{OWNER_FIRST}} enters a prompt and receives only Launchpad-origin callbacks.
 - Both surfaces apply `system/prompts/dispatch-core.md` and route substantive work through `router-dispatch.sh` with an origin tag.
-- `system/state/` is the live megadesk state layer. `system/today-plan.json` is still written, but only as a compatibility artifact for older launch flows.
+- `system/state/` is the live switchboard state layer. `system/today-plan.json` is still written, but only as a compatibility artifact for older launch flows.
 - The cmux sidebar is action-first: description = next concrete action, plus Driver and State rows. There is no separate `Up next` row.
 - Waiting-like workstreams auto-close after they emit a structured update unless `keep_open_when_waiting: true` is set in `config.yaml` as an explicit watchlist override.
-- Sidebar publishing is cached. Workspace ordering, per-workspace status payloads, and the megadesk tile all keep local snapshots so steady-state refreshes do not spam cmux.
-- Calendar truth now prefers `daemon/calendar-api.sh` across scheduler, megadesk planning, pre-brief, post-ingest, and todo reminder sync. The `gcal` path remains fallback-only.
-- PM OS is Amp-first. Open Amp in this repo, then request workflows in natural language rather than relying on shell aliases or wrapper commands.
+- Sidebar publishing is cached. Workspace ordering, per-workspace status payloads, and the switchboard tile all keep local snapshots so steady-state refreshes do not spam cmux.
+- Calendar truth now prefers `daemon/calendar-api.sh` across scheduler, switchboard planning, pre-brief, post-ingest, and todo reminder sync. The `gcal` path remains fallback-only.
+- switchboard is Amp-first. Open Amp in this repo, then request workflows in natural language rather than relying on shell aliases or wrapper commands.
 
 ## Architecture
 
@@ -50,7 +50,7 @@ start-day.sh → cmux-helpers.sh launch <name>
 ## Directory Structure
 
 ```
-pm-os/
+switchboard/
 ├── system/
 │   ├── start-day.sh              # Main entry point (run this)
 │   ├── cmux-helpers.sh           # Shared library for cmux workspace management
@@ -71,7 +71,7 @@ pm-os/
 │   ├── _archive/                 # Completed/cancelled workstreams
 │   └── README.md                 # Active workstream table
 ├── routines/
-│   ├── megadesk/           # Persistent dispatcher routine over system/state/
+│   ├── switchboard/           # Persistent dispatcher routine over system/state/
 │   ├── launchpad/                 # Quiet pull-based work console
 │   ├── todo/                     # Daily to-do capture and follow-through
 │   ├── comms-triage/             # Slack + Gmail + Linear triage
@@ -119,7 +119,7 @@ Core functions:
 
 The full prompt sent to the Chief of Staff Amp session. It instructs the agent to:
 
-1. **Run CoS preflight sync**: refresh indexes, people summary, and megadesk state
+1. **Run CoS preflight sync**: refresh indexes, people summary, and switchboard state
 2. **Gather context**: git activity, yesterday's note, to-do reconcile, today's calendar
 3. **Create daily note**: Priorities, carry-forwards, to-dos, calendar, notes sections
 4. **Review workstreams**: Read CONTEXT.md + config.yaml, decide which to open (max 7/day)
@@ -219,10 +219,10 @@ The system runs several background processes via launchd:
 
 Install the launchd plists:
 ```bash
-cp system/launchd/com.pm-os.journal-sync.plist ~/Library/LaunchAgents/
-cp system/launchd/com.pm-os.daemon.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.pm-os.journal-sync.plist
-launchctl load ~/Library/LaunchAgents/com.pm-os.daemon.plist
+cp system/launchd/com.switchboard.journal-sync.plist ~/Library/LaunchAgents/
+cp system/launchd/com.switchboard.daemon.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.switchboard.journal-sync.plist
+launchctl load ~/Library/LaunchAgents/com.switchboard.daemon.plist
 ```
 
 ## Prerequisites
@@ -234,11 +234,11 @@ launchctl load ~/Library/LaunchAgents/com.pm-os.daemon.plist
 
 ## Recommended Entry Points
 
-Open Amp in `{{PM_OS_ROOT}}`, then use natural-language requests such as:
+Open Amp in `{{SWITCHBOARD_ROOT}}`, then use natural-language requests such as:
 
 - `start the day`
 - `chief of staff`
-- `sync PM OS`
+- `sync switchboard`
 - `end of day`
 - `close of day`
 
@@ -290,10 +290,10 @@ The cmux sidebar is intentionally compact and action-oriented:
 
 ## Calendar Reliability
 
-- `daemon/calendar-api.sh` is the preferred calendar path for the scheduler, megadesk planning, pre-brief, and post-ingest.
-- `system/scripts/rebuild-megadesk-state.py` now prefers that same direct path when it builds focus-window and next-meeting context.
+- `daemon/calendar-api.sh` is the preferred calendar path for the scheduler, switchboard planning, pre-brief, and post-ingest.
+- `system/scripts/rebuild-switchboard-state.py` now prefers that same direct path when it builds focus-window and next-meeting context.
 - The shared todo skill at `~/.agents/skills/todo/scripts/todo_cli.py` now uses the same direct API fallback for freebusy checks, calendar hold create/update/delete, and meeting-based auto-reconcile.
-- The `gcal` / `pmos calendar` path is still present, but only as fallback while its auth remains flaky.
+- The `gcal` / `switchboard calendar` path is still present, but only as fallback while its auth remains flaky.
 
 ## Customization
 

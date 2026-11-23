@@ -102,7 +102,7 @@ class ValidateSlugTest(unittest.TestCase):
             self.assertIn(fragment, reason, slug)
 
     def test_accepts_topic_titles_and_hash_placeholder(self) -> None:
-        for slug in ("acme-bake-sale", "garden-swap", "pm-os-maintenance",
+        for slug in ("acme-bake-sale", "garden-swap", "switchboard-maintenance",
                      "maple-street-pta", "workstream-1a2b3c4d", "design-review", "photo-sharing"):
             self.assertTrue(nw.validate_slug(slug)[0], slug)
 
@@ -234,7 +234,7 @@ class TitleNoiseTest(unittest.TestCase):
                          ["drive", "slack", "linear", "jira", "github"])
 
     def test_offline_fetch_is_empty(self) -> None:
-        with patch.dict(os.environ, {"PM_OS_LINK_TITLES_OFFLINE": "1"}), \
+        with patch.dict(os.environ, {"SWITCHBOARD_LINK_TITLES_OFFLINE": "1"}), \
              patch.object(nw.link_titles, "drive_title", side_effect=AssertionError("fetched")):
             self.assertEqual(nw.link_titles.fetch_titles(CLUB_DOC_PROMPT), [])
 
@@ -328,7 +328,7 @@ class StrayWorkstreamNameTest(unittest.TestCase):
          "https://docs.google.com/spreadsheets/d/1-TEST/edit I want a thorough review.'"): "comprehensive-recipe-scoring",
         ("the owner: 'Can you update the flyer and email skills with image gen? So it should use image gen to create "
          "better images' - context Slack thread."): "flyer-skills-image",
-        "the owner: 'why did this happen again? PM OS should prevent this' about duplicate workers.": "pm-os-prevent",
+        "the owner: 'why did this happen again? switchboard should prevent this' about duplicate workers.": "switchboard-prevent",
     }
 
     def test_incident_prompts_get_topic_names(self) -> None:

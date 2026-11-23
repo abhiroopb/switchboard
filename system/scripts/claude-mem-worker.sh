@@ -4,7 +4,7 @@
 #
 # claude-mem (https://github.com/thedotmack/claude-mem) is the Claude Code
 # memory plugin that replaces amp-mem in the Amp to Claude migration
-# (workstreams/pm-os-claude-migration). Its own `npx claude-mem start` forks a
+# (workstreams/switchboard-claude-migration). Its own `npx claude-mem start` forks a
 # detached daemon and exits, which fights launchd KeepAlive, so this wrapper
 # resolves the installed plugin root and execs the worker script directly with
 # `--daemon` (the foreground entry point in worker-service.cjs). The worker is
@@ -28,8 +28,8 @@
 #   bash system/scripts/claude-mem-worker.sh            # foreground (launchd)
 #   bash system/scripts/claude-mem-worker.sh --resolve  # print the script path
 #
-# launchd: system/launchd/com.pm-os.claude-mem.plist (installed by
-# install-pm-os-bin.sh). Kill switch: `launchctl bootout gui/$(id -u)/com.pm-os.claude-mem`
+# launchd: system/launchd/com.switchboard.claude-mem.plist (installed by
+# install-switchboard-bin.sh). Kill switch: `launchctl bootout gui/$(id -u)/com.switchboard.claude-mem`
 # plus `claude plugin disable claude-mem@thedotmack`.
 set -euo pipefail
 

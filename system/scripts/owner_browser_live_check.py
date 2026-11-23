@@ -101,7 +101,7 @@ def hidden(text: str) -> int:
 
 def browser_root() -> tuple[int | None, int]:
     """Root process id and visible window count of the owner's browser. No titles."""
-    script = ("$b=Get-CimInstance Win32_Process -Filter \"Name='brave.exe'\"|?{$_.CommandLine -notlike '*pm-os\\agent-brave*'};"
+    script = ("$b=Get-CimInstance Win32_Process -Filter \"Name='brave.exe'\"|?{$_.CommandLine -notlike '*switchboard\\agent-brave*'};"
               "$i=@{};$b|%{$i[$_.ProcessId]=1};"
               "$r=($b|?{-not $i[$_.ParentProcessId]}|select -First 1).ProcessId;"
               "$p=@{};$b|%{$p[[int]$_.ProcessId]=1};"
@@ -111,16 +111,16 @@ def browser_root() -> tuple[int | None, int]:
 
 
 def proxy_env(**extra) -> dict:
-    env = {**os.environ, "PM_OS_OWNER_BROWSER": "brave", "CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS": "1",
-           "PM_OS_OWNER_BROWSER_CALL_WAIT": "180", **extra}  # three minutes for the Allow click
-    env.pop("PM_OS_SCHEDULED_JOB", None)
+    env = {**os.environ, "SWITCHBOARD_OWNER_BROWSER": "brave", "CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS": "1",
+           "SWITCHBOARD_OWNER_BROWSER_CALL_WAIT": "180", **extra}  # three minutes for the Allow click
+    env.pop("SWITCHBOARD_SCHEDULED_JOB", None)
     return env
 
 
 def sandbox_env(folder: str) -> dict:
     """A test owner session: sandboxed, its own state, and an empty folder where the owner's profile would be."""
     cache = str(Path(os.environ["LOCALAPPDATA"]) / "npm-cache")  # an empty npx cache would download for minutes
-    return proxy_env(PM_OS_TEST_SANDBOX="1", PM_OS_OWNER_BROWSER_STATE=folder, LOCALAPPDATA=folder,
+    return proxy_env(SWITCHBOARD_TEST_SANDBOX="1", SWITCHBOARD_OWNER_BROWSER_STATE=folder, LOCALAPPDATA=folder,
                      npm_config_cache=cache)
 
 
@@ -146,7 +146,7 @@ def screen_ready() -> tuple[bool, str]:
 
 def attach() -> None:
     ready, why = screen_ready()
-    if not ready and os.environ.get("PM_OS_ATTACH_ANYWAY") != "1":
+    if not ready and os.environ.get("SWITCHBOARD_ATTACH_ANYWAY") != "1":
         check("owner is at the screen to click Allow", False, f"{why}: no dialog raised")
         return
     foreground = ctypes.windll.user32.GetForegroundWindow
@@ -300,13 +300,13 @@ def agent() -> None:
     # owner's approved live shared connection.
     # Each leg has its own state folder, so the empty-profile leg can never reuse a broker that points at the
     # owner's real profile and raise an Allow dialog.
-    # Both legs run under PM_OS_TEST_SANDBOX against empty profiles, so owner_browser.py itself refuses the real one.
+    # Both legs run under SWITCHBOARD_TEST_SANDBOX against empty profiles, so owner_browser.py itself refuses the real one.
     with tempfile.TemporaryDirectory() as refused_state, tempfile.TemporaryDirectory() as empty_state:
-        sandbox_real = proxy_env(PM_OS_TEST_SANDBOX="1", PM_OS_OWNER_BROWSER_STATE=refused_state)
+        sandbox_real = proxy_env(SWITCHBOARD_TEST_SANDBOX="1", SWITCHBOARD_OWNER_BROWSER_STATE=refused_state)
         guard = subprocess.run(proxy_command("owner"), input="", capture_output=True, text=True, env=sandbox_real,
                                timeout=60)
-        check("under PM_OS_TEST_SANDBOX the owner proxy exits before reaching the real Brave",
-              guard.returncode == 2 and "PM_OS_TEST_SANDBOX" in guard.stderr and not owner_browser.broker_path(
+        check("under SWITCHBOARD_TEST_SANDBOX the owner proxy exits before reaching the real Brave",
+              guard.returncode == 2 and "SWITCHBOARD_TEST_SANDBOX" in guard.stderr and not owner_browser.broker_path(
                   sandbox_real).exists())
         refused, empty = (sandbox_env(state) for state in (refused_state, empty_state))
         owner = Client(proxy_command("owner"), refused)

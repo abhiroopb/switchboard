@@ -21,7 +21,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-os.environ["PM_OS_TEST_SANDBOX"] = "1"
+os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"
 
 HERE = Path(__file__).resolve().parent
 GUARD = HERE / "lib" / "cmux-inject-guard.sh"

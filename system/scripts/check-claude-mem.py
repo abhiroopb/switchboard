@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Daily health check for the claude-mem worker (Claude Code memory plugin).
 
-PM OS runs the claude-mem worker as a supervised service with
+switchboard runs the claude-mem worker as a supervised service with
 `CLAUDE_MEM_WORKER_AUTOSTART=false`, so Claude Code hooks never spawn their
-own copy. The supervisor differs by platform: launchd `com.pm-os.claude-mem`
-on macOS, the systemd user unit `pm-os-claude-mem.service` on Linux, and the
-Task Scheduler job `\\PM OS\\com.pm-os.claude-mem` on Windows. This script
+own copy. The supervisor differs by platform: launchd `com.switchboard.claude-mem`
+on macOS, the systemd user unit `switchboard-claude-mem.service` on Linux, and the
+Task Scheduler job `\\switchboard\\com.switchboard.claude-mem` on Windows. This script
 probes the service, the worker health endpoint, and the telemetry lock, logs
 the result, writes a status file, and fires a desktop notification (macOS
 only) + exit 1 when any probe fails.
@@ -36,9 +36,9 @@ from _local_tz import LOCAL_TZ  # noqa: E402
 
 LOG_FILE = REPO_ROOT / "system" / "logs" / "claude-mem.log"
 STATE_FILE = REPO_ROOT / ".state" / "claude-mem-status.json"
-LAUNCHD_LABEL = "com.pm-os.claude-mem"
-SYSTEMD_UNIT = "pm-os-claude-mem.service"
-WINDOWS_TASK = r"\PM OS\com.pm-os.claude-mem"
+LAUNCHD_LABEL = "com.switchboard.claude-mem"
+SYSTEMD_UNIT = "switchboard-claude-mem.service"
+WINDOWS_TASK = r"\switchboard\com.switchboard.claude-mem"
 CLAUDE_MEM_HOME = Path(os.environ.get("CLAUDE_MEM_HOME", Path.home() / ".claude-mem"))
 TELEMETRY_FILE = CLAUDE_MEM_HOME / "telemetry.json"
 SETTINGS_FILE = CLAUDE_MEM_HOME / "settings.json"
@@ -96,7 +96,7 @@ def probe_systemd() -> tuple[bool, str]:
             capture_output=True, text=True, timeout=15,
         )
     except FileNotFoundError:
-        return False, "systemctl not found (install the unit with install-launchd.sh com.pm-os.claude-mem)"
+        return False, "systemctl not found (install the unit with install-launchd.sh com.switchboard.claude-mem)"
     except subprocess.TimeoutExpired:
         return False, "systemctl timeout"
     state = (r.stdout or r.stderr).strip() or "unknown"
@@ -183,7 +183,7 @@ def probe_autostart_off() -> tuple[bool, str]:
 
 def notify_failure(failures: list[tuple[str, str]]) -> None:
     bullets = ", ".join(f"{label} ({reason[:60]})" for label, reason in failures)
-    title = "PM OS: claude-mem check failed"
+    title = "switchboard: claude-mem check failed"
     body = f"{bullets}. Run `{restart_hint()}`."
     if sys.platform != "darwin":
         # No portable desktop notifier; the stderr line and exit 1 carry the result.

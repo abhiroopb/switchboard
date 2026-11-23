@@ -3,7 +3,7 @@
 
 events.jsonl is an append-only fact stream (workspace updates, queue
 refreshes, auto-close records, notifications) with multiple concurrent
-writers — rebuild-megadesk-state.py, emit-workspace-update.py, and
+writers — rebuild-switchboard-state.py, emit-workspace-update.py, and
 daemon/amp-notify.sh — plus a periodic trimmer invoked from
 system/scripts/rotate-logs.sh.
 

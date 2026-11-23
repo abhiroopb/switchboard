@@ -26,7 +26,7 @@
 set -euo pipefail
 
 # Derive the repo root from the cwd first (worktree-safe), then from this
-# file's location; never from an absolute ~/Development/pm-os path.
+# file's location; never from an absolute ~/Development/switchboard path.
 if [[ -z "${REPO_ROOT:-}" ]]; then
     REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
     [[ -n "$REPO_ROOT" && -f "$REPO_ROOT/system/scripts/generate-recall-pack.py" ]] \

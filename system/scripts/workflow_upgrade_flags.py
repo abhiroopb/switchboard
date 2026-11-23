@@ -49,19 +49,19 @@ def load_workflow_upgrade_flags() -> dict[str, Any]:
         flags.update(baseline)
         sources.append(str(BASELINE_PATH))
 
-    local_path = Path(os.environ.get("PM_OS_WORKFLOW_UPGRADE_FLAGS_PATH", str(DEFAULT_LOCAL_PATH))).expanduser()
+    local_path = Path(os.environ.get("SWITCHBOARD_WORKFLOW_UPGRADE_FLAGS_PATH", str(DEFAULT_LOCAL_PATH))).expanduser()
     local_flags = parse_simple_yaml(local_path)
     if local_flags:
         flags.update(local_flags)
         sources.append(str(local_path))
 
-    env_overrides = os.environ.get("PM_OS_WORKFLOW_UPGRADE_FLAG_OVERRIDES")
+    env_overrides = os.environ.get("SWITCHBOARD_WORKFLOW_UPGRADE_FLAG_OVERRIDES")
     if env_overrides:
         payload = json.loads(env_overrides)
         for key, value in payload.items():
             if key in FLAG_KEYS:
                 flags[key] = bool(value)
-        sources.append("env:PM_OS_WORKFLOW_UPGRADE_FLAG_OVERRIDES")
+        sources.append("env:SWITCHBOARD_WORKFLOW_UPGRADE_FLAG_OVERRIDES")
 
     return {"flags": flags, "sources": sources}
 

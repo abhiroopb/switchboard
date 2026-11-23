@@ -48,7 +48,7 @@ def _ledger():
 
 
 def state_dir() -> Path:
-    env = os.environ.get("PM_OS_STATE_DIR")
+    env = os.environ.get("SWITCHBOARD_STATE_DIR")
     if env:
         return Path(env)
     return Path(_ledger().STATE_FILE).parent
@@ -219,7 +219,7 @@ def cmd_waiting(origin: str) -> int:
     for t in owner[:3]:
         names.append(f"{workstream_name(str(t.get('workstream') or ''))} ({t.get('status')})")
     more = len(owner) - len(names)
-    text = f"{len(rows)} PM OS report{'s' if len(rows) != 1 else ''} waiting for CoS"
+    text = f"{len(rows)} switchboard report{'s' if len(rows) != 1 else ''} waiting for CoS"
     detail = ", ".join(names) + (f", {more} more" if more > 0 else "")
     if notices:
         detail += (", " if detail else "") + f"{notices} system notice{'s' if notices != 1 else ''}"

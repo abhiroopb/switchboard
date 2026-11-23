@@ -2,7 +2,7 @@
 """Keep the installed skills in step with their sources, with no one running an installer.
 
 Skills are copies, kept current automatically. Sources are `.agents/skills` (shared, tracked), `local/skills` (private,
-gitignored), `system/vendor/skills` (pinned third-party) and `~/.agents/skills` (the pmos
+gitignored), `system/vendor/skills` (pinned third-party) and `~/.agents/skills` (the switchboard
 library, plus `todo`). `~/.claude/skills` is output only; Claude and Amp both read it.
 
 Runs:
@@ -19,14 +19,14 @@ One run, always against the main checkout, never a worktree's copy:
   2. runs main's install-claude-skills.py --prune: changed skills are copied, an edited
      installed copy is saved to local/skill-edits first, and more than 5 deletes at once
      is refused;
-  3. where `codex` is on PATH, refreshes the PM OS copies in ~/.agents/skills, which Codex
+  3. where `codex` is on PATH, refreshes the switchboard copies in ~/.agents/skills, which Codex
      reads; elsewhere it moves old unmarked repo copies there to the Recycle Bin (or the
      macOS Trash), because Amp reads ~/.agents/skills first and a stale copy masks the
      current one. `todo` always stays there;
   4. with --notify, sends CoS one deduped line for an edited copy it saved, an unmanaged
      folder in ~/.claude/skills, a refused prune, or three failed runs in a row.
 
-Skips, exit 0: another sync running, a landing or rebase in flight, PM_OS_TEST_SANDBOX=1,
+Skips, exit 0: another sync running, a landing or rebase in flight, SWITCHBOARD_TEST_SANDBOX=1,
 SKILL_SYNC_DISABLED=1. State: system/state/skill-sync.json. Log: the caller's.
 """
 from __future__ import annotations
@@ -133,7 +133,7 @@ def company_cli(main: Path) -> bool:
     helper = main / "system/connectors/company_cli.py"
     if helper.exists():
         return run([sys.executable, str(helper), "--quiet"], timeout=30).returncode == 0
-    return shutil.which("pmos") is not None
+    return shutil.which("switchboard") is not None
 
 
 def apply_overrides(main: Path, home: Path) -> tuple[bool, str]:
@@ -163,21 +163,21 @@ def apply_overrides(main: Path, home: Path) -> tuple[bool, str]:
 def install(main: Path, home: Path, extra: list[str], notices: Path) -> tuple[int, str]:
     cmd = [sys.executable, str(main / "system/scripts/install-claude-skills.py"), "--home", str(home),
            "--notices-json", str(notices), *extra]
-    if os.environ.get("PM_OS_SKILL_EDITS_DIR"):  # tests; the default is main's local/skill-edits
-        cmd += ["--backup-dir", os.environ["PM_OS_SKILL_EDITS_DIR"]]
+    if os.environ.get("SWITCHBOARD_SKILL_EDITS_DIR"):  # tests; the default is main's local/skill-edits
+        cmd += ["--backup-dir", os.environ["SWITCHBOARD_SKILL_EDITS_DIR"]]
     result = run(cmd, timeout=600)
     return result.returncode, (result.stdout + result.stderr).strip()
 
 
 def move_to_trash(path: Path, main: Path) -> tuple[bool, str]:
-    """Recycle Bin on Windows, the Trash on macOS, through pm-os-trash.py, which refuses
+    """Recycle Bin on Windows, the Trash on macOS, through switchboard-trash.py, which refuses
     rather than hard-deletes when the bin cannot take it and logs every move."""
-    helper = main / "system" / "scripts" / "pm-os-trash.py"
+    helper = main / "system" / "scripts" / "switchboard-trash.py"
     result = run([sys.executable, str(helper), "-rf", str(path)], timeout=180)
     said = (result.stderr + result.stdout).strip()
     if result.returncode == 0 and "moved" in said and not path.exists():
         return True, said.split("(", 1)[-1].split(")", 1)[0] if "(" in said else "the Trash"
-    return False, said[:200] or f"pm-os-trash.py exited {result.returncode}"
+    return False, said[:200] or f"switchboard-trash.py exited {result.returncode}"
 
 
 def tidy_agents_copies(main: Path, home: Path, dry_run: bool) -> list[str]:
@@ -194,8 +194,8 @@ def tidy_agents_copies(main: Path, home: Path, dry_run: bool) -> list[str]:
         return []
     candidates = [p for p in sorted(agents.iterdir())
                   if p.is_dir() and not is_link(p) and p.name not in KEEP_IN_AGENTS
-                  and (repo / p.name / "SKILL.md").exists() and not (p / ".pm-os-source").exists()
-                  and (claude / p.name / ".pm-os-source").exists()]
+                  and (repo / p.name / "SKILL.md").exists() and not (p / ".switchboard-source").exists()
+                  and (claude / p.name / ".switchboard-source").exists()]
     if len(candidates) > TRASH_CAP:
         return [f"✗ {len(candidates)} old Amp copies found, over the cap of {TRASH_CAP}; none moved"]
     lines = []
@@ -254,7 +254,7 @@ def prune_skill_husks(main: Path, home: Path, dry_run: bool) -> list[str]:
     check counts it as a broken skill. A husk is a folder that is not a link,
     has no SKILL.md, holds at least one file and only cache files, has not changed in the
     last hour, and, inside the main checkout, has no file git tracks. It goes to the trash
-    (Recycle Bin or macOS Trash) through pm-os-trash.py, never a plain delete.
+    (Recycle Bin or macOS Trash) through switchboard-trash.py, never a plain delete.
     """
     lines: list[str] = []
     now = time.time()
@@ -302,7 +302,7 @@ def cos_line(main: Path, text: str, status: str = "done") -> bool:
     stamp = time.strftime("%Y%m%d-%H%M%S")
     cmd = ["bash", str(main / "system/scripts/report-to-cos.sh"), "--task-id", f"skill-sync-{stamp}", "--origin", "cos",
            "--workstream", "skills-system", "--status", status, "--create-if-missing", text]
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
     env["REPORT_TO_COS_NO_HOOKS"] = "1"
     result = run(cmd, timeout=180, env=env)
     return result.returncode == 0
@@ -356,13 +356,13 @@ def main_cli(argv: list[str]) -> int:
     if os.environ.get("SKILL_SYNC_DISABLED") == "1":
         print("skill sync: disabled (SKILL_SYNC_DISABLED=1)")
         return 0
-    if os.environ.get("PM_OS_TEST_SANDBOX") == "1" and args.home is None:
+    if os.environ.get("SWITCHBOARD_TEST_SANDBOX") == "1" and args.home is None:
         print("skill sync: skipped in the test sandbox (real home)")
         return 0
     home = args.home or Path.home()
     main = main_checkout()
     state_path = args.state or main / "system/state/skill-sync.json"
-    locks = Path(os.environ.get("PM_OS_LOCKS_DIR") or main / ".amp" / "locks")
+    locks = Path(os.environ.get("SWITCHBOARD_LOCKS_DIR") or main / ".amp" / "locks")
     print(f"skill sync ({args.reason}) from {main} at {now_iso()}")
 
     with try_lock(locks / "skill-sync.lock") as mine:
@@ -395,7 +395,7 @@ def synced(args: argparse.Namespace, main: Path, home: Path, state_path: Path) -
         if line.startswith("✗"):
             errors.append(line)
 
-    with tempfile.TemporaryDirectory(prefix="pm-os-skill-sync-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="switchboard-skill-sync-") as tmp:
         notices_path = Path(tmp) / "notices.json"
         # --skip-missing: a library skill this machine lacks (firecrawl on a kit Mac) is dormant,
         # never a failure that stops every tick; dormant copies are held, never pruned.
@@ -414,11 +414,11 @@ def synced(args: argparse.Namespace, main: Path, home: Path, state_path: Path) -
             if line.startswith("✗"):
                 errors.append(line)
         if shutil.which("codex"):
-            # Codex reads ~/.agents/skills: managed pm-os copies go back there, marked, after the
+            # Codex reads ~/.agents/skills: managed switchboard copies go back there, marked, after the
             # unmarked old ones left for the trash. No --force, so a catalog skill folder that shares
             # a name is refused, never overwritten.
             codex_dest = str(home / ".agents" / "skills")
-            code, output = install(main, home, ["--destination", codex_dest, "--source-kind", "pm-os",
+            code, output = install(main, home, ["--destination", codex_dest, "--source-kind", "switchboard",
                                                 "--skip-missing", "--prune", "--no-settings",
                                                 *(["--dry-run"] if args.dry_run else [])],
                                    Path(tmp) / "codex.json")

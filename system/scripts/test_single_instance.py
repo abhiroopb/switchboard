@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synthetic process-level tests for PM OS invocation locking."""
+"""Synthetic process-level tests for switchboard invocation locking."""
 from __future__ import annotations
 
 import os
@@ -19,7 +19,7 @@ SCRIPTS_DIR = Path(__file__).resolve().parent
 
 def run_python(code: str, lock_dir: Path, *args: str) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
-    env["PM_OS_LOCK_DIR"] = str(lock_dir)
+    env["SWITCHBOARD_LOCK_DIR"] = str(lock_dir)
     env["PYTHONPATH"] = str(SCRIPTS_DIR)
     return subprocess.run(
         [sys.executable, "-c", code, *args], env=env, capture_output=True, text=True, check=False
@@ -53,7 +53,7 @@ class SingleInstanceTests(unittest.TestCase):
                     self.assertEqual(attempt.returncode, 75, attempt.stderr)
                     return 17
 
-                with mock.patch.dict(os.environ, {"PM_OS_LOCK_DIR": str(root / "locks")}), \
+                with mock.patch.dict(os.environ, {"SWITCHBOARD_LOCK_DIR": str(root / "locks")}), \
                      contextlib.redirect_stdout(io.StringIO()):
                     with self.assertRaises(SystemExit) as exit_result:
                         invoke(["--help"])
@@ -105,7 +105,7 @@ class SingleInstanceTests(unittest.TestCase):
                     "from single_instance import single_instance; import time; "
                     "\nwith single_instance('job'): print('held', flush=True); time.sleep(2)",
                 ],
-                env={**os.environ, "PM_OS_LOCK_DIR": str(lock_dir), "PYTHONPATH": str(SCRIPTS_DIR)},
+                env={**os.environ, "SWITCHBOARD_LOCK_DIR": str(lock_dir), "PYTHONPATH": str(SCRIPTS_DIR)},
                 stdout=subprocess.PIPE,
                 text=True,
             )
@@ -151,7 +151,7 @@ class SingleInstanceTests(unittest.TestCase):
                 "\nwith single_instance('increment', timeout=5):"
                 "\n n=int(p.read_text()); time.sleep(.02); p.write_text(str(n+1))"
             )
-            env = {**os.environ, "PM_OS_LOCK_DIR": str(lock_dir), "PYTHONPATH": str(SCRIPTS_DIR)}
+            env = {**os.environ, "SWITCHBOARD_LOCK_DIR": str(lock_dir), "PYTHONPATH": str(SCRIPTS_DIR)}
             procs = [
                 subprocess.Popen([sys.executable, "-c", code, str(counter)], env=env)
                 for _ in range(12)

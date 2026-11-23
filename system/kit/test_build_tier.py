@@ -295,14 +295,14 @@ class BuildTests(unittest.TestCase):
         self.assertFalse((self.out / "notes").exists())
         self.assertFalse((self.out / "kit").exists())
         self.assertEqual(git(self.out, "log", "-1", "--format=%an <%ae>"), "Neutral <neutral@users.noreply.github.com>")
-        manifest = json.loads((self.out / ".pm-os-kit" / "source-manifest.json").read_text(encoding="utf-8"))
+        manifest = json.loads((self.out / ".switchboard-kit" / "source-manifest.json").read_text(encoding="utf-8"))
         import hashlib
         for rel, meta in manifest["files"].items():  # what install.py checks before it renders
             self.assertEqual(hashlib.sha256((self.out / rel).read_bytes()).hexdigest(), meta["sha256"], rel)
         self.assertEqual(manifest["files"]["README.md"]["source"], "overlay")
         self.assertTrue((self.out / "KIT_VERSION").read_text(encoding="utf-8").startswith("build "))
         self.assertEqual((self.out / "run.cmd").read_bytes(), b"@echo off\r\nrem x\r\n")
-        self.assertFalse((self.out / ".pm-os-kit" / "tier.json").exists(), "the build record never ships")
+        self.assertFalse((self.out / ".switchboard-kit" / "tier.json").exists(), "the build record never ships")
         record = json.loads((self.src / "local" / "kit" / "public.record.json").read_text(encoding="utf-8"))
         self.assertEqual(record["source_rev"], git(self.src, "rev-parse", "HEAD"))
         self.assertEqual(record["commit"], git(self.out, "rev-parse", "HEAD"))

@@ -70,7 +70,7 @@ if sys.version_info < (3, 12):  # pragma: no cover
     # import dies with "SyntaxError: f-string: unmatched '['", which the app would show as the delivery
     # line. Name the real cause instead so the item says what to fix.
     print(json.dumps({"state": "failed", "detail": (
-        f"python3 is {sys.version.split()[0]} at {sys.executable}; the pm-os scripts need 3.12+. "
+        f"python3 is {sys.version.split()[0]} at {sys.executable}; the switchboard scripts need 3.12+. "
         "The app's PATH must put Homebrew (/opt/homebrew/bin) ahead of /usr/bin.")}))
     sys.exit(1)
 
@@ -234,7 +234,7 @@ def select_workspace(ref: str) -> tuple[bool, str]:
     try:
         proc = subprocess.run([cmux_binary(), "select-workspace", "--workspace", ref], capture_output=True,
                               text=True, timeout=10,
-                              env={**os.environ, "CMUX_QUIET": "1", "PM_OS_EXPLICIT_USER_FOCUS": "1"})
+                              env={**os.environ, "CMUX_QUIET": "1", "SWITCHBOARD_EXPLICIT_USER_FOCUS": "1"})
     except (OSError, subprocess.TimeoutExpired) as exc:
         return False, f"could not select {ref} in cmux ({exc})"
     if proc.returncode != 0:

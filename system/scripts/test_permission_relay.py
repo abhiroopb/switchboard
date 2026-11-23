@@ -25,11 +25,11 @@ from pathlib import Path
 from unittest import mock
 
 TMP = tempfile.TemporaryDirectory()
-os.environ["PM_OS_STATE_DIR"] = str(Path(TMP.name) / "state")
+os.environ["SWITCHBOARD_STATE_DIR"] = str(Path(TMP.name) / "state")
 os.environ["PERMISSION_RELAY_OWNER_DELAY"] = "0"
 # Never reach a live cmux or wmux tab: lib/mux, the inject guard and the shim fail closed.
-os.environ["PM_OS_TEST_SANDBOX"] = "1"
-os.environ["PM_OS_PLUGIN_CONFIG"] = str(Path(TMP.name) / "plugin-config.json")
+os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"
+os.environ["SWITCHBOARD_PLUGIN_CONFIG"] = str(Path(TMP.name) / "plugin-config.json")
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
@@ -46,8 +46,8 @@ PROMPT_SCREEN = """\
    2. No, and tell Claude what to do differently (esc)
 """
 IDLE_SCREEN = "> \n  ? for shortcuts\n"
-TAB = {"ref": "workspace:7", "id": "WS-7", "title": "🔧 PM OS Maintenance 2", "description": "PM OS worker rt-000000000007"}
-ROW = {"id": "rt-000000000007", "status": "active", "workstream": "pm-os-maintenance", "workspace_ref": "workspace:7",
+TAB = {"ref": "workspace:7", "id": "WS-7", "title": "🔧 Switchboard Maintenance 2", "description": "switchboard worker rt-000000000007"}
+ROW = {"id": "rt-000000000007", "status": "active", "workstream": "switchboard-maintenance", "workspace_ref": "workspace:7",
        "session_id": "sess-1"}
 
 
@@ -88,10 +88,10 @@ class PermissionRelayTest(unittest.TestCase):
         self.assertFalse(relay.prompt_visible("Do you want to proceed? (prose only, no options)"))
 
     def test_message_for_a_worker_row_names_the_worker_and_the_steer(self) -> None:
-        with mock.patch.object(relay.owner_tabs, "owner_name", return_value="PM OS Maintenance"):
+        with mock.patch.object(relay.owner_tabs, "owner_name", return_value="Switchboard Maintenance"):
             text = relay.build_message(tab=TAB, row=ROW, tool="Bash", command="sudo rm -rf /opt/example",
-                                       reason="pm-os-guardrails: confirm rm -rf", kind="permission_prompt")
-        self.assertTrue(text.startswith("[ROUTER REPORT] 🔐 🔧 PM OS Maintenance 2, the PM OS Maintenance worker for rt-000000000007 (workspace:7)"))
+                                       reason="switchboard-guardrails: confirm rm -rf", kind="permission_prompt")
+        self.assertTrue(text.startswith("[ROUTER REPORT] 🔐 🔧 Switchboard Maintenance 2, the Switchboard Maintenance worker for rt-000000000007 (workspace:7)"))
         self.assertIn("```\nsudo rm -rf /opt/example\n```", text)
         self.assertIn("--steer rt-000000000007 allow", text)
         self.assertIn("never answer it without their word", text)
@@ -133,7 +133,7 @@ class PermissionRelayTest(unittest.TestCase):
              mock.patch.object(relay, "read_screen", return_value=PROMPT_SCREEN), \
              mock.patch.object(relay, "recorded_ask", return_value={"tool": "Bash", "command": "sudo rm -rf /opt/example", "reason": "confirm"}), \
              mock.patch.object(relay, "_cos_ref", return_value="workspace:1"), \
-             mock.patch.object(relay.owner_tabs, "owner_name", return_value="PM OS Maintenance"), \
+             mock.patch.object(relay.owner_tabs, "owner_name", return_value="Switchboard Maintenance"), \
              mock.patch.object(relay.owner_tabs, "agent_message", side_effect=lambda ref, text, sender: sent.append((ref, text)) or {"ok": True}):
             payload = {"notification_type": "permission_prompt", "session_id": "sess-1", "workspace_id": "WS-7"}
             dry = relay.send(payload, dry_run=True)
@@ -234,7 +234,7 @@ class PermissionRelayTest(unittest.TestCase):
         # A CoS steer: a worker tab sat on a delete confirm, and CoS heard only
         # "waiting on a question". Its session predates the Notification hook, so the
         # sweep reads the tab and the transcript instead.
-        command = "cd /Users/tester/pm-os/.worktrees/rt-000000000050 && rm -rf .amp/in/rt-000000000050/kit-render"
+        command = "cd /Users/tester/switchboard/.worktrees/rt-000000000050 && rm -rf .amp/in/rt-000000000050/kit-render"
         transcript = Path(TMP.name) / "kit.jsonl"
         transcript.write_text(json.dumps({"message": {"content": [
             {"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": command}}]}}) + "\n")
@@ -273,7 +273,7 @@ class PermissionRelayTest(unittest.TestCase):
         self.assertNotIn("idle_prompt", relay.RELAY_TYPES)
 
     def test_notify_outside_cmux_spawns_nothing(self) -> None:
-        # PM OS Kit (Windows, Linux, a plain terminal): no CMUX_WORKSPACE_ID means no
+        # switchboard Kit (Windows, Linux, a plain terminal): no CMUX_WORKSPACE_ID means no
         # tab to read and no CoS to tell, so the hook returns before it detaches a sender.
         env = {k: v for k, v in os.environ.items() if k not in ("CMUX_WORKSPACE_ID", "PERMISSION_RELAY_DISABLED")}
         with mock.patch.dict(os.environ, env, clear=True), \
@@ -286,7 +286,7 @@ class PermissionRelayTest(unittest.TestCase):
 
 
 TALL = json.loads((SCRIPTS / "fixtures" / "permission_relay_tall_command.json").read_text(encoding="utf-8"))
-BOLT = {"id": "rt-000000000053", "status": "active", "workstream": "pm-os-maintenance",
+BOLT = {"id": "rt-000000000053", "status": "active", "workstream": "switchboard-maintenance",
         "workspace_ref": "workspace:42", "session_id": "00000000-0000-4000-8000-0000000000b1"}
 
 
@@ -319,7 +319,7 @@ class TallSubagentCommandTest(unittest.TestCase):
             {"timestamp": "2026-01-01T00:51:30.597Z", "message": {"content": [{"type": "tool_result", "tool_use_id": "m1"}]}},
             # The background Agent launch resolves at once; its subagent keeps running.
             {"timestamp": "2026-01-01T00:51:31.000Z", "message": {"content": [
-                {"type": "tool_use", "id": "toolu_01AAAAAAAAAAAAAAAAAAAAAA", "name": "Agent", "input": {"subagent_type": "pm-os:code-reviewer"}}]}},
+                {"type": "tool_use", "id": "toolu_01AAAAAAAAAAAAAAAAAAAAAA", "name": "Agent", "input": {"subagent_type": "switchboard:code-reviewer"}}]}},
             {"timestamp": "2026-01-01T00:51:31.200Z", "message": {"content": [
                 {"type": "tool_result", "tool_use_id": "toolu_01AAAAAAAAAAAAAAAAAAAAAA"}]}},
         ]
@@ -340,12 +340,12 @@ class TallSubagentCommandTest(unittest.TestCase):
             (asks / f"{BOLT['session_id']}.json").write_text(json.dumps(ask))
         sent: list[tuple[str, str]] = []
         with mock.patch.object(relay, "read_screen", return_value=screen), \
-             mock.patch.object(relay, "find_tab", return_value={**TAB, "ref": BOLT["workspace_ref"], "title": "🛠️ PM OS Maintenance 2"}), \
+             mock.patch.object(relay, "find_tab", return_value={**TAB, "ref": BOLT["workspace_ref"], "title": "🛠️ Switchboard Maintenance 2"}), \
              mock.patch.object(relay, "is_operator_tab", return_value=False), \
              mock.patch.object(relay, "live_row", return_value=BOLT), \
              mock.patch.object(relay, "transcript_for_session", return_value=str(self.transcript)), \
              mock.patch.object(relay, "_cos_ref", return_value="workspace:40"), \
-             mock.patch.object(relay.owner_tabs, "owner_name", return_value="PM OS Maintenance"), \
+             mock.patch.object(relay.owner_tabs, "owner_name", return_value="Switchboard Maintenance"), \
              mock.patch.object(relay.owner_tabs, "agent_message", side_effect=lambda ref, text, sender: sent.append((ref, text)) or {"ok": True}):
             results = relay.sweep([BOLT])
         self.assertTrue(results and results[0]["sent"], results)
@@ -363,7 +363,7 @@ class TallSubagentCommandTest(unittest.TestCase):
         text = sent[0][1]
         self.assertIn(f"```\n{TALL['command']}\n```", text)
         self.assertIn("S=/private/tmp/claude-501/", text)
-        self.assertIn("Asked by: the pm-os:code-reviewer subagent (Code review cmux heartbeat hook)", text)
+        self.assertIn("Asked by: the switchboard:code-reviewer subagent (Code review cmux heartbeat hook)", text)
         self.assertIn("--steer rt-000000000053 allow", text)
         self.assertNotIn("not found", text)
         pending = relay._read_state()["pending"][BOLT["workspace_ref"]]
@@ -375,12 +375,12 @@ class TallSubagentCommandTest(unittest.TestCase):
         ask = {"session_id": BOLT["session_id"], "tool": "Bash", "command": TALL["command"], "at": at,
                "agent_type": TALL["agent_type"],
                # The reason the pre-landing bridge gave for this exact command.
-               "reason": f"pm-os-guardrails: confirm rm -rf\n\nAllow destructive delete of $S/st, $S/hang?\n\n{TALL['command']}"}
+               "reason": f"switchboard-guardrails: confirm rm -rf\n\nAllow destructive delete of $S/st, $S/hang?\n\n{TALL['command']}"}
         text = self.relay_bolt(TALL["screen"], ask)[0][1]
-        self.assertIn("Guardrail reason: pm-os-guardrails: confirm rm -rf. Allow destructive delete of $S/st, $S/hang?\n", text)
+        self.assertIn("Guardrail reason: switchboard-guardrails: confirm rm -rf. Allow destructive delete of $S/st, $S/hang?\n", text)
         self.assertNotIn("Prompt: Do you want to proceed?", text)
         self.assertIn(TALL["command"], text)
-        self.assertIn("Asked by: the pm-os:code-reviewer subagent", text)
+        self.assertIn("Asked by: the switchboard:code-reviewer subagent", text)
 
     def test_a_record_for_another_command_is_ignored(self) -> None:
         now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -419,7 +419,7 @@ class TallSubagentCommandTest(unittest.TestCase):
     def test_newest_open_call_wins_across_main_and_subagents(self) -> None:
         call = relay.transcript_tool_call(str(self.transcript))
         self.assertEqual(call["command"], TALL["command"])
-        self.assertEqual(call["agent"], "the pm-os:code-reviewer subagent (Code review cmux heartbeat hook)")
+        self.assertEqual(call["agent"], "the switchboard:code-reviewer subagent (Code review cmux heartbeat hook)")
         self.assertEqual(relay.transcript_tool_call(str(self.transcript), screen=PROMPT_SCREEN)["command"], TALL["command"])
 
 
@@ -744,7 +744,7 @@ class PermissionCaseTests(unittest.TestCase):
 
     def test_the_message_states_the_case(self) -> None:
         own = {"case": "own-task-files", "reason": "r", "targets": ["/tmp/x/a.png"]}
-        with mock.patch.object(relay.owner_tabs, "owner_name", return_value="PM OS Maintenance"):
+        with mock.patch.object(relay.owner_tabs, "owner_name", return_value="Switchboard Maintenance"):
             text = relay.build_message(tab=TAB, row=ROW, tool="Bash", command="rm -f /tmp/x/a.png", reason="",
                                        kind="permission_prompt", case=own)
             other = relay.build_message(tab=TAB, row=ROW, tool="Bash", command="sudo rm -rf /opt/example", reason="",
@@ -779,7 +779,7 @@ class PermissionCaseTests(unittest.TestCase):
     @unittest.skipUnless(os.name == "nt", "a Windows path shape")
     def test_a_git_bash_tmp_path_resolves_to_the_windows_temp_folder(self) -> None:
         import permission_case
-        made = Path(tempfile.mkdtemp(prefix="pmos-case-", dir=tempfile.gettempdir()))
+        made = Path(tempfile.mkdtemp(prefix="switchboard-case-", dir=tempfile.gettempdir()))
         self.addCleanup(lambda: __import__("shutil").rmtree(made, ignore_errors=True))
         (made / "a.png").write_text("png")
         verdict = permission_case.classify("Bash", f"rm -f /tmp/{made.name}/a.png", row=self.row, cwd=str(self.wt),
@@ -850,7 +850,7 @@ class AutoAnswerTests(unittest.TestCase):
         result, keys = self.press({"case": "own-task-files", "reason": "r", "targets": ["/tmp/x/a.png"]})
         self.assertEqual(result["status"], "answered")
         self.assertEqual(keys.read_text().split(), ["Enter"])
-        self.assertIn("Auto-allowed a permission prompt in 🔧 PM OS Maintenance 2", result["report_line"])
+        self.assertIn("Auto-allowed a permission prompt in 🔧 Switchboard Maintenance 2", result["report_line"])
         rows = relay.auto_answers(unreported=True, mark_reported=True)
         self.assertEqual([r["targets"] for r in rows], [["/tmp/x/a.png"]])
         self.assertEqual(relay.auto_answers(unreported=True), [])
@@ -907,9 +907,9 @@ class DispatchPermissionSteerTest(unittest.TestCase):
         args = argparse.Namespace(task_id="rt-000000000007")
         out = io.StringIO()
         with mock.patch.object(relay, "answer", return_value=answer_result or {}) as pressed, \
-             mock.patch.object(d, "task_lead", return_value="PM OS Maintenance (trash rewrite)"), \
+             mock.patch.object(d, "task_lead", return_value="Switchboard Maintenance (trash rewrite)"), \
              mock.patch.object(d, "log"), redirect_stdout(out):
-            d.command_permission_steer(args, row, decision, "pm-os-maintenance", word)
+            d.command_permission_steer(args, row, decision, "switchboard-maintenance", word)
         result = json.loads(out.getvalue())
         result["_pressed"] = pressed.call_args
         return result

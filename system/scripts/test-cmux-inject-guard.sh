@@ -32,19 +32,19 @@ expect_safe() {   # name screen  (busy=no AND box positively empty)
 # --- Live-captured footers ----------------------------------------------------
 
 # workspace:20, streaming.
-STREAMING_FOOTER=$' ⡬ Exploring 1 file, 1 search ▸\n╭──────────────────────────────────────── $242.3_ ─ ultra ─╮\n│                                                          │\n│                                                          │\n╰ ≈ Streaming ─────────────────── ◷ ─ ~/Development/pm-os (main) ─╯'
+STREAMING_FOOTER=$' ⡬ Exploring 1 file, 1 search ▸\n╭──────────────────────────────────────── $242.3_ ─ ultra ─╮\n│                                                          │\n│                                                          │\n╰ ≈ Streaming ─────────────────── ◷ ─ ~/Development/switchboard (main) ─╯'
 
 # workspace:20, same session, while a shell_command was in flight.
-RUNNING_TOOLS_FOOTER=$' ⢘ Running 1 command, 1 failed ▸\n╭──────────────────────────────────────── $242.3_ ─ ultra ─╮\n│                                                          │\n╰ ≈ Running Tools ─────────────── ◷ ─ ~/Development/pm-os (main) ─╯'
+RUNNING_TOOLS_FOOTER=$' ⢘ Running 1 command, 1 failed ▸\n╭──────────────────────────────────────── $242.3_ ─ ultra ─╮\n│                                                          │\n╰ ≈ Running Tools ─────────────── ◷ ─ ~/Development/switchboard (main) ─╯'
 
 # Footer only — the spinner line scrolled off the sampled window.
-FOOTER_ONLY=$'╭──────────────────────────────────────── $242.3_ ─ ultra ─╮\n│                                                          │\n╰ ≈ Thinking ──────────────────── ◷ ─ ~/Development/pm-os (main) ─╯'
+FOOTER_ONLY=$'╭──────────────────────────────────────── $242.3_ ─ ultra ─╮\n│                                                          │\n╰ ≈ Thinking ──────────────────── ◷ ─ ~/Development/switchboard (main) ─╯'
 
 # workspace:73 idle, 2026-09-07 — plain footer, empty box.
-IDLE_NEO=$' - No business data or permissions changed. Write capability remains unverified.\n╭──────────────────────────────────────── $78.99 ─ high ─╮\n│                                                        │\n│                                                        │\n╰──────────────────────────────── ◷ ─ ~/Development/pm-os (main) ─╯'
+IDLE_NEO=$' - No business data or permissions changed. Write capability remains unverified.\n╭──────────────────────────────────────── $78.99 ─ high ─╮\n│                                                        │\n│                                                        │\n╰──────────────────────────────── ◷ ─ ~/Development/switchboard (main) ─╯'
 
 # workspace:6 idle — remote-host footer variant.
-IDLE_REMOTE=$' Understood — ending this session. No work was performed and no changes were made.\n╭──────────────────────────────────────────── $6.51 ─ ultra ─╮\n│                                                            │\n╰──────────────────────── ◷ ─ example-laptop.local: …/Development/pm-os ─╯'
+IDLE_REMOTE=$' Understood — ending this session. No work was performed and no changes were made.\n╭──────────────────────────────────────────── $6.51 ─ ultra ─╮\n│                                                            │\n╰──────────────────────── ◷ ─ example-laptop.local: …/Development/switchboard ─╯'
 
 # --- Legacy TUI fixtures (must keep working) ----------------------------------
 LEGACY_BUSY_TOK=$'Thinking 89 tok\n╭──────────────────────────╮\n│                          │\n╰──────────────────────────╯\n  Enter to steer · esc to interrupt'
@@ -60,9 +60,9 @@ IDLE_DRAFT=$'agent output above\n╭──────────────�
 # test fixture or a pasted log line) ABOVE an idle box must not read as busy.
 # The live region is the box plus the two lines above it (spinner line), so the
 # quote sits three lines above the box top — real scrollback.
-QUOTED_FOOTER_IDLE=$'expect_busy "neo footer" "╰ ≈ Streaming ─────── ◷ ─ ~/Development/pm-os (main) ─╯"\nThat quoted footer was missed by the old classifier.\nNo work is in flight now.\n╭──────────────────────────────────────── $242.3_ ─ ultra ─╮\n│                                                          │\n╰──────────────────────────────── ◷ ─ ~/Development/pm-os (main) ─╯'
+QUOTED_FOOTER_IDLE=$'expect_busy "neo footer" "╰ ≈ Streaming ─────── ◷ ─ ~/Development/switchboard (main) ─╯"\nThat quoted footer was missed by the old classifier.\nNo work is in flight now.\n╭──────────────────────────────────────── $242.3_ ─ ultra ─╮\n│                                                          │\n╰──────────────────────────────── ◷ ─ ~/Development/switchboard (main) ─╯'
 # …and a live streaming footer below a quoted idle footer is still busy.
-LIVE_FOOTER_BUSY=$'╰──────────────────────────────── ◷ ─ ~/Development/pm-os (main) ─╯ (quoted earlier)\n╭──────────────────────────────────────── $242.3_ ─ ultra ─╮\n│                                                          │\n╰ ≈ Streaming ─────────────────── ◷ ─ ~/Development/pm-os (main) ─╯'
+LIVE_FOOTER_BUSY=$'╰──────────────────────────────── ◷ ─ ~/Development/switchboard (main) ─╯ (quoted earlier)\n╭──────────────────────────────────────── $242.3_ ─ ultra ─╮\n│                                                          │\n╰ ≈ Streaming ─────────────────── ◷ ─ ~/Development/switchboard (main) ─╯'
 
 # --- Assertions ---------------------------------------------------------------
 expect_busy "neo footer ≈ Streaming (ws:20 live)"       "$STREAMING_FOOTER"
@@ -88,14 +88,14 @@ if printf '%s\n' "$STREAMING_FOOTER" | input_box_is_empty; then ok "streaming bo
 
 # Amp 0.0.1789000905 live capture: the animated marker also
 # renders U+223C (∼). No token counter or tool-status line may be present.
-CURRENT_STREAMING=$'╭────────────────── $3.15 ─ high ─╮\n│                                 │\n╰ ∼ Streaming ─ ◷ ─ ~/Development/pm-os (main) ─╯'
+CURRENT_STREAMING=$'╭────────────────── $3.15 ─ high ─╮\n│                                 │\n╰ ∼ Streaming ─ ◷ ─ ~/Development/switchboard (main) ─╯'
 CURRENT_TOOLS="${CURRENT_STREAMING/Streaming/Running Tools}"
 expect_busy "current ∼ Streaming without tokens or tools" "$CURRENT_STREAMING"
 expect_busy "current ∼ Running Tools footer" "$CURRENT_TOOLS"
 expect_busy "current ∼ Thinking footer" "${CURRENT_STREAMING/Streaming/Thinking}"
 expect_idle "quoted current footer above idle box" "$CURRENT_STREAMING"$'\nFinished.\nNothing running.\n'"$IDLE_NEO"
 
-# --- Claude Code composer (PM_OS_AGENT=claude), live captures ------------------
+# --- Claude Code composer (SWITCHBOARD_AGENT=claude), live captures ------------------
 # Claude Code 2.1.x in cmux 0.65, workspace:1000040020. No ╭…╮ box: the
 # composer is a `❯` line fenced by two ──── rules; the footer sits below.
 expect_state() {   # name expected screen
@@ -115,7 +115,7 @@ CLAUDE_SCROLLBACK_ECHO=$'❯ Reply with the word PONG only\n\n⏺ PONG\n\n● hi
 # A long draft pushed the bottom rule out of the sample: unknown, never empty.
 CLAUDE_TRUNCATED=$'● high · /effort\n'"$CLAUDE_RULE"$'\n❯ a very long draft\n  that keeps going'
 # A starship shell prompt also uses ❯ but has no rule above it.
-STARSHIP_SHELL=$'~/Development/pm-os on  main [!?]\n❯ '
+STARSHIP_SHELL=$'~/Development/switchboard on  main [!?]\n❯ '
 # Quoted Claude busy text in scrollback above an idle Claude composer.
 CLAUDE_QUOTED_BUSY=$'⏺ The footer said "esc to interrupt" and the spinner read "· Thinking… (3s)".\n\nDone.\nNothing running.\n\n● high · /effort\n'"$CLAUDE_RULE"$'\n❯ \n'"$CLAUDE_RULE"$'\n  ⏵⏵ bypass permissions on (shift+tab to cycle)'
 

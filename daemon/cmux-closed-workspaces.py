@@ -16,7 +16,7 @@ scrollback (refreshed every 15s) and, when a workspace closes:
 Consumed by system/scripts/cmux-reopen-last-closed.sh (and the sidebar
 "reopen last closed" button, which runs that script).
 
-Managed by launchd: com.pm-os.cmux-closed-workspaces (KeepAlive).
+Managed by launchd: com.switchboard.cmux-closed-workspaces (KeepAlive).
 """
 try:
     import fcntl
@@ -38,23 +38,23 @@ import time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "system", "scripts"))
 from lib.mux import runnable as _runnable  # Windows: the extensionless mux/cmux wrapper runs via Python
 
-PM_OS_ROOT = os.environ.get("PM_OS_ROOT") or os.path.expanduser("~/Development/pm-os")
+SWITCHBOARD_ROOT = os.environ.get("SWITCHBOARD_ROOT") or os.path.expanduser("~/Development/switchboard")
 CMUX = os.environ.get("CMUX_BIN") or "/Applications/cmux.app/Contents/Resources/bin/cmux"
 AMP_MEM = os.environ.get("AMP_MEM_BIN", os.path.expanduser("~/bin/amp-mem"))
-STACK = os.path.join(PM_OS_ROOT, ".state", "cmux-recently-closed.json")
-STACK_LOCK = os.path.join(PM_OS_ROOT, ".state", "cmux-recently-closed.lock")
+STACK = os.path.join(SWITCHBOARD_ROOT, ".state", "cmux-recently-closed.json")
+STACK_LOCK = os.path.join(SWITCHBOARD_ROOT, ".state", "cmux-recently-closed.lock")
 # Launcher workspaces (reopen/relaunch bootstraps) append their own wid
 # here just before self-closing; record() consumes matching entries and
 # skips them instead of guessing from init commands.
-SKIP_FILE = os.path.join(PM_OS_ROOT, ".state", "cmux-skip-record")
-CONTEXT_DIR = os.path.join(PM_OS_ROOT, ".state", "cmux-closed-context")
+SKIP_FILE = os.path.join(SWITCHBOARD_ROOT, ".state", "cmux-skip-record")
+CONTEXT_DIR = os.path.join(SWITCHBOARD_ROOT, ".state", "cmux-closed-context")
 CAP = 50
 CONTEXT_CAP = 100          # keep at most this many context files
 SCROLLBACK_LINES = 200
 REFRESH_SECS = 15
 EVENT_STREAM_SECS = 60
 LEDGER = os.path.join(os.path.dirname(__file__), "../system/scripts/running-task-state.py")
-SESSION_STORE = os.environ.get("PM_OS_CMUX_SESSION_JSON") or os.path.expanduser("~/Library/Application Support/cmux/session-com.cmuxterm.app.json")
+SESSION_STORE = os.environ.get("SWITCHBOARD_CMUX_SESSION_JSON") or os.path.expanduser("~/Library/Application Support/cmux/session-com.cmuxterm.app.json")
 
 snapshot = {}
 last_seen_at = {}

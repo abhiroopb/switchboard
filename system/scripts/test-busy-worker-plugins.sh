@@ -15,12 +15,12 @@ for (const [name, eventName] of [
   ['workstream-signals', 'session.start'],
 ]) {
   const plugin = await import(`${root}/system/amp-plugins/${name}.ts`)
-  process.env.PM_OS_WORKER_ID = 'worker-fixture'
+  process.env.SWITCHBOARD_WORKER_ID = 'worker-fixture'
   const forbidden = new Proxy({}, { get() { throw new Error(`${name} registered owner hooks`) } })
   plugin.default(forbidden)
   console.log(`PASS supplemental ${name} registers no owner hooks`)
 
-  delete process.env.PM_OS_WORKER_ID
+  delete process.env.SWITCHBOARD_WORKER_ID
   const events: string[] = []
   let subscriptions = 0
   plugin.default({

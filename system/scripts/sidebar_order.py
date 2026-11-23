@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Canonical PM OS sidebar order: three sections, top to bottom.
+"""Canonical switchboard sidebar order: three sections, top to bottom.
 
 The order: CoS, then To Do, then Launchpad pinned at the top, workers in a
 middle section called 'workers', and Scheduled Jobs and Meetings at the bottom.
@@ -15,7 +15,7 @@ system/cmux-helpers.sh arrange_workspace_sidebar (start of day and every
 status publish) pins and move-tops the same pinned list, and
 test_sidebar_order.py fails when that list drifts from this one.
 
-wmux cannot order tabs from a script, so the order stays instructions for cmux. PM OS
+wmux cannot order tabs from a script, so the order stays instructions for cmux. switchboard
 never reorders, plans drags for, or restarts wmux to order its sidebar.
 
   python3 system/scripts/sidebar_order.py order     print the sections
@@ -37,7 +37,7 @@ SECTIONS: list[dict[str, str]] = [
 
 # (key, pattern on the title text with the emoji and agent glyph removed)
 PINNED: list[tuple[str, re.Pattern[str]]] = [
-    ("cos", re.compile(r"^(CoS|Chief of Staff|Megadesk)$", re.I)),
+    ("cos", re.compile(r"^(CoS|Chief of Staff)$", re.I)),
     ("todo", re.compile(r"^(To ?-?Do|To-?dos?|Todo)$", re.I)),
     ("launchpad", re.compile(r"^Launch ?pad$", re.I)),
     ("comms-triage", re.compile(r"^Comms Triage$", re.I)),
@@ -139,7 +139,7 @@ def comms_triage_on() -> bool:
                 return bool(fn())
     except Exception:  # noqa: BLE001 - the setting reader is optional here
         pass
-    value = os.environ.get("PM_OS_COMMS_TRIAGE", "").strip().lower()
+    value = os.environ.get("SWITCHBOARD_COMMS_TRIAGE", "").strip().lower()
     return value not in {"off", "0", "false", "no", "disabled"}
 
 
@@ -153,7 +153,7 @@ def render(comms_on: bool = True) -> str:
         else:
             names = ["worker and workstream tabs, in their current order"]
         lines.append(f"{section['label']}: {', '.join(names)}")
-    lines.append("cmux only: wmux cannot order tabs, so PM OS leaves its order alone.")
+    lines.append("cmux only: wmux cannot order tabs, so switchboard leaves its order alone.")
     return "\n".join(lines)
 
 

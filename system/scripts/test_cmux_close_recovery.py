@@ -4,7 +4,7 @@ import importlib.util
 import io
 import json
 import os
-os.environ.pop("PM_OS_ROOT", None)  # these tests pin the default ~/Development/pm-os layout
+os.environ.pop("SWITCHBOARD_ROOT", None)  # these tests pin the default ~/Development/switchboard layout
 import re
 import shlex
 from pathlib import Path
@@ -27,7 +27,7 @@ def path_forms(path: Path) -> list[str]:
     drive, rest = os.path.splitdrive(str(path))
     if drive:
         forms.append("/" + drive[0].lower() + rest.replace("\\", "/"))
-    # A path with a space (a Dropbox "pm os" folder) is written shell-escaped,
+    # A path with a space (a Dropbox "switchboard" folder) is written shell-escaped,
     # as bash `printf %q` or `shlex.quote` spell it.
     forms += [re.sub(r"([^A-Za-z0-9_./:@%+=,-])", r"\\\1", f) for f in forms] + [shlex.quote(f) for f in forms]
     return forms
@@ -152,10 +152,10 @@ class RecorderTests(unittest.TestCase):
 
 
 class SidebarRecoveryTests(unittest.TestCase):
-    def test_installed_wrappers_pop_pm_os_stack_not_retired_stack(self):
+    def test_installed_wrappers_pop_switchboard_stack_not_retired_stack(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
-            state = home / "Development/pm-os/.state"
+            state = home / "Development/switchboard/.state"
             state.mkdir(parents=True)
             stack = state / "cmux-recently-closed.json"
             older = {"title": "older", "resume_commands": ["/bin/echo WRONG-OLDER"]}
@@ -192,7 +192,7 @@ class SidebarRecoveryTests(unittest.TestCase):
         source = (ROOT / "system/scripts/cmux-reopen-last-closed.sh").read_text()
         action = source.split("ACTION=$(python3 <<'PY'\n", 1)[1].split("\nPY\n)", 1)[0]
         with tempfile.TemporaryDirectory() as tmp:
-            state = Path(tmp) / "Development/pm-os/.state"
+            state = Path(tmp) / "Development/switchboard/.state"
             state.mkdir(parents=True)
             skip = state / "cmux-skip-record"
             self.assertEqual(Path(recorder.SKIP_FILE).relative_to(Path.home()), skip.relative_to(Path(tmp)))
@@ -226,7 +226,7 @@ class SidebarRecoveryTests(unittest.TestCase):
         action = source.split("ACTION=$(python3 <<'PY'\n", 1)[1].split("\nPY\n)", 1)[0]
         with tempfile.TemporaryDirectory() as tmp:
             entry = {"surfaces": [{"type": "terminal"}]}
-            with patch.dict(os.environ, HOME=tmp, USERPROFILE=tmp, ENTRY=json.dumps(entry), PM_OS_SCRIPTS_DIR=str(ROOT / "system/scripts")), \
+            with patch.dict(os.environ, HOME=tmp, USERPROFILE=tmp, ENTRY=json.dumps(entry), SWITCHBOARD_SCRIPTS_DIR=str(ROOT / "system/scripts")), \
                     patch.dict(sys.modules, {"fcntl": None}), patch.dict(sys.modules), \
                     patch("subprocess.run", return_value=Mock(returncode=0, stdout="OK workspace:1", stderr="")), \
                     patch("sys.stdout", new_callable=io.StringIO):

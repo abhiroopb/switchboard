@@ -1,6 +1,6 @@
 """Shared due check for jobs in ``system/scheduled-jobs.yaml``.
 
-One implementation for every reader: ``rebuild-megadesk-state.py`` (the
+One implementation for every reader: ``rebuild-switchboard-state.py`` (the
 Scheduled Jobs source the routine and CoS read) and
 ``scheduled-job-dispatch.py`` (the command-center tick that dispatches
 ``dispatch: router`` jobs). Contract: ``routines/scheduled-jobs/CONTEXT.md``.

@@ -2,7 +2,7 @@
 """permission_relay.py — a worker or owner tab stuck on a prompt reaches CoS.
 
 Destructive deletes in workers raised prompts the owner often missed. Option 2, approved with option 1 (the Trash rewrite in
-pm-os-guardrails Rule 3): any permission prompt that is left goes to the live
+switchboard-guardrails Rule 3): any permission prompt that is left goes to the live
 Claude CoS as one direct callback, with the tab, the exact command, and how to
 answer. `allow` and `deny` work through the steer path.
 
@@ -15,7 +15,7 @@ answer. `allow` and `deny` work through the steer path.
       show the prompt (--force skips that check, for the live test). CoS,
       Launchpad, Todo, and Comms Triage tabs are skipped: the owner works there.
   permission_relay.py amp-confirm --rule R --title T --detail D --timeout-ms N
-      The Amp runtime's guardrail modal (pm-os-guardrails confirm()). Amp's
+      The Amp runtime's guardrail modal (switchboard-guardrails confirm()). Amp's
       modal cannot be pressed from outside, so the callback says the owner answers in
       the tab before the guardrail's timeout declines it.
   permission_relay.py sweep [--dry-run]     dispatch.py sweep: every live worker tab that shows a
@@ -47,7 +47,7 @@ command taller than the tab shows only its last lines, and CoS would get only
 State: system/state/worker-dispatch/permission-relay.json (dedupe and the
 pending prompt per tab). Log: system/state/logs/permission-relay.log.
 Kill switches: PERMISSION_RELAY_DISABLED=1, or {"permission-relay.disabled":
-true} in ~/.claude/pm-os-plugin-config.json. Tests: test_permission_relay.py.
+true} in ~/.claude/switchboard-plugin-config.json. Tests: test_permission_relay.py.
 """
 from __future__ import annotations
 
@@ -83,14 +83,14 @@ except Exception:  # noqa: BLE001  (a copy without lib/ keeps the cmux-only look
 
 STATE_DIR = owner_tabs.STATE_DIR
 REPO_ROOT = owner_tabs.REPO_ROOT
-CONFIG_PATH = Path(os.environ.get("PM_OS_PLUGIN_CONFIG") or Path.home() / ".claude" / "pm-os-plugin-config.json")
+CONFIG_PATH = Path(os.environ.get("SWITCHBOARD_PLUGIN_CONFIG") or Path.home() / ".claude" / "switchboard-plugin-config.json")
 OWNER_DELAY = float(os.environ.get("PERMISSION_RELAY_OWNER_DELAY", "20"))
 ASK_FRESH_SECONDS = 120     # a record with no screen to check it against
 ASK_ON_SCREEN_SECONDS = 3600  # a record whose command is still in the dialog
 DEDUPE_SECONDS = 600
 RELAY_TYPES = {"permission_prompt", "elicitation_dialog"}
 # the owner works in these tabs; a prompt there is already in front of the owner.
-OPERATOR_TITLES = re.compile(r"(🧭|\bcos\b|megadesk|launchpad|comms triage|\btodo\b)", re.I)
+OPERATOR_TITLES = re.compile(r"(🧭|\bcos\b|launchpad|comms triage|\btodo\b)", re.I)
 SENDER = owner_tabs.REPORT_SENDER
 
 # Claude Code's permission dialog: "Do you want to proceed?" (or "make this edit",
@@ -336,7 +336,7 @@ def transcript_tool_call(path: str, screen: str | None = None) -> dict[str, Any]
 
 
 def reason_line(reason: str, command: str = "") -> str:
-    """One line from a guardrail ask: its title ("pm-os-guardrails: confirm rm -rf")
+    """One line from a guardrail ask: its title ("switchboard-guardrails: confirm rm -rf")
     and the question under it ("Allow destructive delete of $S/st, $S/hang?"),
     without the command the record already repeats."""
     head = _flat(next((line for line in command.splitlines() if line.strip()), ""))[:40]
@@ -540,7 +540,7 @@ def amp_confirm(rule: str, title: str, detail: str, timeout_ms: int, dry_run: bo
         screen = read_screen(ref) or ""
         if title and title not in screen:
             return {"sent": False, "reason": "the modal is no longer on screen"}
-    row = live_row(task_id=os.environ.get("PM_OS_WORKER_TASK_ID", ""), ref=ref)
+    row = live_row(task_id=os.environ.get("SWITCHBOARD_WORKER_TASK_ID", ""), ref=ref)
     command = detail.split("\n\n", 1)[1] if "\n\n" in detail else ""
     text = build_message(tab=tab, row=row, tool="Bash" if command else "", command=command,
                          reason=f"{title}: {detail.splitlines()[0] if detail else rule}", kind="permission_prompt",
@@ -702,7 +702,7 @@ def main() -> int:
         payload["workspace_id"] = current_workspace_id()
         if not payload["workspace_id"]:
             return 0  # outside cmux/wmux there is no tab to read and no CoS to tell
-        payload["task_id"] = os.environ.get("PM_OS_WORKER_TASK_ID", "")
+        payload["task_id"] = os.environ.get("SWITCHBOARD_WORKER_TASK_ID", "")
         fd, path = tempfile.mkstemp(prefix="permission-relay-", suffix=".json")
         with os.fdopen(fd, "w") as handle:
             json.dump(payload, handle)

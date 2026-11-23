@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Relaunch a cmux workspace in place.
 #
-# Triggered from the pm-os sidebar context menu. "Relaunch" creates a FRESH
+# Triggered from the switchboard sidebar context menu. "Relaunch" creates a FRESH
 # workspace whose initial command is
 #
 #   cmux-relaunch-workspace.sh --exec <old_workspace_id>
@@ -73,13 +73,13 @@ try:
     import fcntl
 except ImportError:  # Windows: flock() over msvcrt, system/scripts/flock_compat.py
     import os as _os, sys as _sys
-    _sys.path.insert(0, _os.environ.get("PM_OS_SCRIPTS_DIR") or _os.path.join(_os.environ.get("PM_OS_ROOT") or _os.path.expanduser("~/Development/pm-os"), "system", "scripts"))
+    _sys.path.insert(0, _os.environ.get("SWITCHBOARD_SCRIPTS_DIR") or _os.path.join(_os.environ.get("SWITCHBOARD_ROOT") or _os.path.expanduser("~/Development/switchboard"), "system", "scripts"))
     import flock_compat as fcntl
 
 CMUX = os.environ["CMUX"]
 SELF = os.environ["SELF"]
 SKIP = os.path.expanduser(
-    os.environ.get("CMUX_RELAUNCH_SKIP_FILE", os.path.join(os.environ.get("PM_OS_ROOT") or "~/Development/pm-os", ".state", "cmux-skip-record"))
+    os.environ.get("CMUX_RELAUNCH_SKIP_FILE", os.path.join(os.environ.get("SWITCHBOARD_ROOT") or "~/Development/switchboard", ".state", "cmux-skip-record"))
 )
 RELAUNCH_LOCK = os.path.expanduser(
     os.environ.get("CMUX_RELAUNCH_ALL_LOCK", "~/.local/state/cmux/relaunch-all.lock")

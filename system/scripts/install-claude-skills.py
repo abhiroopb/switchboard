@@ -2,7 +2,7 @@
 """Copy manifest skills into ~/.claude/skills so Claude Code and Amp both read them.
 
 Manifest: system/config/claude-skills-manifest.yaml. Each installed copy carries a
-`.pm-os-source` file (origin, content hash, time) so `--check` can tell a source
+`.switchboard-source` file (origin, content hash, time) so `--check` can tell a source
 update from a hand edit, and `--prune` only ever removes copies this script made.
 
 Usage:
@@ -69,7 +69,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "system/config/claude-skills-manifest.yaml"
-MARKER = ".pm-os-source"
+MARKER = ".switchboard-source"
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store", ".git")
 SKIP_IN_HASH = {MARKER, ".DS_Store"}
 
@@ -147,7 +147,7 @@ def machine_setting(key: str) -> str:
     """
     if os.environ.get(key):
         return os.environ[key]
-    machine = (os.environ.get("PM_OS_MACHINE") or socket.gethostname()).split(".")[0].upper()
+    machine = (os.environ.get("SWITCHBOARD_MACHINE") or socket.gethostname()).split(".")[0].upper()
     try:
         lines = (ROOT / "local" / "machines" / f"{machine}.env").read_text(encoding="utf-8-sig").splitlines()
     except (OSError, UnicodeDecodeError):
@@ -583,8 +583,8 @@ def prune(data: dict, home: Path, dry_run: bool, backup_root: Path | None = None
 def guard_destination(data: dict, home: Path, kinds: set[str] | None = None) -> str | None:
     """A reason to refuse when the destination and a source root this run reads overlap, else None.
 
-    Codex mode installs only pm-os skills into ~/.agents/skills, which is also the `agents`
-    root; with kinds limited to pm-os that root is not read, so it is not an overlap.
+    Codex mode installs only switchboard skills into ~/.agents/skills, which is also the `agents`
+    root; with kinds limited to switchboard that root is not read, so it is not an overlap.
     """
     dest = Path(os.path.realpath(resolve(data["destination"], home)))
     for kind, raw in (data.get("sources") or {}).items():
@@ -638,7 +638,7 @@ def vendor(entry: dict, data: dict, home: Path, dry_run: bool) -> str:
     target = source_dir(entry, data, home)
     if dry_run:
         return f"→ {name}: would fetch {entry['repo']}@{entry['ref']}:{entry['path']} -> {target}"
-    with tempfile.TemporaryDirectory(prefix="pm-os-vendor-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="switchboard-vendor-") as tmp:
         clone = Path(tmp) / "repo"
         subprocess.run(["git", "clone", "--quiet", "--filter=blob:none", "--no-checkout",
                         entry["repo"], str(clone)], check=True)
@@ -700,7 +700,7 @@ def main(argv: list[str]) -> int:
                         help="treat skills and patterns with no source on this machine as dormant, not failures")
     parser.add_argument("--destination", help="install somewhere other than the manifest destination (Codex's ~/.agents/skills)")
     parser.add_argument("--source-kind", action="append", default=[], metavar="KIND",
-                        help="limit install and prune to entries from these sources (pm-os, local, vendor, agents)")
+                        help="limit install and prune to entries from these sources (switchboard, local, vendor, agents)")
     parser.add_argument("--backup-dir", type=Path, default=None,
                         help="where edited copies are saved before replacement (default local/skill-edits)")
     parser.add_argument("--notices-json", type=Path, default=None, help="write events worth a CoS line here as JSON")

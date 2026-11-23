@@ -28,7 +28,7 @@ CLI (one JSON line each):
   owner_tabs.py message --ref R --from NAME     send stdin (or --text) by cmux agent message
   owner_tabs.py result-card --task-id ID ...    card to the owner tab, else CONTEXT.md
 
-Env: OWNER_TABS_ROOT (repo root for workstreams/, tests), PM_OS_STATE_DIR,
+Env: OWNER_TABS_ROOT (repo root for workstreams/, tests), SWITCHBOARD_STATE_DIR,
 CC_CMUX_SESSION_JSON (cmux session store, read by running-task-state.py),
 CMUX_BIN / CMUX.
 """
@@ -53,33 +53,33 @@ from repo_paths import main_checkout  # noqa: E402
 import private_workstreams  # noqa: E402
 
 REPO_ROOT = Path(os.environ.get("OWNER_TABS_ROOT") or main_checkout(Path(os.environ.get("REPO_ROOT") or SCRIPTS.parents[1])))
-STATE_DIR = Path(os.environ.get("PM_OS_STATE_DIR") or REPO_ROOT / "system" / "state")
+STATE_DIR = Path(os.environ.get("SWITCHBOARD_STATE_DIR") or REPO_ROOT / "system" / "state")
 COS_REGISTRATION = Path(os.environ.get("COS_SURFACE_FILE") or STATE_DIR / "cos-surface.json")
 
 
 def _auto_sandbox() -> None:
     """The report-to-cos.sh rule in Python: a run
     whose ledger, state dir or repo root is not main's (a test, a repair copy)
-    sets PM_OS_TEST_SANDBOX=1, so lib/mux.py and the wmux shim, here and in every
+    sets SWITCHBOARD_TEST_SANDBOX=1, so lib/mux.py and the wmux shim, here and in every
     child it starts (ask_cos.py's detached retry included), refuse live tabs."""
-    if os.environ.get("PM_OS_TEST_SANDBOX") == "1":
+    if os.environ.get("SWITCHBOARD_TEST_SANDBOX") == "1":
         return
     main = main_checkout(Path(os.environ.get("REPO_ROOT") or SCRIPTS.parents[1]))
     state = main / "system" / "state"
     same = lambda a, b: os.path.normcase(str(Path(a).resolve())) == os.path.normcase(str(Path(b).resolve()))
     checks = ((os.environ.get("RUNNING_TASKS_FILE"), state / "running-tasks.json"),
-              (os.environ.get("PM_OS_STATE_DIR"), state), (os.environ.get("OWNER_TABS_ROOT"), main))
+              (os.environ.get("SWITCHBOARD_STATE_DIR"), state), (os.environ.get("OWNER_TABS_ROOT"), main))
     if any(value and not same(value, expected) for value, expected in checks):
-        os.environ["PM_OS_TEST_SANDBOX"] = "1"
+        os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"
 
 
 _auto_sandbox()
 COS_TITLE = "🧭 CoS"
-COS_TITLES = (COS_TITLE, "CoS", "🧭 Megadesk", "Megadesk", "megadesk")
-WORKER_DESCRIPTION_PREFIX = "PM OS worker "
+COS_TITLES = (COS_TITLE, "CoS")
+WORKER_DESCRIPTION_PREFIX = "switchboard worker "
 LATEST_RESULTS_HEADING = "## Latest results"
 LATEST_RESULTS_KEEP = 5
-REPORT_SENDER = "PM OS report"
+REPORT_SENDER = "switchboard report"
 PT = ZoneInfo("America/Los_Angeles")
 _LINE_MARK = re.compile(r" ?⏎ ?")
 _FENCED_BLOCK = re.compile(r"```.*?```", re.DOTALL)
@@ -242,7 +242,7 @@ def is_worker_tab(ws: dict[str, Any]) -> bool:
 def owner_tab(slug: str, workspaces: list[dict[str, Any]], exclude_refs: tuple[str, ...] = (),
               root: Path | None = None) -> dict[str, Any] | None:
     """The open owner tab of `slug` (normal or P0 title), never a worker tab
-    ("<owner> <n>" titles differ, and a "PM OS worker rt-…" description is
+    ("<owner> <n>" titles differ, and a "switchboard worker rt-…" description is
     excluded on its own)."""
     if not slug:
         return None
@@ -259,8 +259,8 @@ def owner_tab(slug: str, workspaces: list[dict[str, Any]], exclude_refs: tuple[s
 
 def configured_agent() -> str:
     try:
-        import pm_os_agent
-        return str(pm_os_agent.agent())
+        import switchboard_agent
+        return str(switchboard_agent.agent())
     except Exception:
         return ""
 
@@ -480,7 +480,7 @@ def sandbox_reaching_main(root: Path | str) -> bool:
     tabs, but with hooks on a fixture's close-out could still commit to main and auto-push
     could publish it. A test's own temp repo is not main, so it
     still writes there."""
-    if os.environ.get("PM_OS_TEST_SANDBOX") != "1":
+    if os.environ.get("SWITCHBOARD_TEST_SANDBOX") != "1":
         return False
     same = lambda a, b: os.path.normcase(str(Path(a).resolve())) == os.path.normcase(str(Path(b).resolve()))
     return same(root, main_checkout(SCRIPTS.parents[1]))
@@ -529,7 +529,7 @@ def write_latest_results(root: Path, slug: str, task_id: str, card: str, when: d
 
 
 def commit_written_paths(root: Path, rels: list[str], message: str) -> dict[str, Any]:
-    """Commit exactly `rels` on root's checkout as the PM OS worker. `git commit
+    """Commit exactly `rels` on root's checkout as the switchboard worker. `git commit
     -- <path>` only takes paths git already tracks, so a file the caller has just
     created (a new workstream's CONTEXT.md) is staged first by its
     explicit path, never `-A`; a failed add or commit unstages it again, leaving
@@ -548,7 +548,7 @@ def commit_written_paths(root: Path, rels: list[str], message: str) -> dict[str,
         if add.returncode:
             g("reset", "-q", "--", *new)
             return {"committed": False, "reason": (add.stderr or add.stdout).strip()[:200] or "git add failed"}
-    commit = g("-c", "user.name=PM OS worker", "-c", "user.email=pm-os-worker@local",
+    commit = g("-c", "user.name=switchboard worker", "-c", "user.email=switchboard-worker@local",
                "commit", "-q", "-m", message, "--", *rels)
     if commit.returncode:
         if new:

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # run-profile-tick-hooks.sh: run the active organisation profile's per-tick jobs.
 #
-# Core PM OS holds no profile job. A profile that needs work on every
+# Core switchboard holds no profile job. A profile that needs work on every
 # command-center tick puts one script per job at
 # profiles/<name>/overlay/system/scripts/profile-tick.d/<job>.sh; apply-profile.py
 # copies it here only while that profile is active, so on any other machine the

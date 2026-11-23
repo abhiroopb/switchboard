@@ -1,4 +1,4 @@
-"""mux.py: backend detection for Python PM OS scripts (mirror of lib/mux.sh).
+"""mux.py: backend detection for Python switchboard scripts (mirror of lib/mux.sh).
 
     from lib.mux import cmux_bin, backend
     CMUX = cmux_bin()          # cmux binary on macOS, the cmux-shim on wmux
@@ -35,7 +35,7 @@ def _is_wsl() -> bool:
 
 
 def backend() -> str:
-    forced = os.environ.get("PM_OS_MUX", "").strip().lower()
+    forced = os.environ.get("SWITCHBOARD_MUX", "").strip().lower()
     if forced and forced != "auto":
         return forced
     if os.environ.get("WMUX") == "1" or os.environ.get("WMUX_PIPE") or os.environ.get("WMUX_CLI"):
@@ -52,13 +52,13 @@ def backend() -> str:
     return "none"
 
 
-SANDBOX_CMUX = "/nonexistent/pm-os-test-sandbox/cmux"
+SANDBOX_CMUX = "/nonexistent/switchboard-test-sandbox/cmux"
 
 
 def sandboxed() -> bool:
-    """PM_OS_TEST_SANDBOX=1: a test or repair run that must never reach a live
+    """SWITCHBOARD_TEST_SANDBOX=1: a test or repair run that must never reach a live
     cmux or wmux tab."""
-    return os.environ.get("PM_OS_TEST_SANDBOX") == "1"
+    return os.environ.get("SWITCHBOARD_TEST_SANDBOX") == "1"
 
 
 def cmux_bin() -> str:
@@ -106,7 +106,7 @@ def runnable(cmd: list[str]) -> list[str]:
 
 def _git_bash() -> str:
     """Git for Windows bash. Never System32's bash.exe: that is the WSL launcher, which cannot run a C:\\ path."""
-    candidates = [os.environ.get("PM_OS_BASH"), shutil.which("bash")]
+    candidates = [os.environ.get("SWITCHBOARD_BASH"), shutil.which("bash")]
     git = shutil.which("git")
     if git:  # ...\Git\cmd\git.exe -> ...\Git\bin\bash.exe
         candidates.append(str(Path(git).resolve().parent.parent / "bin" / "bash.exe"))
@@ -121,11 +121,11 @@ def _git_bash() -> str:
 
 def session_store_path() -> Path:
     """Where the cmux-shaped session store lives for this backend."""
-    override = os.environ.get("CC_CMUX_SESSION_JSON") or os.environ.get("PM_OS_CMUX_SESSION_JSON")
+    override = os.environ.get("CC_CMUX_SESSION_JSON") or os.environ.get("SWITCHBOARD_CMUX_SESSION_JSON")
     if override:
         return Path(override).expanduser()
     if backend() == "wmux":
-        return Path(os.environ.get("PM_OS_STATE_HOME") or Path.home() / ".pm-os") / "wmux-session-store.json"
+        return Path(os.environ.get("SWITCHBOARD_STATE_HOME") or Path.home() / ".switchboard") / "wmux-session-store.json"
     return Path.home() / "Library" / "Application Support" / "cmux" / "session-com.cmuxterm.app.json"
 
 
@@ -245,7 +245,7 @@ def active() -> str:
     return kind
 
 
-# What each PM OS caller needs from the multiplexer, and how wmux 2.49 serves it.
+# What each switchboard caller needs from the multiplexer, and how wmux 2.49 serves it.
 # "full" matches cmux; "typed" goes through the composer instead of an agent
 # channel; "sidecar" is kept by the shim because wmux has no store for it.
 CAPABILITIES: dict[str, dict[str, str]] = {
@@ -261,7 +261,7 @@ CAPABILITIES: dict[str, dict[str, str]] = {
     "set status": {"cmux": "full", "wmux": "idle|running|interrupted + text",
                    "gap": "wmux has no named status pills. The shim keeps them in a sidecar file."},
     "heartbeat": {"cmux": "hooks enqueue", "wmux": "report-agent or wmux-hook.js",
-                  "gap": "When wmux's own Claude hooks are installed, they report run state and PM OS adds nothing."},
+                  "gap": "When wmux's own Claude hooks are installed, they report run state and switchboard adds nothing."},
     "pin, color, order": {"cmux": "full", "wmux": "sidecar", "gap": "wmux applies them only after seed-session.ps1 -Restart."},
 }
 

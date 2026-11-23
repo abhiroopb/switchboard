@@ -5,7 +5,7 @@ description: "Wraps the PM day by updating today's note, reconciling follow-thro
 
 # Closing Day
 
-Run a compact end-of-day closeout for PM OS.
+Run a compact end-of-day closeout for switchboard.
 
 ## Use For
 
@@ -107,7 +107,7 @@ bash system/scripts/command-center-action.sh close-all --closeout-saved
 
    Teardown waits for each wrap-up turn to finish, then closes the workspace after verifying an idle footer and an empty input box. It uses a 90-second pre-send wait, a 900-second wrap-up wait, and up to three retry passes within a 3,600-second total ceiling. Accepted wrap prompts are not sent again. The only intentional survivors are workspaces with an unsent draft or a pending tool approval; never force-close either case. An agent still working stays protected while teardown waits and retries. Unreadable state, unknown delivery, unrelated live processes, and close failures remain explicit verification blockers, not successful completion. Report each survivor with its exact reason. A verified dead Thread Status stub closes without signalling any process. CoS closes last after its final turn finishes, then cmux quits only after verifying that no workspaces remain.
 
-   Read the returned log on failure. Use `~/Development/pm-os/docs/runbooks/cmux-workspace-launch.md`, section "End-of-day teardown", for wait settings and safe verification.
+   Read the returned log on failure. Use `~/Development/switchboard/docs/runbooks/cmux-workspace-launch.md`, section "End-of-day teardown", for wait settings and safe verification.
    `--dry-run` previews only. `--keep-app` still closes real workspaces and is
    not a safe test mode without fake cmux.
 

@@ -128,8 +128,8 @@ class RouterContextPackTest(unittest.TestCase):
                 "next_step": "",
             },
             {
-                "slug": "pm-os-maintenance",
-                "display_name": "PM OS Maintenance",
+                "slug": "switchboard-maintenance",
+                "display_name": "Switchboard Maintenance",
                 "status": "active",
                 "todo_match_terms": [],
                 "signal_match_terms": [],
@@ -138,19 +138,19 @@ class RouterContextPackTest(unittest.TestCase):
                 "next_step": "",
             },
         ]
-        prompt = ("Original request: Workstream: pm-os-maintenance (fold into the reliability review). Workers never resume; "
+        prompt = ("Original request: Workstream: switchboard-maintenance (fold into the reliability review). Workers never resume; "
                   "two stall classes were verified; add them to the fix and its regression tests.")
 
         ranked = MODULE.rank_workstreams(prompt, rows, [])
 
-        self.assertEqual(MODULE.explicit_workstream(prompt), "pm-os-maintenance")
-        self.assertEqual(ranked[0]["slug"], "pm-os-maintenance")
-        self.assertIn('explicit directive "Workstream: pm-os-maintenance"', ranked[0]["evidence"])
+        self.assertEqual(MODULE.explicit_workstream(prompt), "switchboard-maintenance")
+        self.assertEqual(ranked[0]["slug"], "switchboard-maintenance")
+        self.assertIn('explicit directive "Workstream: switchboard-maintenance"', ranked[0]["evidence"])
         self.assertGreater(ranked[1]["score"], 220, "the decoy must still score higher than the directive bonus alone would need")
 
     def test_explicit_workstream_parses_common_wrappers(self) -> None:
         self.assertEqual(MODULE.explicit_workstream("Workstream: launch-notes. the owner said ..."), "launch-notes")
-        self.assertEqual(MODULE.explicit_workstream("**Workstream:** pm-os-maintenance\nmore"), "pm-os-maintenance")
+        self.assertEqual(MODULE.explicit_workstream("**Workstream:** switchboard-maintenance\nmore"), "switchboard-maintenance")
         self.assertEqual(MODULE.explicit_workstream("workstream : Foo-Bar (see note)"), "foo-bar")
         self.assertEqual(MODULE.explicit_workstream("Create a new workstream for this."), "")
         self.assertEqual(MODULE.explicit_workstream("No directive here"), "")
@@ -230,7 +230,7 @@ class NamedOwnerEvidenceTest(unittest.TestCase):
         (self.root / "system" / "scripts").mkdir(parents=True)
         (self.root / "system" / "scripts" / "dispatch.py").write_text("")
         self.rows = [
-            {"slug": "pm-os-maintenance", "display_name": "PM OS Maintenance", "status": "active"},
+            {"slug": "switchboard-maintenance", "display_name": "Switchboard Maintenance", "status": "active"},
             {"slug": "photo-book-kit", "display_name": "Photo Book Kit", "status": "active"},
             {"slug": "launch-notes", "display_name": "Launch Notes", "status": "active",
              "todo_match_terms": ["netlify"]},
@@ -255,7 +255,7 @@ class NamedOwnerEvidenceTest(unittest.TestCase):
         self.assertFalse([e for e in self.evidence("Update CONTEXT.md", "photo-book-kit") if e.startswith("note named")])
 
     def test_path_owner_is_empty_when_another_slug_is_named(self) -> None:
-        prompt = "Move workstreams/photo-book-kit/ notes into pm-os-maintenance."
+        prompt = "Move workstreams/photo-book-kit/ notes into switchboard-maintenance."
         self.assertEqual(MODULE.path_owner(prompt, self.rows), "")
 
     def test_shortened_name_and_subject(self) -> None:
@@ -264,17 +264,17 @@ class NamedOwnerEvidenceTest(unittest.TestCase):
         self.assertIn('abbreviated workstream name "photo kit"', evidence)
 
     def test_hyphenated_slug_is_an_exact_slug_phrase(self) -> None:
-        self.assertIn("exact slug phrase", self.evidence("Fold it into pm-os-maintenance.", "pm-os-maintenance"))
+        self.assertIn("exact slug phrase", self.evidence("Fold it into switchboard-maintenance.", "switchboard-maintenance"))
         # A repo path that merely contains a slug is not the slug.
         self.assertNotIn("exact slug phrase", self.evidence("Publish to example/photo-book-kit", "photo-book-kit"))
 
-    def test_pm_os_script_names_the_system_owner(self) -> None:
-        evidence = self.evidence("Why does dispatch.py open a new tab?", "pm-os-maintenance")
-        self.assertIn("PM OS system named: dispatch.py", evidence)
+    def test_switchboard_script_names_the_system_owner(self) -> None:
+        evidence = self.evidence("Why does dispatch.py open a new tab?", "switchboard-maintenance")
+        self.assertIn("switchboard system named: dispatch.py", evidence)
 
-    def test_pm_os_in_the_owners_words_names_the_system_owner(self) -> None:
-        evidence = self.evidence("the owner: 'why did this happen again? PM OS should prevent this'", "pm-os-maintenance")
-        self.assertIn('subject names this workstream: "PM OS"', evidence)
+    def test_switchboard_in_the_owners_words_names_the_system_owner(self) -> None:
+        evidence = self.evidence("the owner: 'why did this happen again? switchboard should prevent this'", "switchboard-maintenance")
+        self.assertIn('subject names this workstream: "switchboard"', evidence)
 
     def test_negated_match_term_names_nobody(self) -> None:
         self.assertEqual(self.evidence("Build a local app; do NOT deploy it to Netlify.", "launch-notes"), [])

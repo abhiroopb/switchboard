@@ -33,13 +33,13 @@ class Base(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp())
         (self.tmp / "local" / "machines").mkdir(parents=True)
-        self.env = {"PM_OS_LOCAL_DIR": str(self.tmp / "local"), "PM_OS_MACHINE": MACHINE}
+        self.env = {"SWITCHBOARD_LOCAL_DIR": str(self.tmp / "local"), "SWITCHBOARD_MACHINE": MACHINE}
 
     def tearDown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def worker(self, **extra) -> dict:
-        return {**self.env, "PM_OS_WORKER_TASK_ID": "rt-test", "PM_OS_WORKSTREAM_SLUG": "browser-control",
+        return {**self.env, "SWITCHBOARD_WORKER_TASK_ID": "rt-test", "SWITCHBOARD_WORKSTREAM_SLUG": "browser-control",
                 guard.NEED_ENV: "read the owner's order history", **extra}
 
     def log_lines(self) -> list[dict]:
@@ -60,14 +60,14 @@ class DecideCases(Base):
         self.assertNotIn("secret", json.dumps(line))  # host names only, never the full URL
 
     def test_worker_without_need_is_refused(self) -> None:
-        env = {**self.env, "PM_OS_WORKER_TASK_ID": "rt-test"}
+        env = {**self.env, "SWITCHBOARD_WORKER_TASK_ID": "rt-test"}
         decision, reason, _ = guard.decide(event("navigate", url="https://example.com"), env)
         self.assertEqual(decision, "deny")
         self.assertIn("Browser: signed-in", reason)
 
     def test_scheduled_and_sandbox_are_refused(self) -> None:
-        self.assertEqual(guard.decide(event("read_page", tabId=1), self.worker(PM_OS_SCHEDULED_JOB="1"))[0], "deny")
-        self.assertEqual(guard.decide(event("read_page", tabId=1), {**self.env, "PM_OS_TEST_SANDBOX": "1"})[0], "deny")
+        self.assertEqual(guard.decide(event("read_page", tabId=1), self.worker(SWITCHBOARD_SCHEDULED_JOB="1"))[0], "deny")
+        self.assertEqual(guard.decide(event("read_page", tabId=1), {**self.env, "SWITCHBOARD_TEST_SANDBOX": "1"})[0], "deny")
         self.assertEqual(guard.decide({**event("read_page"), "cwd": "/r/routines/scheduled-jobs/x"}, self.env)[0], "deny")
 
     def test_bank_and_email_refused_for_worker_and_asked_in_owner_tab(self) -> None:
@@ -204,16 +204,16 @@ class LaunchCases(Base):
 
     def test_switch_round_trip_keeps_other_keys(self) -> None:
         env_file = self.tmp / "local" / "machines" / f"{MACHINE}.env"
-        env_file.write_text("PM_OS_OWNER_BROWSER=brave\n", encoding="utf-8")
+        env_file.write_text("SWITCHBOARD_OWNER_BROWSER=brave\n", encoding="utf-8")
         guard.set_switch("on", self.env)
         self.assertTrue(guard.enabled(self.env))
         guard.set_switch("off", self.env)
         self.assertFalse(guard.enabled(self.env))
-        self.assertIn("PM_OS_OWNER_BROWSER=brave", env_file.read_text(encoding="utf-8"))
+        self.assertIn("SWITCHBOARD_OWNER_BROWSER=brave", env_file.read_text(encoding="utf-8"))
 
     def test_unreadable_manifest_is_reported(self) -> None:
         manifest = self.tmp / "missing.json"
-        env = {**self.env, "PM_OS_CHROME_NATIVE_HOST_MANIFEST": str(manifest)}
+        env = {**self.env, "SWITCHBOARD_CHROME_NATIVE_HOST_MANIFEST": str(manifest)}
         self.assertFalse(guard.native_host(env)["manifest_readable"])
 
 
@@ -240,10 +240,10 @@ class DispatchLaunchCases(Base):
 
 
 class PluginWrapperCases(Base):
-    WRAPPER = REPO / "system" / "claude-marketplace" / "plugins" / "pm-os" / "hooks" / "claude-in-chrome-guard.py"
+    WRAPPER = REPO / "system" / "claude-marketplace" / "plugins" / "switchboard" / "hooks" / "claude-in-chrome-guard.py"
 
     def run_wrapper(self, payload: dict, root: Path) -> str:
-        env = {**self.env, "PM_OS_ROOT": str(root), "PATH": __import__("os").environ.get("PATH", ""),
+        env = {**self.env, "SWITCHBOARD_ROOT": str(root), "PATH": __import__("os").environ.get("PATH", ""),
                "SYSTEMROOT": __import__("os").environ.get("SYSTEMROOT", "")}
         return subprocess.run([sys.executable, str(self.WRAPPER)], input=json.dumps(payload), capture_output=True,
                               text=True, env=env, timeout=30).stdout
@@ -259,7 +259,7 @@ class PluginWrapperCases(Base):
     def test_wrapper_refuses_unreadable_input(self) -> None:
         import os
         result = subprocess.run([sys.executable, str(self.WRAPPER)], input=b"{not json", capture_output=True, timeout=30,
-                                env={**self.env, "PM_OS_ROOT": str(REPO), "PATH": os.environ.get("PATH", ""),
+                                env={**self.env, "SWITCHBOARD_ROOT": str(REPO), "PATH": os.environ.get("PATH", ""),
                                      "SYSTEMROOT": os.environ.get("SYSTEMROOT", "")})
         self.assertEqual(result.returncode, 2)
         self.assertIn(b"refused", result.stderr)

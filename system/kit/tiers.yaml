@@ -26,7 +26,7 @@ tiers:
       - .state/
       - system/state/
       - graphify-out/
-      - .pm-os-kit/
+      - .switchboard-kit/
       - "*.pyc"
       - "*/__pycache__/*"
     keep:

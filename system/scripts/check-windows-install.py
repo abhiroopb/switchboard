@@ -27,10 +27,10 @@ import comms_triage_setting  # noqa: E402
 import repo_paths  # noqa: E402
 
 ROOT = repo_paths.main_checkout(HERE.parents[1])
-STATE_HOME = Path(os.environ.get("PM_OS_STATE_HOME") or Path.home() / ".pm-os")
-EXPECTED_TASKS = ("com.pm-os.command-center", "com.pm-os.background-tasks", "com.pm-os.log-rotate",
-                  "com.pm-os.amp-mem-weekly-distill", "com.pm-os.note-links",
-                  "com.pm-os.local-backup", "com.pm-os.cos-autostart")
+STATE_HOME = Path(os.environ.get("SWITCHBOARD_STATE_HOME") or Path.home() / ".switchboard")
+EXPECTED_TASKS = ("com.switchboard.command-center", "com.switchboard.background-tasks", "com.switchboard.log-rotate",
+                  "com.switchboard.amp-mem-weekly-distill", "com.switchboard.note-links",
+                  "com.switchboard.local-backup", "com.switchboard.cos-autostart")
 # Same value install-claude-code.sh merges into ~/.claude/settings.json.
 MCP_TIMEOUT_MS = 60000
 # Two 30-minute background ticks: a file still old this long after a wake is a real miss.
@@ -65,25 +65,25 @@ def check_env_file() -> None:
         if "=" in line and not line.lstrip().startswith("#"):
             k, _, v = line.partition("=")
             keys[k.strip()] = v.strip()
-    root = keys.get("PM_OS_ROOT", "")
+    root = keys.get("SWITCHBOARD_ROOT", "")
     if not same_dir(root, ROOT):
-        add("warn", "env PM_OS_ROOT", f"records {root or '(none)'}, not {ROOT}; scheduled tasks read the wrong folder "
-            f"(fix the line in {env_file}; a test install must set PM_OS_STATE_HOME)")
+        add("warn", "env SWITCHBOARD_ROOT", f"records {root or '(none)'}, not {ROOT}; scheduled tasks read the wrong folder "
+            f"(fix the line in {env_file}; a test install must set SWITCHBOARD_STATE_HOME)")
     else:
-        add("ok", "env PM_OS_ROOT", root)
-    missing = [k for k in ("PM_OS_PYTHON", "PM_OS_TOOL_PATH", "WMUX_BIN") if not keys.get(k)]
+        add("ok", "env SWITCHBOARD_ROOT", root)
+    missing = [k for k in ("SWITCHBOARD_PYTHON", "SWITCHBOARD_TOOL_PATH", "WMUX_BIN") if not keys.get(k)]
     if missing:
         add("warn", "env tool keys", f"{', '.join(missing)} missing, so scheduled tasks lose python, git or wmux "
             "(rerun: powershell -File system\\windows\\install.ps1 -SkipSeed)")
     else:
-        add("ok", "env tool keys", "PM_OS_PYTHON, PM_OS_TOOL_PATH, WMUX_BIN recorded")
+        add("ok", "env tool keys", "SWITCHBOARD_PYTHON, SWITCHBOARD_TOOL_PATH, WMUX_BIN recorded")
 
 
 def check_tasks() -> None:
     ps = shutil.which("powershell.exe") or shutil.which("powershell")
     if not ps:
         return add("warn", "scheduled tasks", "powershell not found")
-    script = ("Get-ScheduledTask -TaskPath '\\PM OS\\' -ErrorAction SilentlyContinue | ForEach-Object { "
+    script = ("Get-ScheduledTask -TaskPath '\\switchboard\\' -ErrorAction SilentlyContinue | ForEach-Object { "
               "$i = $_ | Get-ScheduledTaskInfo; [pscustomobject]@{n=$_.TaskName; s=[string]$_.State; r=$i.LastTaskResult} } "
               "| ConvertTo-Json -Compress")
     proc = run([ps, "-NoProfile", "-Command", script], timeout=90)
@@ -98,7 +98,7 @@ def check_tasks() -> None:
         add("warn", "scheduled tasks", f"not registered: {', '.join(missing)} "
             "(powershell -File system\\windows\\register-scheduled-tasks.ps1)")
     else:
-        add("ok", "scheduled tasks", f"{len(EXPECTED_TASKS)} PM OS tasks registered")
+        add("ok", "scheduled tasks", f"{len(EXPECTED_TASKS)} switchboard tasks registered")
 
 
 def check_background_log() -> None:
@@ -285,10 +285,10 @@ def stop_tree(proc: subprocess.Popen) -> None:
 
 
 def check_connectors() -> None:
-    pmos = shutil.which("pmos")
-    if not pmos:
-        return add("warn", "connectors", "pmos not on PATH (install.ps1 adds system\\connectors)")
-    proc = run([pmos, "status"], timeout=60)
+    switchboard = shutil.which("switchboard")
+    if not switchboard:
+        return add("warn", "connectors", "switchboard not on PATH (install.ps1 adds system\\connectors)")
+    proc = run([switchboard, "status"], timeout=60)
     text = (proc.stdout if proc else "") or ""
     for line in text.splitlines():
         name = line.split(":", 1)[0].strip()
@@ -296,14 +296,14 @@ def check_connectors() -> None:
             continue
         good = "ready" in line or " ok" in line
         if name == "dropbox":
-            check_dropbox(pmos, good)
+            check_dropbox(switchboard, good)
             continue
         if name == "slack" and not good and not comms_triage_setting.enabled():
             add("ok", "connector slack", "not used: Comms Triage is off on this machine")
             continue
         add("ok" if good else "owner", f"connector {name}", line.split(":", 1)[-1].strip()[:120])
-    # Same rule as system/connectors/pmos-shim.py connectors_dir().
-    token = Path(os.environ.get("PM_OS_CONNECTORS_DIR") or Path.home() / ".pm-os" / "connectors") / "google-token.json"
+    # Same rule as system/connectors/switchboard-shim.py connectors_dir().
+    token = Path(os.environ.get("SWITCHBOARD_CONNECTORS_DIR") or Path.home() / ".switchboard" / "connectors") / "google-token.json"
     try:
         scopes = json.loads(token.read_text(encoding="utf-8")).get("scopes") or []
     except (OSError, json.JSONDecodeError):
@@ -312,7 +312,7 @@ def check_connectors() -> None:
     if gcal.exists() or "https://www.googleapis.com/auth/calendar" in scopes:
         add("ok", "todo calendar holds", "calendar API token available")
     else:
-        add("owner", "todo calendar holds", "no calendar token (pmos login google)")
+        add("owner", "todo calendar holds", "no calendar token (switchboard login google)")
 
 
 def last_wake_epoch() -> float | None:
@@ -334,12 +334,12 @@ def last_wake_epoch() -> float | None:
         return None
 
 
-def check_dropbox(pmos: str, configured: bool) -> None:
+def check_dropbox(switchboard: str, configured: bool) -> None:
     """No skill needs this connector: tracker links are signed-in links built from the file's path."""
     if not configured:
         add("ok", "connector dropbox", "not used: tracker links are signed-in links built without it")
         return
-    proc = run([pmos, "doctor", "dropbox"], timeout=60)
+    proc = run([switchboard, "doctor", "dropbox"], timeout=60)
     detail = ((proc.stdout if proc else "") or "no answer").strip().split(":", 1)[-1].strip()
     add("ok", "connector dropbox", f"optional, no skill uses it: {detail}"[:120])
 
@@ -368,7 +368,7 @@ def check_knowledge() -> None:
 
 
 def check_note_links() -> None:
-    port = os.environ.get("PM_OS_NOTE_LINK_PORT") or "7472"
+    port = os.environ.get("SWITCHBOARD_NOTE_LINK_PORT") or "7472"
     try:
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=3) as resp:
             up = resp.status == 200
@@ -407,7 +407,7 @@ def check_hook_profile() -> None:
 
 
 def check_plugin_copy() -> None:
-    # Claude Code runs the pm-os plugin from its install-time copy, and the version never changes,
+    # Claude Code runs the switchboard plugin from its install-time copy, and the version never changes,
     # so hook fixes in the repo do not reach live sessions until this copies them.
     script = Path(__file__).resolve().parent / "sync-claude-plugin.py"
     repo = Path(__file__).resolve().parents[2]
@@ -420,11 +420,11 @@ def check_plugin_copy() -> None:
     status = out.get("status") or "unreadable"
     if status == "behind":
         shown = ", ".join(out.get("changed", [])[:4]) + ("…" if len(out.get("changed", [])) > 4 else "")
-        add("warn", "pm-os plugin copy", f"installed copy is behind the repo ({shown}) "
+        add("warn", "switchboard plugin copy", f"installed copy is behind the repo ({shown}) "
             "(python3 system/scripts/sync-claude-plugin.py)")
     else:
         held = out.get("held") or []
-        add("ok", "pm-os plugin copy", status + (f"; held hand fixes: {', '.join(held)}" if held else ""))
+        add("ok", "switchboard plugin copy", status + (f"; held hand fixes: {', '.join(held)}" if held else ""))
 
 
 def main() -> int:

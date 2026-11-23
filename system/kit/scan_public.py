@@ -37,7 +37,7 @@ HOME_PATH = re.compile(r"(?:\b[A-Za-z]:[/\\]{1,2}[Uu]sers[/\\]{1,2}|(?<![\w.~-])
                        r"|(?<![\w.~-])/Users/|(?<![\w.~-])/home/)([A-Za-z0-9._-]++)(?!\()")
 SAFE_HOME = re.compile(r"(?i)^(?:you|your[-_]?name|user|username|owner|example|me|runner|runneradmin|public|default|"
                        r"shared|linuxbrew|name|someone|alice|bob|carol|pat|sam|jane|john|person|home|tester|test|invented|fake|demo|"
-                       r"x|a|it|kit|data|dev|pm-os|switchboard|\.\.\.|<.*|\{.*|\$.*|%.*|\*)$|^[a-z]$")
+                       r"x|a|it|kit|data|dev|switchboard|\.\.\.|<.*|\{.*|\$.*|%.*|\*)$|^[a-z]$")
 OWNER_RULING = re.compile(r"\(the owner, \d{4}-\d{2}-\d{2}[^)]*?:\s*[\"“]")
 PLACEHOLDER = re.compile(r"\{\{[A-Z_]+\}\}|YOUR[_-][A-Z_-]+|<[a-z-]+>")
 

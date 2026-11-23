@@ -1,6 +1,6 @@
 # Shared shopping lists PRD
 
-An invented example that shows the depth and shape PM OS expects from a PRD. The product, the numbers and the people are made up. It follows `templates/prd-template.md`.
+An invented example that shows the depth and shape switchboard expects from a PRD. The product, the numbers and the people are made up. It follows `templates/prd-template.md`.
 
 | Field | Value |
 |---|---|

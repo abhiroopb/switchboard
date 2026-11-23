@@ -48,7 +48,7 @@ class FilingPromise(unittest.TestCase):
             "Filing with the platform team today.",
             "Filing a ticket for the login bug.",
             "We're filing this tomorrow.",
-            "PM OS is filing it.",
+            "switchboard is filing it.",
             "I'll file a ticket about this.",
             "Filed two issues against the importer.",
             "Opened a Jira ticket.",
@@ -80,15 +80,15 @@ class FilingPromise(unittest.TestCase):
 
     def test_local_note_entries_noun_file_and_own_warning_do_not_trigger(self) -> None:
         for sentence in (
-            # Entries in a PM OS Markdown note, not a tracker.
+            # Entries in a switchboard Markdown note, not a tracker.
             "**Issue log.** Both are logged as issues 21 and 22 in the Windows issue log, with kit item K14 for macOS.",
             # The same note, and "file" as a noun.
             "The issue log gains issue 14 and kit item K9.",
-            "test_local_backup.py has 1 failure in pm-os-trash.py, a file this task did not touch.",
+            "test_local_backup.py has 1 failure in switchboard-trash.py, a file this task did not touch.",
             "Logged as issue 23 in 2026-11-12-windows-cos-issues.md.",
             "Each one is logged as an issue in the maintenance note.",
             # The warning a first pass appended, read again by a second pass.
-            'Done. ⚠️ Filing promised, no record URL ("logged as issues"): create the record via pmos '
+            'Done. ⚠️ Filing promised, no record URL ("logged as issues"): create the record via switchboard '
             "(linear, jira, airtable) or gh issue create and resend with its id and URL verbatim; CoS does not "
             "send this draft (external-replies Rule 9).",
         ):
@@ -99,8 +99,8 @@ class FilingPromise(unittest.TestCase):
     def test_an_issue_log_entry_with_a_kit_item_does_not_trigger(self) -> None:
         # An entry in the Windows issue log that also names a kit item is not a record.
         for sentence in (
-            "Logged as issue 30 with Mac kit item K18 in workstreams/pm-os-maintenance/2026-11-12-windows-cos-issues.md.",
-            "Logged as issue 30 with Mac kit item K18 in workstreams/pm-os-maintenance/2026-11-12-windows-cos-issues.md",
+            "Logged as issue 30 with Mac kit item K18 in workstreams/switchboard-maintenance/2026-11-12-windows-cos-issues.md.",
+            "Logged as issue 30 with Mac kit item K18 in workstreams/switchboard-maintenance/2026-11-12-windows-cos-issues.md",
             "Logged as issue 30, with kit item K18, in the Windows issue log.",
             "Logged as issue 30 (kit item K18) in 2026-11-12-windows-cos-issues.md.",
             "Logged as issues 30 and 31 with kit items K18 and K19 in the Windows issue log.",
@@ -124,9 +124,9 @@ class FilingPromise(unittest.TestCase):
             "2026-11-12-windows-cos-issues.md. Code-reviewer persona not run (one-number config change plus a test).",
             # A numbered entry with the note later in the sentence, plain or linked.
             "Logged as issue 32 for a numbered entry in the local file "
-            "workstreams/pm-os-maintenance/2026-11-12-windows-cos-issues.md.",
+            "workstreams/switchboard-maintenance/2026-11-12-windows-cos-issues.md.",
             "Logged as issue 35, the digest lock entry, in "
-            "[the issue log](workstreams/pm-os-maintenance/2026-11-12-windows-cos-issues.md).",
+            "[the issue log](workstreams/switchboard-maintenance/2026-11-12-windows-cos-issues.md).",
         ):
             with self.subTest(text=text[:60]):
                 self.assertEqual(rs.filing_promises(text), [])

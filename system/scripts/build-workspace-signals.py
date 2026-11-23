@@ -246,7 +246,7 @@ def canonical_knowledge_section(slug: str, days: int) -> str:
         "--limit", "12",
         "--include-historical",
     ]
-    knowledge_dir = os.environ.get("PM_OS_KNOWLEDGE_DIR")
+    knowledge_dir = os.environ.get("SWITCHBOARD_KNOWLEDGE_DIR")
     if knowledge_dir:
         cmd += ["--knowledge-dir", knowledge_dir]
     try:

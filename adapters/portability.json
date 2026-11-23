@@ -3,7 +3,7 @@
   "adapter": 156,
   "amp-only": 96,
   "cmux-only": 76,
-  "portable": 884
+  "portable": 889
  },
  "files": {
   ".agents/skills/asd-ste100/LICENSE": {
@@ -294,7 +294,7 @@
    "class": "portable",
    "reason": "no harness dependency found"
   },
-  ".claude/hooks/pm-os-guardrails.py": {
+  ".claude/hooks/switchboard-guardrails.py": {
    "class": "portable",
    "reason": "Claude Code adapter"
   },
@@ -306,7 +306,7 @@
    "class": "portable",
    "reason": "Codex adapter"
   },
-  ".cursor/rules/pm-os.mdc": {
+  ".cursor/rules/switchboard.mdc": {
    "class": "portable",
    "reason": "Cursor adapter"
   },
@@ -474,6 +474,10 @@
    "class": "portable",
    "reason": "no harness dependency found"
   },
+  "docs/images/wmux-switchboard.png": {
+   "class": "portable",
+   "reason": "binary asset"
+  },
   "docs/install-decisions.md": {
    "class": "adapter",
    "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
@@ -550,14 +554,6 @@
    "class": "adapter",
    "reason": "no harness dependency found"
   },
-  "routines/megadesk/CONTEXT.md": {
-   "class": "adapter",
-   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
-  },
-  "routines/megadesk/config.yaml": {
-   "class": "adapter",
-   "reason": "no harness dependency found"
-  },
   "routines/router/CONTEXT.md": {
    "class": "adapter",
    "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
@@ -571,6 +567,14 @@
    "reason": "no harness dependency found"
   },
   "routines/scheduled-jobs/config.yaml": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "routines/switchboard/CONTEXT.md": {
+   "class": "adapter",
+   "reason": "mentions Amp or cmux in prose; the harness adapter supplies the equivalent"
+  },
+  "routines/switchboard/config.yaml": {
    "class": "adapter",
    "reason": "no harness dependency found"
   },
@@ -746,203 +750,203 @@
    "class": "amp-only",
    "reason": "Amp plugin bundle"
   },
-  "system/amp-plugins/pm-os-bundle.json": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os-commands.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os-guardrails.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os-runtime.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/active-surface.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/amp-auth.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/amp-auth.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/amp-mem.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/auto-pilot-router.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/browser-automation.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/bundle.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/bundle.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/chrome-mcp-lease.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/claude-bridge-heartbeat.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/claude-bridge-rm-trash.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/claude-bridge-timing.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/claude-report-parity.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/cmux-lifecycle-adapter.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/cmux-lifecycle-reconcile.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/debounced-triggers.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/detached-spawn.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/ephemeral-close.py": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/ephemeral-close.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/ephemeral-close.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/foreign-worker-seed.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/goal-loop-events.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/goal-loop-fencing.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/guardrails-amp-auth.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/guardrails-rm-trash.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/install-bundle.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/lib.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/native-ack.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/native-executor.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/open-focus-plugin.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/open-focus.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/organize-execute.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/organize-execute.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/rm-guard.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/rm-guard.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/router-settings.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/sensitive-reads.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/sensitive-reads.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/slack-link-format.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/test-fixtures/rm-heredoc-remote.sh": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/test-fixtures/slack-link-format-cases.json": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/test-mocks.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/test-runner.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/test_ephemeral_close.py": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
-  "system/amp-plugins/pm-os/wmux-pane-identity.test.ts": {
-   "class": "amp-only",
-   "reason": "Amp plugin bundle"
-  },
   "system/amp-plugins/review-lane.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard-bundle.json": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard-commands.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard-guardrails.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard-runtime.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/active-surface.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/amp-auth.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/amp-auth.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/amp-mem.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/auto-pilot-router.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/browser-automation.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/bundle.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/bundle.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/chrome-mcp-lease.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/claude-bridge-heartbeat.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/claude-bridge-rm-trash.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/claude-bridge-timing.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/claude-report-parity.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/cmux-lifecycle-adapter.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/cmux-lifecycle-reconcile.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/debounced-triggers.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/detached-spawn.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/ephemeral-close.py": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/ephemeral-close.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/ephemeral-close.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/foreign-worker-seed.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/goal-loop-events.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/goal-loop-fencing.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/guardrails-amp-auth.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/guardrails-rm-trash.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/install-bundle.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/lib.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/native-ack.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/native-executor.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/open-focus-plugin.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/open-focus.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/organize-execute.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/organize-execute.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/rm-guard.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/rm-guard.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/router-settings.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/sensitive-reads.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/sensitive-reads.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/slack-link-format.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/test-fixtures/rm-heredoc-remote.sh": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/test-fixtures/slack-link-format-cases.json": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/test-mocks.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/test-runner.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/test_ephemeral_close.py": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/wmux-pane-identity.test.ts": {
    "class": "amp-only",
    "reason": "Amp plugin bundle"
   },
@@ -1002,239 +1006,239 @@
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/.claude-plugin/plugin.json": {
+  "system/claude-marketplace/plugins/switchboard/.claude-plugin/plugin.json": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/LICENSE.humanlayer": {
+  "system/claude-marketplace/plugins/switchboard/LICENSE.humanlayer": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/README.md": {
+  "system/claude-marketplace/plugins/switchboard/README.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/THIRD_PARTY.md": {
+  "system/claude-marketplace/plugins/switchboard/THIRD_PARTY.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/accessibility-auditor.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/accessibility-auditor.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/ai-product-specialist.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/ai-product-specialist.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/api-contract-reviewer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/api-contract-reviewer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/code-reviewer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/code-reviewer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/codebase-analyzer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/codebase-analyzer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/codebase-locator.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/codebase-locator.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/codebase-pattern-finder.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/codebase-pattern-finder.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/competitive-analyst.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/competitive-analyst.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/content-ux-writer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/content-ux-writer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/customer-voice.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/customer-voice.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/data-analyst.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/data-analyst.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/data-storyteller.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/data-storyteller.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/debugger.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/debugger.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/design-system-reviewer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/design-system-reviewer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/designer-reviewer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/designer-reviewer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/engineer-reviewer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/engineer-reviewer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/executive-reviewer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/executive-reviewer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/experimentation-designer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/experimentation-designer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/gtm-launch-strategist.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/gtm-launch-strategist.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/incident-reviewer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/incident-reviewer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/interaction-prototyper.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/interaction-prototyper.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/legal-advisor.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/legal-advisor.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/performance-reviewer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/performance-reviewer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/pricing-monetization.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/pricing-monetization.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/product-designer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/product-designer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/reality-checker.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/reality-checker.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/refactor-architect.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/refactor-architect.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/security-privacy-reviewer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/security-privacy-reviewer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/skeptic.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/skeptic.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/stakeholder-strategist.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/stakeholder-strategist.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/test-strategist.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/test-strategist.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/thoughts-analyzer.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/thoughts-analyzer.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/thoughts-locator.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/thoughts-locator.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/uxr-analyst.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/uxr-analyst.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/agents/web-search-researcher.md": {
+  "system/claude-marketplace/plugins/switchboard/agents/web-search-researcher.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/comms-triage.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/comms-triage.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/create_plan.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/create_plan.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/distill-memory.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/distill-memory.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/end-day.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/end-day.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/implement_plan.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/implement_plan.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/iterate_plan.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/iterate_plan.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/memory-search.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/memory-search.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/open-workstream.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/open-workstream.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/recall-pack.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/recall-pack.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/refresh-docs.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/refresh-docs.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/research_codebase.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/research_codebase.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/start-day.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/start-day.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/status-update.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/status-update.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/commands/todo.md": {
+  "system/claude-marketplace/plugins/switchboard/commands/todo.md": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/hooks/amp-bridge.ts": {
+  "system/claude-marketplace/plugins/switchboard/hooks/amp-bridge.ts": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/hooks/claude-in-chrome-guard.py": {
+  "system/claude-marketplace/plugins/switchboard/hooks/claude-in-chrome-guard.py": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/hooks/cmux-heartbeat.py": {
+  "system/claude-marketplace/plugins/switchboard/hooks/cmux-heartbeat.py": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/hooks/hooks.json": {
+  "system/claude-marketplace/plugins/switchboard/hooks/hooks.json": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/hooks/surface-context.py": {
+  "system/claude-marketplace/plugins/switchboard/hooks/surface-context.py": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
-  "system/claude-marketplace/plugins/pm-os/hooks/worker-closed.py": {
+  "system/claude-marketplace/plugins/switchboard/hooks/worker-closed.py": {
    "class": "adapter",
    "reason": "Claude Code plugin: hooks, slash commands and reviewer agents"
   },
@@ -1242,7 +1246,7 @@
    "class": "cmux-only",
    "reason": "drives cmux or wmux workspaces"
   },
-  "system/cmux-sidebars/pm-os.swift": {
+  "system/cmux-sidebars/switchboard.swift": {
    "class": "cmux-only",
    "reason": "cmux sidebar"
   },
@@ -1298,19 +1302,19 @@
    "class": "portable",
    "reason": "connector shim: Gmail, Calendar, Drive, Slack and Dropbox over direct APIs"
   },
-  "system/connectors/pmos": {
+  "system/connectors/switchboard": {
    "class": "portable",
    "reason": "connector shim: Gmail, Calendar, Drive, Slack and Dropbox over direct APIs"
   },
-  "system/connectors/pmos-shim.py": {
+  "system/connectors/switchboard-shim.py": {
    "class": "portable",
    "reason": "connector shim: Gmail, Calendar, Drive, Slack and Dropbox over direct APIs"
   },
-  "system/connectors/pmos.cmd": {
+  "system/connectors/switchboard.cmd": {
    "class": "portable",
    "reason": "connector shim: Gmail, Calendar, Drive, Slack and Dropbox over direct APIs"
   },
-  "system/connectors/test_pmos_shim.py": {
+  "system/connectors/test_switchboard_shim.py": {
    "class": "portable",
    "reason": "connector shim: Gmail, Calendar, Drive, Slack and Dropbox over direct APIs"
   },
@@ -1342,31 +1346,31 @@
    "class": "portable",
    "reason": "no harness dependency found"
   },
-  "system/launchd/com.pm-os.amp-mem-weekly-distill.plist": {
+  "system/launchd/com.switchboard.amp-mem-weekly-distill.plist": {
    "class": "portable",
    "reason": "macOS launchd agents for the loop"
   },
-  "system/launchd/com.pm-os.background-tasks.plist": {
+  "system/launchd/com.switchboard.background-tasks.plist": {
    "class": "portable",
    "reason": "macOS launchd agents for the loop"
   },
-  "system/launchd/com.pm-os.claude-mem.plist": {
+  "system/launchd/com.switchboard.claude-mem.plist": {
    "class": "portable",
    "reason": "macOS launchd agents for the loop"
   },
-  "system/launchd/com.pm-os.cmux-closed-workspaces.plist": {
+  "system/launchd/com.switchboard.cmux-closed-workspaces.plist": {
    "class": "portable",
    "reason": "macOS launchd agents for the loop"
   },
-  "system/launchd/com.pm-os.command-center.plist": {
+  "system/launchd/com.switchboard.command-center.plist": {
    "class": "portable",
    "reason": "macOS launchd agents for the loop"
   },
-  "system/launchd/com.pm-os.local-backup.plist": {
+  "system/launchd/com.switchboard.local-backup.plist": {
    "class": "portable",
    "reason": "macOS launchd agents for the loop"
   },
-  "system/launchd/com.pm-os.log-rotate.plist": {
+  "system/launchd/com.switchboard.log-rotate.plist": {
    "class": "portable",
    "reason": "macOS launchd agents for the loop"
   },
@@ -1710,7 +1714,7 @@
    "class": "cmux-only",
    "reason": "no harness dependency found"
   },
-  "system/scripts/install-pm-os-bin.sh": {
+  "system/scripts/install-switchboard-bin.sh": {
    "class": "amp-only",
    "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
   },
@@ -1822,7 +1826,7 @@
    "class": "portable",
    "reason": "no harness dependency found"
   },
-  "system/scripts/mux/pm-os-board.py": {
+  "system/scripts/mux/switchboard-board.py": {
    "class": "cmux-only",
    "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
   },
@@ -1886,18 +1890,6 @@
    "class": "portable",
    "reason": "no harness dependency found"
   },
-  "system/scripts/pm-os-headless-agent.sh": {
-   "class": "adapter",
-   "reason": "no harness dependency found"
-  },
-  "system/scripts/pm-os-trash.py": {
-   "class": "cmux-only",
-   "reason": "drives cmux or wmux workspaces"
-  },
-  "system/scripts/pm_os_agent.py": {
-   "class": "cmux-only",
-   "reason": "no harness dependency found"
-  },
   "system/scripts/post-next-up-digest.sh": {
    "class": "cmux-only",
    "reason": "no harness dependency found"
@@ -1922,11 +1914,11 @@
    "class": "portable",
    "reason": "no harness dependency found"
   },
-  "system/scripts/publish-megadesk-status.sh": {
+  "system/scripts/publish-running-tasks-status.sh": {
    "class": "cmux-only",
    "reason": "no harness dependency found"
   },
-  "system/scripts/publish-running-tasks-status.sh": {
+  "system/scripts/publish-switchboard-status.sh": {
    "class": "cmux-only",
    "reason": "no harness dependency found"
   },
@@ -1946,7 +1938,7 @@
    "class": "cmux-only",
    "reason": "no harness dependency found"
   },
-  "system/scripts/rebuild-megadesk-state.py": {
+  "system/scripts/rebuild-switchboard-state.py": {
    "class": "adapter",
    "reason": "no harness dependency found"
   },
@@ -2106,6 +2098,18 @@
    "class": "portable",
    "reason": "no harness dependency found"
   },
+  "system/scripts/switchboard-headless-agent.sh": {
+   "class": "adapter",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/switchboard-trash.py": {
+   "class": "cmux-only",
+   "reason": "drives cmux or wmux workspaces"
+  },
+  "system/scripts/switchboard_agent.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
   "system/scripts/sync-claude-plugin.py": {
    "class": "portable",
    "reason": "no harness dependency found"
@@ -2154,7 +2158,7 @@
    "class": "adapter",
    "reason": "no harness dependency found"
   },
-  "system/scripts/test-install-pm-os-bin.sh": {
+  "system/scripts/test-install-switchboard-bin.sh": {
    "class": "portable",
    "reason": "no harness dependency found"
   },
@@ -2374,14 +2378,6 @@
    "class": "cmux-only",
    "reason": "no harness dependency found"
   },
-  "system/scripts/test_pm_os_board.py": {
-   "class": "cmux-only",
-   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
-  },
-  "system/scripts/test_pm_os_trash.py": {
-   "class": "cmux-only",
-   "reason": "no harness dependency found"
-  },
   "system/scripts/test_portable_date.py": {
    "class": "portable",
    "reason": "no harness dependency found"
@@ -2470,6 +2466,14 @@
    "class": "portable",
    "reason": "no harness dependency found"
   },
+  "system/scripts/test_switchboard_board.py": {
+   "class": "cmux-only",
+   "reason": "uses the Amp plugin API, amp-mem or the amp CLI"
+  },
+  "system/scripts/test_switchboard_trash.py": {
+   "class": "cmux-only",
+   "reason": "no harness dependency found"
+  },
   "system/scripts/test_sync_claude_plugin.py": {
    "class": "portable",
    "reason": "no harness dependency found"
@@ -2523,6 +2527,10 @@
    "reason": "no harness dependency found"
   },
   "system/scripts/test_winlink_relink.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_wmux_look.py": {
    "class": "portable",
    "reason": "no harness dependency found"
   },
@@ -4714,6 +4722,10 @@
    "class": "portable",
    "reason": "Windows install and scheduled tasks"
   },
+  "system/windows/install-wmux.ps1": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
   "system/windows/install.ps1": {
    "class": "portable",
    "reason": "Windows install and scheduled tasks"
@@ -4730,10 +4742,6 @@
    "class": "portable",
    "reason": "Windows install and scheduled tasks"
   },
-  "system/windows/pm-os-env.sh": {
-   "class": "portable",
-   "reason": "Windows install and scheduled tasks"
-  },
   "system/windows/register-obsidian-notes.ps1": {
    "class": "portable",
    "reason": "Windows install and scheduled tasks"
@@ -4743,6 +4751,18 @@
    "reason": "Windows install and scheduled tasks"
   },
   "system/windows/seed-session.ps1": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/switchboard-env.sh": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/wmux-look.json": {
+   "class": "portable",
+   "reason": "Windows install and scheduled tasks"
+  },
+  "system/windows/wmux_look.py": {
    "class": "portable",
    "reason": "Windows install and scheduled tasks"
   },

@@ -4,7 +4,7 @@
 The fake wmux (written into a temp dir) records every call it receives and
 answers with the JSON shapes wmux 2.49 prints (list-workspaces, new-workspace,
 list-surfaces, read-screen, identify). Each test asserts both the cmux-shaped
-output PM OS scripts parse and the exact wmux verbs the shim sent.
+output switchboard scripts parse and the exact wmux verbs the shim sent.
 """
 from __future__ import annotations
 
@@ -158,8 +158,8 @@ class ShimHarness:
         self.log = tmp / "fake-log.jsonl"
         self.state.write_text(json.dumps({
             "workspaces": workspaces if workspaces is not None else [
-                {"id": "ws-1", "title": "🧭 CoS", "isActive": True, "cwd": "C:\\pm-os", "shell": "pwsh"},
-                {"id": "ws-2", "title": "🚀 Launchpad", "isActive": False, "cwd": "C:\\pm-os", "shell": "pwsh"},
+                {"id": "ws-1", "title": "🧭 CoS", "isActive": True, "cwd": "C:\\switchboard", "shell": "pwsh"},
+                {"id": "ws-2", "title": "🚀 Launchpad", "isActive": False, "cwd": "C:\\switchboard", "shell": "pwsh"},
             ],
             "surfaces": {"ws-1": [{"id": "sf-1", "type": "terminal", "paneId": "pane-1", "isActive": True}],
                          "ws-2": [{"id": "sf-2", "type": "terminal", "paneId": "pane-2", "isActive": True}]},
@@ -170,11 +170,11 @@ class ShimHarness:
         self.session = tmp / "session-store.json"
 
     def env(self, **extra):
-        env = {k: v for k, v in os.environ.items() if not k.startswith(("CMUX_", "WMUX", "PM_OS_"))}
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("CMUX_", "WMUX", "SWITCHBOARD_"))}
         env.update({"WMUX_BIN": str(self.fake), "FAKE_WMUX_STATE": str(self.state), "FAKE_WMUX_LOG": str(self.log),
-                    "PM_OS_WMUX_SIDECAR": str(self.sidecar), "PM_OS_CMUX_SESSION_JSON": str(self.session),
-                    "HOME": str(self.tmp), "PM_OS_PYTHON": sys.executable,
-                    "PM_OS_TEST_SANDBOX": "1", "PM_OS_TEST_WMUX_BIN": str(self.fake)})   # never the live wmux
+                    "SWITCHBOARD_WMUX_SIDECAR": str(self.sidecar), "SWITCHBOARD_CMUX_SESSION_JSON": str(self.session),
+                    "HOME": str(self.tmp), "SWITCHBOARD_PYTHON": sys.executable,
+                    "SWITCHBOARD_TEST_SANDBOX": "1", "SWITCHBOARD_TEST_WMUX_BIN": str(self.fake)})   # never the live wmux
         env.update(extra)
         return env
 
@@ -222,10 +222,10 @@ class CmuxShimTest(unittest.TestCase):
         self.h.run("list-workspaces")
         first = json.loads(self.h.run("rpc", "workspace.list", "{}").stdout)["workspaces"]
         self.assertEqual(first[1]["ref"], "workspace:2")
-        self.h.run("new-workspace", "--name", "🍻 Pm Os Portable Kit 1", "--description", "PM OS worker rt-1")
+        self.h.run("new-workspace", "--name", "🍻 Switchboard Portable Kit 1", "--description", "switchboard worker rt-1")
         third = json.loads(self.h.run("rpc", "workspace.list", "{}").stdout)["workspaces"]
         self.assertEqual(third[2]["ref"], "workspace:3")
-        self.assertEqual(third[2]["description"], "PM OS worker rt-1")
+        self.assertEqual(third[2]["description"], "switchboard worker rt-1")
         self.assertEqual(third[0]["ref"], "workspace:1")
 
     def test_workspace_list_json_alias(self):
@@ -234,23 +234,23 @@ class CmuxShimTest(unittest.TestCase):
 
     # -- create ------------------------------------------------------------
     def test_new_workspace_sends_command_and_prints_ref(self):
-        out = self.h.run("new-workspace", "--name", "🍻 Pm Os Portable Kit 1", "--description", "PM OS worker rt-abc",
-                         "--cwd", "/mnt/c/pm-os", "--focus", "false", "--command", "amp threads continue T-1")
+        out = self.h.run("new-workspace", "--name", "🍻 Switchboard Portable Kit 1", "--description", "switchboard worker rt-abc",
+                         "--cwd", "/mnt/c/switchboard", "--focus", "false", "--command", "amp threads continue T-1")
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertRegex(out.stdout, r"workspace:3")
         calls = self.h.calls()
         create = next(c for c in calls if c[0] == "new-workspace")
         self.assertIn("--panes", create)
         self.assertEqual(create[create.index("--panes") + 1], "1")
-        self.assertEqual(create[create.index("--title") + 1], "🍻 Pm Os Portable Kit 1")
-        self.assertEqual(create[create.index("--cwd") + 1], "/mnt/c/pm-os")
+        self.assertEqual(create[create.index("--title") + 1], "🍻 Switchboard Portable Kit 1")
+        self.assertEqual(create[create.index("--cwd") + 1], "/mnt/c/switchboard")
         send = next(c for c in calls if c[0] == "send")
         self.assertEqual(send, ["send", "--surface", "sf-ws-3", "amp threads continue T-1"])
         self.assertIn(["send-key", "enter", "--surface", "sf-ws-3"], calls)
         self.assertFalse(any(c[0] == "select-workspace" for c in calls), "--focus false must not select")
 
     def submit_env(self):
-        return {"PM_OS_SHIM_SUBMIT_SETTLE": "0", "PM_OS_SHIM_READY_SETTLE": "0", "PM_OS_SHIM_SUBMIT_WAIT": "0.2"}
+        return {"SWITCHBOARD_SHIM_SUBMIT_SETTLE": "0", "SWITCHBOARD_SHIM_READY_SETTLE": "0", "SWITCHBOARD_SHIM_SUBMIT_WAIT": "0.2"}
 
     def set_state(self, **values):
         data = json.loads(self.h.state.read_text())
@@ -272,7 +272,7 @@ class CmuxShimTest(unittest.TestCase):
         out = self.h.run("new-workspace", "--name", "W", "--command", "claude 'go'", **self.submit_env())
         self.assertEqual(out.returncode, 0, out.stderr)
         enters = [c for c in self.h.calls() if c[:2] == ["send-key", "enter"]]
-        self.assertEqual(len(enters), 4, "the first Enter plus PM_OS_SHIM_SUBMIT_RETRIES (3)")
+        self.assertEqual(len(enters), 4, "the first Enter plus SWITCHBOARD_SHIM_SUBMIT_RETRIES (3)")
         self.assertIn("never acknowledged", out.stderr)
 
     def test_no_prompt_log_means_one_enter_as_before(self):
@@ -281,7 +281,7 @@ class CmuxShimTest(unittest.TestCase):
         self.assertEqual(len([c for c in self.h.calls() if c[:2] == ["send-key", "enter"]]), 1)
 
     def test_launch_state_reports_shell_and_agent_prompts(self):
-        self.set_state(prompts=[{"seq": 1, "source": "shell", "text": "PM_OS_WORKER_TASK_ID=rt-1 claude"},
+        self.set_state(prompts=[{"seq": 1, "source": "shell", "text": "SWITCHBOARD_WORKER_TASK_ID=rt-1 claude"},
                                 {"seq": 2, "source": "agent", "text": "Read and follow"}],
                        agent={"state": "working", "sessionProvider": "claude", "sessionId": "s-1"})
         out = self.h.run("launch-state", "--workspace", "workspace:2")
@@ -289,21 +289,21 @@ class CmuxShimTest(unittest.TestCase):
         state = json.loads(out.stdout)
         self.assertEqual((state["prompt_log"], state["agent_prompts"], state["provider"], state["session_id"]),
                          (True, 1, "claude", "s-1"))
-        self.assertEqual(state["shell_prompts"], ["PM_OS_WORKER_TASK_ID=rt-1 claude"])
+        self.assertEqual(state["shell_prompts"], ["SWITCHBOARD_WORKER_TASK_ID=rt-1 claude"])
 
     def test_new_workspace_defaults_to_git_bash_shell(self):
-        # wmux's own default on Windows is pwsh; PM OS scripts and the seeded
+        # wmux's own default on Windows is pwsh; switchboard scripts and the seeded
         # .bashrc assume Git Bash, so every shim-created workspace asks for it.
         self.h.run("new-workspace", "--name", "X")
         create = next(c for c in self.h.calls() if c[0] == "new-workspace")
         self.assertEqual(create[create.index("--shell") + 1], "bash.exe")
 
     def test_new_workspace_shell_override_and_wmux_default(self):
-        self.h.run("new-workspace", "--name", "X", PM_OS_WMUX_SHELL="pwsh")
+        self.h.run("new-workspace", "--name", "X", SWITCHBOARD_WMUX_SHELL="pwsh")
         create = next(c for c in self.h.calls() if c[0] == "new-workspace")
         self.assertEqual(create[create.index("--shell") + 1], "pwsh")
         self.h.reset_log()
-        self.h.run("new-workspace", "--name", "Y", PM_OS_WMUX_SHELL="default")
+        self.h.run("new-workspace", "--name", "Y", SWITCHBOARD_WMUX_SHELL="default")
         create = next(c for c in self.h.calls() if c[0] == "new-workspace")
         self.assertNotIn("--shell", create)
 
@@ -361,11 +361,11 @@ class CmuxShimTest(unittest.TestCase):
     def test_workspace_action_pin_description_color_persist(self):
         pin = self.h.run("workspace-action", "--action", "pin", "--workspace", "workspace:1")
         self.assertIn("seed-session.ps1 -Restart", pin.stderr)
-        self.h.run("workspace-action", "--action", "set-description", "--description", "PM OS worker rt-9", "--workspace", "workspace:2")
+        self.h.run("workspace-action", "--action", "set-description", "--description", "switchboard worker rt-9", "--workspace", "workspace:2")
         self.h.run("workspace-action", "--action", "set-color", "--color", "#8e44ad", "--workspace", "workspace:2")
         payload = json.loads(self.h.run("list-workspaces", "--json").stdout)["workspaces"]
         self.assertTrue(payload[0]["pinned"])
-        self.assertEqual(payload[1]["description"], "PM OS worker rt-9")
+        self.assertEqual(payload[1]["description"], "switchboard worker rt-9")
         self.assertEqual(payload[1]["custom_color"], "#8e44ad")
         self.h.run("workspace-action", "--action", "unpin", "--workspace", "workspace:1")
         payload = json.loads(self.h.run("list-workspaces", "--json").stdout)["workspaces"]
@@ -382,9 +382,9 @@ class CmuxShimTest(unittest.TestCase):
         ])
 
     def test_workspace_status_lane_follows_description(self):
-        self.h.run("workspace-action", "--action", "set-description", "--description", "PM OS worker rt-9", "--workspace", "workspace:2")
+        self.h.run("workspace-action", "--action", "set-description", "--description", "switchboard worker rt-9", "--workspace", "workspace:2")
         out = self.h.run("workspace", "status", "--workspace", "workspace:2").stdout.splitlines()
-        # line 1 is cmux vocabulary (command-center-digest.py reads it); `lane:` is the PM OS lane
+        # line 1 is cmux vocabulary (command-center-digest.py reads it); `lane:` is the switchboard lane
         self.assertEqual(out[0], "working")
         self.assertIn("lane: workers", out)
         self.assertEqual(self.h.run("workspace", "status", "--workspace", "workspace:1").stdout.splitlines()[0], "todo")
@@ -396,23 +396,23 @@ class CmuxShimTest(unittest.TestCase):
         self.h.run("workspace", "status", "set", "auto", "--workspace", "workspace:1")
         self.assertEqual(self.h.run("workspace", "status", "--workspace", "workspace:1").stdout.splitlines()[0], "todo")
 
-    # -- lanes (mirror of system/cmux-sidebars/pm-os.swift) ---------------
-    def test_sidebar_lanes_follow_pm_os_bucket_rules(self):
+    # -- lanes (mirror of system/cmux-sidebars/switchboard.swift) ---------------
+    def test_sidebar_lanes_follow_switchboard_bucket_rules(self):
         self.h.state.write_text(json.dumps({
             "workspaces": [
-                {"id": "ws-1", "title": "🧭 CoS", "isActive": True, "cwd": "C:\\pm-os", "shell": "pwsh"},
-                {"id": "ws-2", "title": "⏰ Scheduled Jobs", "isActive": False, "cwd": "C:\\pm-os", "shell": "pwsh"},
-                {"id": "ws-3", "title": "🔥 P0 · Fix the thing", "isActive": False, "cwd": "C:\\pm-os", "shell": "pwsh"},
-                {"id": "ws-4", "title": "◆ Needs me", "isActive": False, "cwd": "C:\\pm-os", "shell": "pwsh"},
-                {"id": "ws-5", "title": "⠋ Running one", "isActive": False, "cwd": "C:\\pm-os", "shell": "pwsh"},
-                {"id": "ws-6", "title": "📝 Review me", "isActive": False, "cwd": "C:\\pm-os", "shell": "pwsh"},
-                {"id": "ws-7", "title": "🧱 Worker 1", "isActive": False, "cwd": "C:\\pm-os", "shell": "pwsh"},
+                {"id": "ws-1", "title": "🧭 CoS", "isActive": True, "cwd": "C:\\switchboard", "shell": "pwsh"},
+                {"id": "ws-2", "title": "⏰ Scheduled Jobs", "isActive": False, "cwd": "C:\\switchboard", "shell": "pwsh"},
+                {"id": "ws-3", "title": "🔥 P0 · Fix the thing", "isActive": False, "cwd": "C:\\switchboard", "shell": "pwsh"},
+                {"id": "ws-4", "title": "◆ Needs me", "isActive": False, "cwd": "C:\\switchboard", "shell": "pwsh"},
+                {"id": "ws-5", "title": "⠋ Running one", "isActive": False, "cwd": "C:\\switchboard", "shell": "pwsh"},
+                {"id": "ws-6", "title": "📝 Review me", "isActive": False, "cwd": "C:\\switchboard", "shell": "pwsh"},
+                {"id": "ws-7", "title": "🧱 Worker 1", "isActive": False, "cwd": "C:\\switchboard", "shell": "pwsh"},
             ],
             "surfaces": {f"ws-{n}": [{"id": f"sf-{n}", "type": "terminal", "paneId": f"pane-{n}", "isActive": True}] for n in range(1, 8)},
         }))
         self.h.run("workspace-action", "--action", "pin", "--workspace", "ws-1")
         self.h.run("workspace-action", "--action", "set-color", "--color", "#bb9af7", "--workspace", "ws-6")
-        self.h.run("workspace-action", "--action", "set-description", "--description", "PM OS worker rt-1", "--workspace", "ws-7")
+        self.h.run("workspace-action", "--action", "set-description", "--description", "switchboard worker rt-1", "--workspace", "ws-7")
         view = json.loads(self.h.run("sidebar", "lanes", "--json").stdout)
         by_lane = {lane["key"]: [w["id"] for w in lane["workspaces"]] for lane in view["lanes"]}
         self.assertEqual([lane["key"] for lane in view["lanes"]],
@@ -496,10 +496,10 @@ class CmuxShimTest(unittest.TestCase):
         self.assertTrue(all(row.get("order_index") is None for row in side.values()))
 
     def test_markdown_open_returns_surface_and_set_updates_it(self):
-        out = self.h.run("markdown", "open", "C:\\pm-os\\board.md")
+        out = self.h.run("markdown", "open", "C:\\switchboard\\board.md")
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertEqual(out.stdout.split(), ["ok", "surface:1", "sf-md-1"])
-        self.assertIn(["markdown", "set", "sf-md-1", "--file", "C:\\pm-os\\board.md"], self.h.calls())
+        self.assertIn(["markdown", "set", "sf-md-1", "--file", "C:\\switchboard\\board.md"], self.h.calls())
         out = self.h.run("markdown", "set", "surface:1", "--content", "# hello", "--title", "Board")
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertIn(["markdown", "set", "sf-md-1", "--content", "# hello", "--title", "Board"], self.h.calls())
@@ -585,7 +585,7 @@ class CmuxShimTest(unittest.TestCase):
         self.assertEqual(self.h.run("list-status", "--workspace", "workspace:1").stdout.strip(), "")
 
     def test_hooks_session_start_binds_thread_into_session_store(self):
-        payload = json.dumps({"session_id": "T-00000000-0000-4000-8000-0000000000e1", "cwd": "/mnt/c/pm-os"})
+        payload = json.dumps({"session_id": "T-00000000-0000-4000-8000-0000000000e1", "cwd": "/mnt/c/switchboard"})
         out = self.h.run("hooks", "enqueue", "amp", "session-start", stdin=payload, CMUX_WORKSPACE_ID="ws-2", CMUX_SURFACE_ID="sf-2")
         self.assertEqual(out.returncode, 0, out.stderr)
         store = json.loads(self.h.session.read_text())
@@ -615,12 +615,12 @@ class CmuxShimTest(unittest.TestCase):
         self.h.run("log", "--level", "info", "--source", "amp", "--workspace", "workspace:1", "--", "hello", "there")
         self.assertIn(["log", "info", "[amp] hello there"], self.h.calls())
         # untargeted: no WMUX_SURFACE_ID is added, wmux keeps its own default
-        self.h.run("notify", "--title", "PM OS", "--body", "done")
-        self.assertIn(["notify", "PM OS: done"], self.h.calls())
+        self.h.run("notify", "--title", "switchboard", "--body", "done")
+        self.assertIn(["notify", "switchboard: done"], self.h.calls())
         # --workspace targets the row: wmux gets that workspace's surface id and the
         # sidecar unread count rises for a non-selected workspace only
-        self.h.run("notify", "--workspace", "workspace:2", "--title", "PM OS", "--body", "ready")
-        self.assertIn(["notify", "PM OS: ready", "env:WMUX_SURFACE_ID=sf-2"], self.h.calls())
+        self.h.run("notify", "--workspace", "workspace:2", "--title", "switchboard", "--body", "ready")
+        self.assertIn(["notify", "switchboard: ready", "env:WMUX_SURFACE_ID=sf-2"], self.h.calls())
         side = json.loads(self.h.sidecar.read_text())
         self.assertEqual(side["workspaces"]["ws-2"]["unread"], 1)
         self.h.run("notify", "--workspace", "workspace:1", "hi")
@@ -653,17 +653,17 @@ class CmuxShimTest(unittest.TestCase):
 
 class MuxDetectionTest(unittest.TestCase):
     def run_sh(self, snippet: str, **env):
-        base = {k: v for k, v in os.environ.items() if not k.startswith(("CMUX_", "WMUX", "PM_OS_"))}
+        base = {k: v for k, v in os.environ.items() if not k.startswith(("CMUX_", "WMUX", "SWITCHBOARD_"))}
         base.update(env)
         return subprocess.run([shutil.which("bash") or "bash", "-c", f"source '{(HERE / 'lib' / 'mux.sh').as_posix()}'; {snippet}"],
                               capture_output=True, text=True, env=base)
 
     def test_forced_backend_wins(self):
-        self.assertEqual(self.run_sh("mux_detect", PM_OS_MUX="wmux").stdout.strip(), "wmux")
-        self.assertEqual(self.run_sh("mux_detect", PM_OS_MUX="cmux").stdout.strip(), "cmux")
+        self.assertEqual(self.run_sh("mux_detect", SWITCHBOARD_MUX="wmux").stdout.strip(), "wmux")
+        self.assertEqual(self.run_sh("mux_detect", SWITCHBOARD_MUX="cmux").stdout.strip(), "cmux")
 
     def test_wmux_pane_env_selects_wmux_and_points_cmux_bin_at_shim(self):
-        out = self.run_sh("mux_init; echo \"$PM_OS_MUX|$CMUX_BIN|$CMUX_SURFACE_ID\"", WMUX="1", WMUX_SURFACE_ID="sf-9",
+        out = self.run_sh("mux_init; echo \"$SWITCHBOARD_MUX|$CMUX_BIN|$CMUX_SURFACE_ID\"", WMUX="1", WMUX_SURFACE_ID="sf-9",
                           WMUX_BIN="/bin/false")
         backend, cmux_bin, surface = out.stdout.strip().split("|")
         self.assertEqual(backend, "wmux")
@@ -677,7 +677,7 @@ class MuxDetectionTest(unittest.TestCase):
     def test_macos_auto_detection_does_not_touch_cmux_bin(self):
         if sys.platform != "darwin":
             self.skipTest("macOS only")
-        out = self.run_sh("mux_init; echo \"$PM_OS_MUX|${CMUX_BIN:-unset}\"")
+        out = self.run_sh("mux_init; echo \"$SWITCHBOARD_MUX|${CMUX_BIN:-unset}\"")
         backend, cmux_bin = out.stdout.strip().split("|")
         self.assertIn(backend, ("cmux", "none"))
         self.assertEqual(cmux_bin, "unset")
@@ -691,15 +691,15 @@ class MuxDetectionTest(unittest.TestCase):
         saved = dict(os.environ)
         try:
             for key in list(os.environ):
-                if key.startswith(("CMUX_", "WMUX", "PM_OS_")):
+                if key.startswith(("CMUX_", "WMUX", "SWITCHBOARD_")):
                     del os.environ[key]
-            os.environ["PM_OS_MUX"] = "wmux"
+            os.environ["SWITCHBOARD_MUX"] = "wmux"
             self.assertEqual(mux.backend(), "wmux")
             self.assertTrue(Path(mux.cmux_bin()).as_posix().endswith("/mux/cmux"))
             os.environ["CMUX_BIN"] = "/opt/cmux"
             self.assertEqual(mux.cmux_bin(), "/opt/cmux")
             del os.environ["CMUX_BIN"]
-            os.environ["PM_OS_MUX"] = "cmux"
+            os.environ["SWITCHBOARD_MUX"] = "cmux"
             self.assertEqual(mux.backend(), "cmux")
             self.assertNotIn("/mux/cmux", mux.cmux_bin())
         finally:
@@ -750,7 +750,7 @@ def load_shim():
 
 class SidecarConcurrencyTest(unittest.TestCase):
     """Every shim call is its own process and each wrote the whole file back, so the last writer
-    erased the others' changes. That dropped "PM OS worker <task-id>" from live tabs and the
+    erased the others' changes. That dropped "switchboard worker <task-id>" from live tabs and the
     reaper closed them."""
 
     @classmethod
@@ -770,14 +770,14 @@ class SidecarConcurrencyTest(unittest.TestCase):
         first.workspace("ws-1")
         first.save()
         stale, launcher = self.fresh(), self.fresh()
-        launcher.workspace("ws-1")["description"] = "PM OS worker rt-new"
+        launcher.workspace("ws-1")["description"] = "switchboard worker rt-new"
         launcher.dirty = True
         launcher.save()
         stale.workspace("ws-1")["unread"] = 3
         stale.dirty = True
         stale.save()
         final = self.fresh().workspace("ws-1")
-        self.assertEqual(final["description"], "PM OS worker rt-new")
+        self.assertEqual(final["description"], "switchboard worker rt-new")
         self.assertEqual(final["unread"], 3)
 
     def test_two_processes_number_two_new_tabs_apart_and_one_new_tab_alike(self):
@@ -815,7 +815,7 @@ class SidecarConcurrencyTest(unittest.TestCase):
 
     def test_an_unreadable_file_is_never_merged_as_empty(self):
         first = self.fresh()
-        first.workspace("ws-1")["description"] = "PM OS worker rt-1"
+        first.workspace("ws-1")["description"] = "switchboard worker rt-1"
         first.dirty = True
         first.save()
         saved = self.path.read_text()
@@ -828,7 +828,7 @@ class SidecarConcurrencyTest(unittest.TestCase):
         self.assertEqual(self.path.read_text(), saved)
         again.save()
         final = json.loads(self.path.read_text())["workspaces"]["ws-1"]
-        self.assertEqual((final["description"], final["unread"]), ("PM OS worker rt-1", 2))
+        self.assertEqual((final["description"], final["unread"]), ("switchboard worker rt-1", 2))
 
     def test_concurrent_processes_lose_no_description(self):
         script = textwrap.dedent(f"""
@@ -837,7 +837,7 @@ class SidecarConcurrencyTest(unittest.TestCase):
             m = importlib.util.module_from_spec(spec); sys.modules['s'] = m; spec.loader.exec_module(m)
             side = m.Sidecar(pathlib.Path({str(self.path)!r}))
             wid = sys.argv[1]
-            side.workspace(wid)['description'] = 'PM OS worker ' + wid
+            side.workspace(wid)['description'] = 'switchboard worker ' + wid
             side.dirty = True
             side.save()
         """)
@@ -845,7 +845,7 @@ class SidecarConcurrencyTest(unittest.TestCase):
         self.assertEqual([p.wait(timeout=60) for p in procs], [0] * 6)
         data = json.loads(self.path.read_text())
         self.assertEqual({w: e["description"] for w, e in data["workspaces"].items()},
-                         {f"rt-{n}": f"PM OS worker rt-{n}" for n in range(6)})
+                         {f"rt-{n}": f"switchboard worker rt-{n}" for n in range(6)})
         self.assertEqual(len({e["ref"] for e in data["workspaces"].values()}), 6, "no two tabs share a ref")
 
 
@@ -861,8 +861,8 @@ class NewWorkspaceIdentityTest(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
         self.path = Path(self._tmp.name) / "sidecar.json"
-        patcher = patch.dict(os.environ, {"PM_OS_WMUX_SIDECAR": str(self.path), "PM_OS_TEST_SANDBOX": "1",
-                                          "PM_OS_CMUX_SESSION_JSON": str(Path(self._tmp.name) / "store.json")})
+        patcher = patch.dict(os.environ, {"SWITCHBOARD_WMUX_SIDECAR": str(self.path), "SWITCHBOARD_TEST_SANDBOX": "1",
+                                          "SWITCHBOARD_CMUX_SESSION_JSON": str(Path(self._tmp.name) / "store.json")})
         patcher.start()
         self.addCleanup(patcher.stop)
         self.surfaces = [{"id": "sf-md", "type": "markdown", "paneId": "p-1", "isActive": True},
@@ -891,8 +891,8 @@ class NewWorkspaceIdentityTest(unittest.TestCase):
         seen = []
         shim.wait_shell_ready = lambda sid: seen.append(json.loads(self.path.read_text())["workspaces"]["ws-new"]["description"])
         shim.type_into = lambda sid, text, press_enter=False: None
-        shim.cmd_new_workspace([], {"--name": "W", "--description": "PM OS worker rt-new", "--command": "go"})
-        self.assertEqual(seen, ["PM OS worker rt-new"])
+        shim.cmd_new_workspace([], {"--name": "W", "--description": "switchboard worker rt-new", "--command": "go"})
+        self.assertEqual(seen, ["switchboard worker rt-new"])
 
     def test_typing_targets_the_terminal_when_another_pane_has_focus(self):
         shim = self.make()

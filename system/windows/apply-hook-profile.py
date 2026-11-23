@@ -10,7 +10,7 @@ Claude Code starts each hook through bash: bash, a conhost, a forked bash, then 
 eight hooks, about 38 leaked processes, before its own command. Two of them have no effect here:
 
 - cmux-heartbeat.py exits at once when wmux's own Claude hooks are installed (its docstring says so). It is removed
-  from the installed copy of the pm-os plugin only while settings.json holds those hooks. The repo's hooks.json is
+  from the installed copy of the switchboard plugin only while settings.json holds those hooks. The repo's hooks.json is
   what macOS reads, and it does not change.
 - The hookify plugin runs python on every tool call to read its rule files. It is turned off only when no rule file
   exists. Writing a rule later means turning it back on with --undo.
@@ -28,7 +28,7 @@ import sys
 from pathlib import Path
 
 HOOKIFY = "hookify@claude-plugins-official"
-PM_OS_PLUGIN = "pm-os@pm-os-local"
+SWITCHBOARD_PLUGIN = "switchboard@switchboard-local"
 HEARTBEAT = "cmux-heartbeat.py"
 WMUX_HOOK = "wmux-hook.js"
 
@@ -52,7 +52,7 @@ def plugin_hooks_file(base: Path) -> Path | None:
         installed = read_json(base / "plugins" / "installed_plugins.json")
     except (OSError, ValueError):
         return None
-    for entry in installed.get("plugins", {}).get(PM_OS_PLUGIN, []):
+    for entry in installed.get("plugins", {}).get(SWITCHBOARD_PLUGIN, []):
         candidate = Path(entry.get("installPath", "")) / "hooks" / "hooks.json"
         if candidate.is_file():
             return candidate
@@ -94,7 +94,7 @@ def has_hookify_rules(base: Path, repo: Path) -> bool:
 
 
 def repo_root() -> Path:
-    return Path(os.environ.get("PM_OS_ROOT") or Path(__file__).resolve().parents[2])
+    return Path(os.environ.get("SWITCHBOARD_ROOT") or Path(__file__).resolve().parents[2])
 
 
 def status(base: Path, repo: Path) -> list[str]:
@@ -103,7 +103,7 @@ def status(base: Path, repo: Path) -> list[str]:
     settings = read_json(base / "settings.json")
     hooks_file = plugin_hooks_file(base)
     if hooks_file and wmux_hooks_installed(settings) and has_heartbeat(read_json(hooks_file)):
-        todo.append("heartbeat hooks present in the installed pm-os plugin")
+        todo.append("heartbeat hooks present in the installed switchboard plugin")
     if settings.get("enabledPlugins", {}).get(HOOKIFY) and not has_hookify_rules(base, repo):
         todo.append("hookify enabled with no rule files")
     return todo
@@ -133,7 +133,7 @@ def undo(base: Path, repo: Path) -> list[str]:
         write_json(settings_path, settings)
         done.append(f"turned on {HOOKIFY}")
     hooks_file = plugin_hooks_file(base)
-    source = repo / "system" / "claude-marketplace" / "plugins" / "pm-os" / "hooks" / "hooks.json"
+    source = repo / "system" / "claude-marketplace" / "plugins" / "switchboard" / "hooks" / "hooks.json"
     if hooks_file and source.is_file():
         shutil.copyfile(source, hooks_file)
         done.append(f"restored {hooks_file}")
@@ -145,7 +145,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--undo", action="store_true")
     args = ap.parse_args(argv)
-    if os.name != "nt" and not os.environ.get("PM_OS_HOOK_PROFILE_ANY_OS"):
+    if os.name != "nt" and not os.environ.get("SWITCHBOARD_HOOK_PROFILE_ANY_OS"):
         print("hook profile: Windows only, nothing to do")
         return 0
     base, repo = claude_dir(), repo_root()

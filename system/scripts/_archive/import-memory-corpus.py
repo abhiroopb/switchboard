@@ -3,7 +3,7 @@
 
 Writes system/recall/recall-index.sqlite3 on the main checkout (gitignored), an
 SQLite FTS5 table `recall_documents(path, title, content)` over the durable
-PM OS corpus:
+switchboard corpus:
 
     knowledge/, workstreams/, projects/, outputs/, routines/*/CONTEXT.md,
     docs/, people/ (profiles, not the template), notes/ (not notes/sensitive
@@ -154,7 +154,7 @@ def build(root: Path, db: Path) -> dict[str, int]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Build the PM OS recall FTS index.")
+    parser = argparse.ArgumentParser(description="Build the switchboard recall FTS index.")
     parser.add_argument("--force", action="store_true", help="rebuild even when the index is fresh")
     parser.add_argument("--max-age-hours", type=float, default=20.0)
     parser.add_argument("--repo-root", help="default: the main checkout of the repo in the current directory")

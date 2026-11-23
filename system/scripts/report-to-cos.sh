@@ -12,7 +12,7 @@
 # The row this task continued (continuation_of) is handled without the flag.
 #
 # What the origin sees is exactly one line, led by the workstream's name
-# (names, never bare numbers): "[🛠️ PM OS Maintenance · rt-xxxx] accepted; worker starting",
+# (names, never bare numbers): "[🛠️ Switchboard Maintenance · rt-xxxx] accepted; worker starting",
 # "[… · rt-xxxx] done: …", "[… · rt-xxxx] waiting on <name> (rt-yyyy) because …",
 # "[… · rt-xxxx] failed: …" or "[… · rt-xxxx] blocked: …". A done report from
 # a worktree worker first lands its branch on main (dispatch.py finish); a real
@@ -45,14 +45,14 @@
 # routed_to=log, delivered=false.
 #
 # Env: REPORT_TO_COS_NO_HOOKS=1 skips finish/release/reap (tests, repair);
-# REPORT_TO_COS_NO_WAITER=1 skips the waiter; PM_OS_STATE_DIR redirects the
+# REPORT_TO_COS_NO_WAITER=1 skips the waiter; SWITCHBOARD_STATE_DIR redirects the
 # feed; REPORT_TO_COS_WAIT_SECONDS bounds the inline idle wait;
 # REPORT_TO_COS_ROUTER_CONFIG points at another router.yaml (tests).
 set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 SCRIPTS="$REPO_ROOT/system/scripts"
-STATE_DIR="${PM_OS_STATE_DIR:-$REPO_ROOT/system/state}"
+STATE_DIR="${SWITCHBOARD_STATE_DIR:-$REPO_ROOT/system/state}"
 ROUTER_CONFIG="${REPORT_TO_COS_ROUTER_CONFIG:-$REPO_ROOT/system/config/router.yaml}"
 LEDGER="$SCRIPTS/running-task-state.py"
 WAIT_SECONDS="${REPORT_TO_COS_WAIT_SECONDS:-5}"
@@ -62,8 +62,8 @@ NOTIFICATION_LOCK_DIR="${REPORT_TO_COS_LOCK_DIR:-$REPO_ROOT/system/state/next-up
 # shim then refuse every live cmux or wmux tab, so a row that exists only in a
 # test ledger can never be delivered anywhere real. A task id with no row in
 # the ledger in use is refused below (the ledger update exits 2, nothing sent).
-if [[ "${PM_OS_TEST_SANDBOX:-0}" != "1" && ( -n "${RUNNING_TASKS_FILE:-}" || -n "${PM_OS_STATE_DIR:-}" ) ]]; then
-    if ! python3 - "$SCRIPTS" "$REPO_ROOT" "${RUNNING_TASKS_FILE:-}" "${PM_OS_STATE_DIR:-}" <<'PY'
+if [[ "${SWITCHBOARD_TEST_SANDBOX:-0}" != "1" && ( -n "${RUNNING_TASKS_FILE:-}" || -n "${SWITCHBOARD_STATE_DIR:-}" ) ]]; then
+    if ! python3 - "$SCRIPTS" "$REPO_ROOT" "${RUNNING_TASKS_FILE:-}" "${SWITCHBOARD_STATE_DIR:-}" <<'PY'
 import os, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
@@ -74,7 +74,7 @@ ok = (not sys.argv[3] or same(sys.argv[3], state / "running-tasks.json")) and (n
 raise SystemExit(0 if ok else 1)
 PY
     then
-        export PM_OS_TEST_SANDBOX=1
+        export SWITCHBOARD_TEST_SANDBOX=1
     fi
 fi
 ORIGINAL_ARGS=("$@")   # a deferred terminal report is replayed verbatim by its waiter
@@ -187,7 +187,7 @@ PY
 fi
 review_url="$(printf '%s' "$gate_json" | json_field review_url)"
 # File before you promise (external-replies Rule 9): a report
-# or the draft it carries that says PM OS is filing, tracking, or logging a
+# or the draft it carries that says switchboard is filing, tracking, or logging a
 # record must carry that record's URL. The gate names the unbacked promise
 # phrases; the report still goes through, with the warning in the summary so
 # CoS does not send the draft and steers the worker to file first.
@@ -301,11 +301,11 @@ print(compare_warning_text(json.load(sys.stdin).get("compare_missing") or []))' 
         fi
     fi
 fi
-# Trash instead of delete: pm-os-guardrails Rule 3
-# rewrites an outside `rm -rf` to pm-os-trash.py, which logs each move with the
+# Trash instead of delete: switchboard-guardrails Rule 3
+# rewrites an outside `rm -rf` to switchboard-trash.py, which logs each move with the
 # worker's task id. The final report lists them so nothing goes missing quietly.
 if [[ "$replay" != "true" ]] && [[ "$STATUS" == "done" || "$STATUS" == "blocked" || "$STATUS" == "failed" ]]; then
-    trash_line="$(python3 "$SCRIPTS/pm-os-trash.py" --pm-os-list --task-id "$TASK_ID" --format line 2>/dev/null || true)"
+    trash_line="$(python3 "$SCRIPTS/switchboard-trash.py" --switchboard-list --task-id "$TASK_ID" --format line 2>/dev/null || true)"
     if [[ -n "$trash_line" ]]; then
         SUMMARY="$SUMMARY ⏎ $trash_line"
     fi
@@ -339,7 +339,7 @@ if [[ "$hooks" == "true" && "$STATUS" == "done" && -n "$TASK_ID" ]] \
     && [[ -n "$(printf '%s' "$pre_json" | json_field branch)$(printf '%s' "$pre_json" | json_field worker_id)" && "$(printf '%s' "$pre_json" | json_field _terminal)" != "true" ]] \
     && [[ -z "$ATTEMPT_ID" || "$ATTEMPT_ID" == "$(printf '%s' "$pre_json" | json_field attempt_id)" ]]; then
     mkdir -p "$STATE_DIR/worker-dispatch"
-    landed_json="$(env -u PM_OS_WORKER_ID python3 "$SCRIPTS/dispatch.py" finish --task-id "$TASK_ID" 2>>"$STATE_DIR/worker-dispatch/finish.log" || true)"
+    landed_json="$(env -u SWITCHBOARD_WORKER_ID python3 "$SCRIPTS/dispatch.py" finish --task-id "$TASK_ID" 2>>"$STATE_DIR/worker-dispatch/finish.log" || true)"
     if [[ -n "$landed_json" && "$(printf '%s' "$landed_json" | json_field grace)" == "true" ]]; then
         # Rebase-conflict grace window: finish held the
         # row active with landing.state == "conflict" and told the worker in its tab.
@@ -494,11 +494,11 @@ esac
 # Destination and delivery policy.
 # shellcheck source=../cmux-helpers.sh
 source "$REPO_ROOT/system/cmux-helpers.sh"
-source_type="routine"; source_key="megadesk"
+source_type="routine"; source_key="switchboard"
 if normalized="$(python3 "$SCRIPTS/surface-registry.py" normalize "$origin" 2>/dev/null)"; then
     origin="$normalized"
     source_type="$(python3 "$SCRIPTS/surface-registry.py" get "$origin" source_type 2>/dev/null || echo routine)"
-    source_key="$(python3 "$SCRIPTS/surface-registry.py" get "$origin" source_key 2>/dev/null || echo megadesk)"
+    source_key="$(python3 "$SCRIPTS/surface-registry.py" get "$origin" source_key 2>/dev/null || echo switchboard)"
 fi
 # The live CoS tab: every "delivered" report that day went to
 # the tab titled 🧭 CoS, which still ran Amp, while the owner's CoS was a Claude tab
@@ -507,7 +507,7 @@ fi
 # destination_agent decides the transport below: a Claude tab gets the report by
 # cmux agent message, an Amp tab keeps the guarded idle-only paste.
 destination_ref=""; destination_agent=""; destination_warning=""
-if [[ "$source_key" == "megadesk" && "${REPORT_TO_COS_NO_OWNER_TABS:-0}" != "1" ]] \
+if [[ "$source_key" == "switchboard" && "${REPORT_TO_COS_NO_OWNER_TABS:-0}" != "1" ]] \
     && cos_target_json="$(python3 "$SCRIPTS/owner_tabs.py" cos-target 2>/dev/null)"; then
     destination_ref="$(printf '%s' "$cos_target_json" | json_field ref)"
     destination_agent="$(printf '%s' "$cos_target_json" | json_field agent)"
@@ -690,7 +690,7 @@ spawn_waiter() {
     # Own session: a worker's shell tool kills its whole process group when the
     # call returns, which took the first live waiter down with it (nohup alone
     # only ignores HUP). macOS has no setsid binary, so Python does it.
-    env -u PM_OS_WORKER_ID -u PM_OS_WORKER_TASK_ID -u PM_OS_WORKER_ATTEMPT_ID -u PM_OS_WORKSTREAM_SLUG \
+    env -u SWITCHBOARD_WORKER_ID -u SWITCHBOARD_WORKER_TASK_ID -u SWITCHBOARD_WORKER_ATTEMPT_ID -u SWITCHBOARD_WORKSTREAM_SLUG \
         python3 - "$dir/report-waiter.log" bash "$SCRIPTS/report-waiter.sh" "$TASK_ID" "$destination_ref" "${ORIGINAL_ARGS[@]}" <<'PY' && waiter="true" || true
 import os, shutil, subprocess, sys
 log = open(sys.argv[1], "ab")
@@ -724,7 +724,7 @@ if [[ "$quiet" != "true" && "$already_delivered" != "true" && "$direct" == "true
         claude_note="already on $destination_ref ($(printf '%s' "$seen_json" | json_field where)); not sent again"
     else
         am_rc=0
-        am_json="$(python3 "$SCRIPTS/owner_tabs.py" message --ref "$destination_ref" --from "PM OS report" --decode-marks \
+        am_json="$(python3 "$SCRIPTS/owner_tabs.py" message --ref "$destination_ref" --from "switchboard report" --decode-marks \
             --require-verified --text "$report_line" 2>/dev/null)" || am_rc=$?
         am_id="$(printf '%s' "$am_json" | json_field id 2>/dev/null || true)"
         am_backend="$(printf '%s' "$am_json" | json_field backend 2>/dev/null || true)"
@@ -740,7 +740,7 @@ if [[ "$quiet" != "true" && "$already_delivered" != "true" && "$direct" == "true
             # wmux (a reply that says so, or this run's backend when the shim timed
             # out or failed before replying): never the raw paste below, which
             # would type the full text; the waiter and the loop retry.
-            *) if [[ "$am_backend" == "wmux" || "${PM_OS_MUX:-}" == "wmux" ]]; then
+            *) if [[ "$am_backend" == "wmux" || "${SWITCHBOARD_MUX:-}" == "wmux" ]]; then
                    claude_result="refused"
                    claude_note="${am_reason:-agent message refused}"
                fi ;;   # cmux refusal: the guarded idle-only paste below
@@ -854,7 +854,7 @@ then
         alert_body="$lead finished; its report is waiting on CoS (${claude_note:-CoS busy}). The worker tab stays open until it lands."
     fi
     if [[ "${REPORT_TO_COS_NO_NOTIFY:-0}" != "1" ]]; then
-        cmux_cmd notify ${destination_ref:+--workspace "$destination_ref"} --title "PM OS report waiting" --body "$alert_body" >/dev/null 2>&1 || true
+        cmux_cmd notify ${destination_ref:+--workspace "$destination_ref"} --title "switchboard report waiting" --body "$alert_body" >/dev/null 2>&1 || true
     fi
     python3 "$LEDGER" report-alerted --task-id "$TASK_ID" --note "$alert_body" >/dev/null 2>&1 || true
 fi
@@ -886,7 +886,7 @@ try:
     import fcntl
 except ImportError:  # Windows: flock() over msvcrt, system/scripts/flock_compat.py
     import os as _os, sys as _sys
-    _sys.path.insert(0, _os.environ.get("PM_OS_SCRIPTS_DIR") or _os.path.join(_os.environ.get("PM_OS_ROOT") or _os.path.expanduser("~/Development/pm-os"), "system", "scripts"))
+    _sys.path.insert(0, _os.environ.get("SWITCHBOARD_SCRIPTS_DIR") or _os.path.join(_os.environ.get("SWITCHBOARD_ROOT") or _os.path.expanduser("~/Development/switchboard"), "system", "scripts"))
     import flock_compat as fcntl
 from datetime import datetime, timezone
 path = sys.argv[1]
@@ -928,7 +928,7 @@ bash "$SCRIPTS/publish-running-tasks-status.sh" >/dev/null 2>&1 || true
 # race it.
 if [[ "$hooks" == "true" && "$terminal" == "true" && "$STATUS" != "cancelled" && -n "$TASK_ID" ]]; then
     mkdir -p "$STATE_DIR/worker-dispatch"
-    env -u PM_OS_WORKER_ID python3 "$SCRIPTS/dispatch.py" record --task-id "$TASK_ID" --status "$STATUS" \
+    env -u SWITCHBOARD_WORKER_ID python3 "$SCRIPTS/dispatch.py" record --task-id "$TASK_ID" --status "$STATUS" \
         --result "$SUMMARY" ${THREAD_ID:+--thread-id "$THREAD_ID"} >>"$STATE_DIR/worker-dispatch/finish.log" 2>&1 || true
 fi
 
@@ -955,7 +955,7 @@ card_json=""
 if [[ "$hooks" == "true" && "$terminal" == "true" && "$STATUS" != "cancelled" && -n "$TASK_ID" \
     && "${REPORT_TO_COS_NO_OWNER_TABS:-0}" != "1" ]]; then
     mkdir -p "$STATE_DIR/worker-dispatch"
-    card_json="$(env -u PM_OS_WORKER_ID python3 "$SCRIPTS/owner_tabs.py" result-card --task-id "$TASK_ID" \
+    card_json="$(env -u SWITCHBOARD_WORKER_ID python3 "$SCRIPTS/owner_tabs.py" result-card --task-id "$TASK_ID" \
         --status "$STATUS" --summary "$SUMMARY" --review-url "${review_url:-}" --reporter-ref "${WORKSPACE_REF:-}" \
         2>>"$STATE_DIR/worker-dispatch/finish.log" || true)"
 fi
@@ -986,7 +986,7 @@ fi
 # the git calls under release and reap open no terminal windows.
 if [[ "$hooks" == "true" && "$terminal" == "true" ]]; then
     mkdir -p "$STATE_DIR/worker-dispatch"
-    env -u PM_OS_WORKER_ID -u PM_OS_WORKER_TASK_ID -u PM_OS_WORKER_ATTEMPT_ID -u PM_OS_WORKSTREAM_SLUG \
+    env -u SWITCHBOARD_WORKER_ID -u SWITCHBOARD_WORKER_TASK_ID -u SWITCHBOARD_WORKER_ATTEMPT_ID -u SWITCHBOARD_WORKSTREAM_SLUG \
         python3 "$SCRIPTS/no_window.py" spawn --log "$STATE_DIR/worker-dispatch/hooks.log" -- \
         bash -c "sleep 150; python3 '$SCRIPTS/dispatch.py' release; python3 '$SCRIPTS/dispatch.py' reap --task-id '$TASK_ID'" \
         >>"$STATE_DIR/worker-dispatch/hooks.log" 2>&1 </dev/null || true

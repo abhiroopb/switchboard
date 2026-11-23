@@ -9,7 +9,7 @@ CMUX="${CMUX:-${CMUX_BIN:-/Applications/cmux.app/Contents/Resources/bin/cmux}}"
 source "$REPO_ROOT/system/scripts/lib/cmux-inject-guard.sh"
 DRY=0
 KEEP_APP=0
-INVOKING_REF="${PM_OS_INVOKING_WORKSPACE_REF:-}"
+INVOKING_REF="${SWITCHBOARD_INVOKING_WORKSPACE_REF:-}"
 while (( $# > 0 )); do
   case "$1" in
     --dry-run) DRY=1; shift ;;
@@ -19,7 +19,7 @@ while (( $# > 0 )); do
   esac
 done
 if [[ -z "$INVOKING_REF" ]]; then
-  INVOKING_REF="$("$CMUX" identify | "${PM_OS_PYTHON:-python3}" "$(dirname "${BASH_SOURCE[0]}")/lib/json_get.py" caller.workspace_ref)"
+  INVOKING_REF="$("$CMUX" identify | "${SWITCHBOARD_PYTHON:-python3}" "$(dirname "${BASH_SOURCE[0]}")/lib/json_get.py" caller.workspace_ref)"
 fi
 [[ "$INVOKING_REF" =~ ^workspace:[0-9]+$ ]] || { echo 'invalid invoking workspace' >&2; exit 2; }
 
@@ -29,16 +29,16 @@ reason=""
 wrapped=" "
 unknown_sends=" "
 
-# Personal sessions: every PM OS launcher names its workspace
+# Personal sessions: every switchboard launcher names its workspace
 # (CoS, Comms Triage, workstream emoji titles, Router N, worker tabs), so a
 # workspace with no custom title is one the owner opened by hand, for example an Amp
 # session in ~. EOD leaves those alone: no wrap-up prompt, no close, and they
 # never count as a failed teardown. When the JSON listing is unavailable (fake
-# cmux in tests, older cmux) every workspace is treated as PM OS-managed.
+# cmux in tests, older cmux) every workspace is treated as switchboard-managed.
 personal_refs_now() {
   local json
   json="$(CMUX_QUIET=1 "$CMUX" workspace list --json 2>/dev/null)" || return 0
-  printf '%s\n' "$json" | "${PM_OS_PYTHON:-python3}" -c '
+  printf '%s\n' "$json" | "${SWITCHBOARD_PYTHON:-python3}" -c '
 import json, sys
 try:
     rows = json.loads(sys.stdin.read()).get("workspaces") or []
@@ -62,7 +62,7 @@ while IFS= read -r line; do
   [[ -n "$ref" ]] || continue
   title="$(printf '%s' "${line#"$ref"}" | sed -E 's/^[[:space:]]*[^[:alnum:]]*//; s/[[:space:]]+$//' | tr '[:upper:]' '[:lower:]')"
   if [[ "$ref" != "$INVOKING_REF" ]] && is_personal "$ref"; then
-    echo "[$(ts)] skipping $ref (personal session, no PM OS title): left open"
+    echo "[$(ts)] skipping $ref (personal session, no switchboard title): left open"
     continue
   fi
   if [[ "$title" == cos ]]; then
@@ -276,7 +276,7 @@ done
 
 # New workspaces may have opened while other tabs wrapped. Preserve them and
 # CoS rather than treating the old snapshot as authority to quit the app.
-# Personal sessions (no PM OS title), including ones opened mid-teardown, are
+# Personal sessions (no switchboard title), including ones opened mid-teardown, are
 # expected survivors and never defer the CoS close.
 personal_refs="$(personal_refs_now | tr '\n' ' ')"
 remaining="$("$CMUX" list-workspaces)" || exit 1

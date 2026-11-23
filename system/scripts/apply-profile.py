@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Install one organisation profile into this PM OS checkout: `company` or `personal`.
+"""Install one organisation profile into this switchboard checkout: `company` or `personal`.
 
-Core PM OS is generic. Everything that only works inside your company (its own
+Core switchboard is generic. Everything that only works inside your company (its own
 skills, MCP servers, jobs and rules) lives in
 profiles/company/. A personal machine gets none of it; a company machine gets all of it.
 
-  apply-profile.py                  detect and apply (company when an organization's `pmos` CLI is
+  apply-profile.py                  detect and apply (company when an organization's `switchboard` CLI is
                                     on PATH, else personal)
   apply-profile.py --profile company  force a profile
   apply-profile.py --check          print the active and detected profile, change nothing
@@ -16,12 +16,12 @@ What applying a profile does, all idempotent:
      (and removes files a previously applied profile copied that this one lacks)
   2. fills the marked profile sections in AGENTS.md and adapters/SYSTEM.md from
      profiles/<p>/agents-section.md and system-section.md (empty for personal)
-  3. writes PM_OS_PROFILE and the profile's env (profile.json "env") to ~/.pm-os/env
-  4. records the applied files in .pm-os-kit/profile.json
+  3. writes SWITCHBOARD_PROFILE and the profile's env (profile.json "env") to ~/.switchboard/env
+  4. records the applied files in .switchboard-kit/profile.json
 
 Publishing the kit from a company machine: the profile section and overlay files are
 machine-specific. Publish from core (`apply-profile.py --profile personal` first, or
-have the publisher drop profiled files listed in .pm-os-kit/profile.json and empty the
+have the publisher drop profiled files listed in .switchboard-kit/profile.json and empty the
 marked sections). profiles/ itself always ships. See docs/profiles.md.
 """
 from __future__ import annotations
@@ -36,26 +36,26 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILES = ROOT / "profiles"
-RECORD = ROOT / ".pm-os-kit" / "profile.json"
-BACKUP = ROOT / ".pm-os-kit" / "profile-backup"
+RECORD = ROOT / ".switchboard-kit" / "profile.json"
+BACKUP = ROOT / ".switchboard-kit" / "profile-backup"
 SECTION_FILES = {"AGENTS.md": "agents-section.md", "adapters/SYSTEM.md": "system-section.md"}
-START = "<!-- pm-os:profile-section:start (filled by system/scripts/apply-profile.py; edit profiles/<name>/ instead) -->"
-END = "<!-- pm-os:profile-section:end -->"
+START = "<!-- switchboard:profile-section:start (filled by system/scripts/apply-profile.py; edit profiles/<name>/ instead) -->"
+END = "<!-- switchboard:profile-section:end -->"
 # Every folder under profiles/ with a profile.json (the personal and solo profiles ship;
 # an organization adds its own).
 KNOWN = tuple(sorted(p.name for p in PROFILES.iterdir() if (p / "profile.json").is_file())) if PROFILES.is_dir() else ("personal",)
 
 
 def state_home() -> Path:
-    env = os.environ.get("PM_OS_STATE_HOME")
-    return Path(env) if env else Path.home() / ".pm-os"
+    env = os.environ.get("SWITCHBOARD_STATE_HOME")
+    return Path(env) if env else Path.home() / ".switchboard"
 
 
 def detect() -> str:
     """company when a native connector CLI is on PATH (system/connectors/company_cli.py), else personal."""
     helper = ROOT / "system" / "connectors" / "company_cli.py"
     try:
-        spec = importlib.util.spec_from_file_location("pm_os_company_cli", helper)
+        spec = importlib.util.spec_from_file_location("switchboard_company_cli", helper)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)  # type: ignore[union-attr]
         return "company" if mod.has_company_cli() else "personal"
@@ -152,7 +152,7 @@ def apply(name: str, dry_run: bool = False) -> dict:
             changes["sections"].append(rel)
             if not dry_run:
                 target.write_text(new, encoding="utf-8", newline="\n")
-    env = {"PM_OS_PROFILE": name, **(profile_meta(name).get("env") or {})}
+    env = {"SWITCHBOARD_PROFILE": name, **(profile_meta(name).get("env") or {})}
     # Clear env a previous profile set and this one does not.
     for key in previous.get("env", {}):
         env.setdefault(key, "")
@@ -167,7 +167,7 @@ def apply(name: str, dry_run: bool = False) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--profile", choices=("auto", *KNOWN), default=os.environ.get("PM_OS_PROFILE_OVERRIDE") or "auto")
+    ap.add_argument("--profile", choices=("auto", *KNOWN), default=os.environ.get("SWITCHBOARD_PROFILE_OVERRIDE") or "auto")
     ap.add_argument("--check", action="store_true", help="print active and detected profile; change nothing")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)

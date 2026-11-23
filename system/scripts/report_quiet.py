@@ -30,12 +30,12 @@ _CLAUDE_POINTER = re.compile(r"(?:·\s*)?(?:claude --resume|Claude session) [0-9
 _URL = re.compile(r"https?://\S+")
 _REPORT_FRAME = re.compile(r"^\[[^\]]*\]\s*(?:(?:done|blocked|failed|deferred|cancelled):\s*)?", re.I)
 # Three cues, all required: an acknowledgment opener (including the older
-# "Read the live pm-os registry entry …" / "Registry entry pm-os loaded" seed
+# "Read the live switchboard registry entry …" / "Registry entry switchboard loaded" seed
 # replies), a locality phrase, and a no-deliverable phrase (waiting for
 # instructions, standing by, no files changed, or the "no Orb, remote VM, SSH"
 # recital). Requiring all three keeps ordinary reports from matching.
 _OPENER = re.compile(
-    r"\b(understood|acknowledged|ready|standing by|got it|confirmed|ok|okay|roger|loaded|read the live pm-os registry)\b", re.I)
+    r"\b(understood|acknowledged|ready|standing by|got it|confirmed|ok|okay|roger|loaded|read the live switchboard registry)\b", re.I)
 _LOCAL = re.compile(r"on this (?:machine|mac)\b|staying local|running locally|stay(?:ing)? local", re.I)
 _WAITING = re.compile(
     r"\b(?:waiting|wait|ready|standing by)\b[^.;]{0,60}\binstructions\b|\bstanding by\b"

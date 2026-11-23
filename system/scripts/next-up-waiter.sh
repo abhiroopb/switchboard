@@ -19,7 +19,7 @@ set -uo pipefail
 DEST_REF="${1:?workspace ref}"
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 SCRIPTS="$REPO_ROOT/system/scripts"
-STATE_DIR="${PM_OS_STATE_DIR:-$REPO_ROOT/system/state}"
+STATE_DIR="${SWITCHBOARD_STATE_DIR:-$REPO_ROOT/system/state}"
 POLL="${NEXT_UP_WAITER_POLL:-15}"
 MAX_SECONDS="${NEXT_UP_WAITER_MAX_SECONDS:-14400}"
 PIDFILE="$STATE_DIR/worker-dispatch/next-up-waiter.pid"

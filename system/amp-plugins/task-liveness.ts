@@ -14,7 +14,7 @@
 //                  carries a "Router return contract: task rt-…" / `--task-id
 //                  rt-…` return contract (a workstream seeded by a Router).
 //   tool.result  → `heartbeat` for every tracked task, throttled to one call
-//                  per PM_OS_TASK_HEARTBEAT_MS (default 60s) so the lease in
+//                  per SWITCHBOARD_TASK_HEARTBEAT_MS (default 60s) so the lease in
 //                  the ledger only expires when the agent really stops.
 //   agent.end    → final heartbeat; tasks the ledger reports as terminal or
 //                  fenced out (_stale_attempt) are dropped from tracking.
@@ -25,17 +25,17 @@
 // handoff is not task receipt: ack occurs when Amp processes the user turn.
 // Retain the late scan for deliberate native same-task steering and older
 // senders. It scans user messages it has not seen yet via ctx.thread.messages() on
-// tool.result (throttled by PM_OS_TASK_SCAN_MS, default 15s) and via
+// tool.result (throttled by SWITCHBOARD_TASK_SCAN_MS, default 15s) and via
 // event.messages on agent.end — and acks any seeded task it finds. Only user
 // text blocks are parsed; tool results, tool inputs and outputs never are.
 //
 // Own task from the environment: dispatch.py launches every worker with
-// PM_OS_WORKER_TASK_ID / PM_OS_WORKER_ATTEMPT_ID in its environment, so the
+// SWITCHBOARD_WORKER_TASK_ID / SWITCHBOARD_WORKER_ATTEMPT_ID in its environment, so the
 // worker acks that task on agent.start, tool.result and agent.end without
 // finding the seed prompt in the transcript. The Claude hook bridge (one fresh
 // process per hook event, no in-memory tracking) cannot rely on the seed: after
 // enough tool calls it falls out of the recent messages. Only the launched session binds this way: a Claude row
-// names it in PM_OS_WORKER_SESSION_ID, so a child `claude -p` that inherits the
+// names it in SWITCHBOARD_WORKER_SESSION_ID, so a child `claude -p` that inherits the
 // env never takes the worker's row; Amp falls back to the UI thread, so a
 // native child running in the same process never does either.
 //
@@ -59,7 +59,7 @@
 // `task-liveness.disabled = true` in amp config.
 //
 // Test seams (env): TASK_LIVENESS_LEDGER_SCRIPT, TASK_LIVENESS_CMUX_BIN,
-// CMUX_WORKSPACE_ID, PM_OS_WORKSTREAM_SLUG, PM_OS_TASK_HEARTBEAT_MS,
+// CMUX_WORKSPACE_ID, SWITCHBOARD_WORKSTREAM_SLUG, SWITCHBOARD_TASK_HEARTBEAT_MS,
 // RUNNING_TASKS_FILE (read by the ledger script itself).
 
 import type { AgentEndEvent, AgentStartEvent, PluginAPI, ToolResultEvent } from '@ampcode/plugin'
@@ -68,7 +68,7 @@ import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
 import { dirname, join } from 'node:path'
-import { isPluginEnabled, logEvent, PM_OS_REPO, run, runDetached, writeState } from './pm-os/lib'
+import { isPluginEnabled, logEvent, SWITCHBOARD_REPO, run, runDetached, writeState } from './switchboard/lib'
 
 const PLUGIN = 'task-liveness'
 // Capture once at module load. An old host must not advertise new disk bytes.
@@ -117,13 +117,13 @@ export interface TrackedTask {
  * Windows only. The Claude bridge is one process per hook, so
  * the in-memory throttles here reset on every tool call and each result started the ledger
  * script and git, about 10 processes that a kernel leak keeps until reboot. A stamp file
- * carries the throttle across them: at most one pass per PM_OS_TASK_RESULT_THROTTLE_MS (2 min).
+ * carries the throttle across them: at most one pass per SWITCHBOARD_TASK_RESULT_THROTTLE_MS (2 min).
  */
 function windowsResultThrottled(threadID: string): boolean {
   if (process.platform !== 'win32') return false
-  const raw = Number(process.env.PM_OS_TASK_RESULT_THROTTLE_MS ?? 120_000)
+  const raw = Number(process.env.SWITCHBOARD_TASK_RESULT_THROTTLE_MS ?? 120_000)
   const windowMs = Number.isFinite(raw) && raw >= 0 ? raw : 120_000
-  const stamp = join(tmpdir(), `pm-os-liveness-${threadID.replace(/[^A-Za-z0-9-]/g, '_')}.stamp`)
+  const stamp = join(tmpdir(), `switchboard-liveness-${threadID.replace(/[^A-Za-z0-9-]/g, '_')}.stamp`)
   try {
     if (Date.now() - statSync(stamp).mtimeMs < windowMs) return true
   } catch { /* no stamp yet */ }
@@ -144,7 +144,7 @@ export function watchLocalExecutors(amp: PluginAPI) {
       if (stamp.code !== 0 || !match || Number(match[1]) !== process.ppid) return
       for (const threadID of active) {
         await writeState('local-executors', `${threadID}-${process.pid}`, {
-          thread_id: threadID, repo_root: PM_OS_REPO,
+          thread_id: threadID, repo_root: SWITCHBOARD_REPO,
           amp_pid: process.ppid, publisher_pid: process.pid, publisher_start: match[2],
           runtime_revision: runtimeRevision,
           observed_at: Date.now() / 1000,
@@ -181,9 +181,9 @@ export function parseTaskReferences(message: string): TrackedTask[] {
   // names exactly one task. Everything else in the prompt (quoted history,
   // the owner's busy task id, other --task-id mentions) is ignored so a
   // parallel worker can never ack or steal the owner's task.
-  const workerTask = text.match(/\bPM_OS_WORKER_TASK_ID=(rt-[0-9a-f]{12})\b/)
+  const workerTask = text.match(/\bSWITCHBOARD_WORKER_TASK_ID=(rt-[0-9a-f]{12})\b/)
   if (workerTask) {
-    const attempt = text.match(/\bPM_OS_WORKER_ATTEMPT_ID=(rt-[0-9a-f]{12}\.a\d+\.[0-9a-f]+)\b/)
+    const attempt = text.match(/\bSWITCHBOARD_WORKER_ATTEMPT_ID=(rt-[0-9a-f]{12}\.a\d+\.[0-9a-f]+)\b/)
     return [{
       taskId: workerTask[1],
       attemptId: attempt && attempt[1].startsWith(workerTask[1]) ? attempt[1] : '',
@@ -224,16 +224,16 @@ export function parseTaskReferences(message: string): TrackedTask[] {
 
 /** The worker task named by the launch environment, or null. Pure; exported for tests. */
 export function ownWorkerTask(env: Record<string, string | undefined>): TrackedTask | null {
-  const taskId = (env.PM_OS_WORKER_TASK_ID ?? '').trim()
+  const taskId = (env.SWITCHBOARD_WORKER_TASK_ID ?? '').trim()
   if (!/^rt-[0-9a-f]{12}$/.test(taskId)) return null
-  const attempt = (env.PM_OS_WORKER_ATTEMPT_ID ?? '').trim()
+  const attempt = (env.SWITCHBOARD_WORKER_ATTEMPT_ID ?? '').trim()
   return { taskId, attemptId: isAttemptId(attempt) && attempt.startsWith(`${taskId}.`) ? attempt : '', role: 'worker' }
 }
 
 /** Loose extra check so a bare id inside a machine prompt is still noticed. */
 export function looksLikeSeededHandoff(message: string): boolean {
   const text = message ?? ''
-  return /\bPM_OS_WORKER_TASK_ID=/.test(text) || /\bROUTER_TASK_ID=/.test(text) || /Router return contract:/i.test(text) || (/--task-id\s+rt-/.test(text) && TASK_ID_RE.test(text))
+  return /\bSWITCHBOARD_WORKER_TASK_ID=/.test(text) || /\bROUTER_TASK_ID=/.test(text) || /Router return contract:/i.test(text) || (/--task-id\s+rt-/.test(text) && TASK_ID_RE.test(text))
 }
 
 /** Text blocks of a user message, ignoring tool results. Pure; exported for tests. */
@@ -302,13 +302,13 @@ export default function (amp: PluginAPI) {
   let config: Record<string, unknown> = {}
   amp.configuration.subscribe(value => { config = value })
 
-  const ledgerScript = process.env.TASK_LIVENESS_LEDGER_SCRIPT ?? `${PM_OS_REPO}/system/scripts/running-task-state.py`
+  const ledgerScript = process.env.TASK_LIVENESS_LEDGER_SCRIPT ?? `${SWITCHBOARD_REPO}/system/scripts/running-task-state.py`
   const cmuxBin = process.env.TASK_LIVENESS_CMUX_BIN ?? process.env.CMUX_BIN ?? '/Applications/cmux.app/Contents/Resources/bin/cmux'
   const workspaceId = process.env.CMUX_WORKSPACE_ID?.trim() ?? ''
-  const workstream = process.env.PM_OS_WORKSTREAM_SLUG?.trim() ?? ''
-  const heartbeatMsRaw = Number(process.env.PM_OS_TASK_HEARTBEAT_MS ?? 60_000)
+  const workstream = process.env.SWITCHBOARD_WORKSTREAM_SLUG?.trim() ?? ''
+  const heartbeatMsRaw = Number(process.env.SWITCHBOARD_TASK_HEARTBEAT_MS ?? 60_000)
   const heartbeatMs = Number.isFinite(heartbeatMsRaw) && heartbeatMsRaw >= 0 ? heartbeatMsRaw : 60_000
-  const scanMsRaw = Number(process.env.PM_OS_TASK_SCAN_MS ?? 15_000)
+  const scanMsRaw = Number(process.env.SWITCHBOARD_TASK_SCAN_MS ?? 15_000)
   const scanMs = Number.isFinite(scanMsRaw) && scanMsRaw >= 0 ? scanMsRaw : 15_000
 
   // thread id → tracked tasks. A thread can carry several queued handoffs.
@@ -324,8 +324,8 @@ export default function (amp: PluginAPI) {
   const enabled = () => isPluginEnabled(config, PLUGIN)
 
   const workerWorkspaceRef = async (threadID: string): Promise<string> => {
-    const probe = process.env.TASK_LIVENESS_PROBE_SCRIPT ?? `${PM_OS_REPO}/system/scripts/local_owner_probe.py`
-    const result = await run('python3', [probe, '--thread', threadID], { cwd: PM_OS_REPO, timeoutMs: 15_000 })
+    const probe = process.env.TASK_LIVENESS_PROBE_SCRIPT ?? `${SWITCHBOARD_REPO}/system/scripts/local_owner_probe.py`
+    const result = await run('python3', [probe, '--thread', threadID], { cwd: SWITCHBOARD_REPO, timeoutMs: 15_000 })
     try {
       const session = JSON.parse(result.stdout)
       return result.code === 0 && session.local === true && session.thread_id === threadID
@@ -349,7 +349,7 @@ export default function (amp: PluginAPI) {
   }
 
   const callLedger = async (args: string[]): Promise<LedgerResult> => {
-    const result = await run('python3', [ledgerScript, ...args], { cwd: PM_OS_REPO, timeoutMs: 15_000 })
+    const result = await run('python3', [ledgerScript, ...args], { cwd: SWITCHBOARD_REPO, timeoutMs: 15_000 })
     const failure = (detail: string): LedgerResult => ({ ok: false, terminal: false, stale: false, fenced: false, mismatch: false, phase: 'unknown', attemptId: '', detail })
     if (result.code !== 0) return failure((result.stderr || result.stdout).trim().slice(0, 300))
     try {
@@ -410,7 +410,7 @@ export default function (amp: PluginAPI) {
     // The launcher sends a file pointer, not the handoff body. Only dereference
     // that exact user instruction inside the launch directory. Tool output and
     // quoted paths must never become receipts for another task.
-    const launchDir = process.env.TASK_LIVENESS_LAUNCH_PROMPT_DIR ?? join(PM_OS_REPO, 'system/state/launch-prompts')
+    const launchDir = process.env.TASK_LIVENESS_LAUNCH_PROMPT_DIR ?? join(SWITCHBOARD_REPO, 'system/state/launch-prompts')
     const pointer = text.trim().match(/^Read and follow all instructions in ([^\n]+\.md)$/)
     if (pointer && dirname(pointer[1]) === launchDir) {
       try {
@@ -430,7 +430,7 @@ export default function (amp: PluginAPI) {
     // A worker-shaped seed for any other task is quoted text (a compaction
     // summary, a pasted launch command from a stuck tab) and must never bind
     // this thread to that row.
-    const ownTask = process.env.PM_OS_WORKER_TASK_ID ?? ''
+    const ownTask = process.env.SWITCHBOARD_WORKER_TASK_ID ?? ''
     for (const task of parseTaskReferences(text)) {
       if (isTracked(threadID, task.taskId)) continue
       if (ownTask && task.role === 'worker' && task.taskId !== ownTask) {
@@ -449,7 +449,7 @@ export default function (amp: PluginAPI) {
     if (!own || ownTaskRejected === own.taskId || isTracked(threadID, own.taskId)) return
     // A Claude launch names its session; Amp falls back to the UI thread. Any
     // other thread or child process that inherits the env is not the worker.
-    const session = (process.env.PM_OS_WORKER_SESSION_ID ?? '').trim()
+    const session = (process.env.SWITCHBOARD_WORKER_SESSION_ID ?? '').trim()
     if (session ? threadID !== session : amp.activeThread?.current?.id !== threadID) return
     const result = await ackTask(threadID, own, logger)
     // Terminal, stale or fenced is final for this attempt: stop re-acking.
@@ -531,7 +531,7 @@ export default function (amp: PluginAPI) {
       // is still awaiting-ack/live. A repeated create_thread result for the same
       // child (plugin reload, replayed tool result) must adopt that record, not
       // register a second attempt and not drop tracking of the child.
-      const existing = await run('python3', [ledgerScript, 'show', '--task-id', taskId], { cwd: PM_OS_REPO, timeoutMs: 15_000 })
+      const existing = await run('python3', [ledgerScript, 'show', '--task-id', taskId], { cwd: SWITCHBOARD_REPO, timeoutMs: 15_000 })
       let adopted: Record<string, unknown> | null = null
       try { adopted = existing.code === 0 ? (JSON.parse(existing.stdout) as Record<string, unknown>) : null } catch { adopted = null }
       if (adopted && String(adopted.thread_id ?? '') === childID && !adopted._terminal && ['routing', 'active'].includes(String(adopted.status ?? ''))) {
@@ -654,7 +654,7 @@ export default function (amp: PluginAPI) {
     if (status !== 'done' || config['task-liveness.park.disabled'] === true || !threadID) return
     const text = finalAssistantText(turnMessages)
     if (!text) return
-    const dir = process.env.TURN_WAIT_TEXT_DIR ?? join(PM_OS_REPO, 'system/state/worker-dispatch/turn-wait')
+    const dir = process.env.TURN_WAIT_TEXT_DIR ?? join(SWITCHBOARD_REPO, 'system/state/worker-dispatch/turn-wait')
     const file = join(dir, `${threadID.replace(/[^A-Za-z0-9-]/g, '_')}-${Date.now()}.txt`)
     try {
       mkdirSync(dir, { recursive: true })
@@ -663,10 +663,10 @@ export default function (amp: PluginAPI) {
       await logEvent(PLUGIN, { event: 'park-text-write-failed', thread_id: threadID, detail: String(error).slice(0, 200) })
       return
     }
-    const script = process.env.TURN_WAIT_SCRIPT ?? join(PM_OS_REPO, 'system/scripts/turn_wait.py')
+    const script = process.env.TURN_WAIT_SCRIPT ?? join(SWITCHBOARD_REPO, 'system/scripts/turn_wait.py')
     const started = await runDetached('python3', [script, 'park', '--thread-id', threadID, '--text-file', file, '--consume'], {
-      cwd: PM_OS_REPO,
-      logFile: join(PM_OS_REPO, 'system/state/logs/turn-wait.log'),
+      cwd: SWITCHBOARD_REPO,
+      logFile: join(SWITCHBOARD_REPO, 'system/state/logs/turn-wait.log'),
       label: `${PLUGIN} park ${threadID}`,
     })
     if (!started) await logEvent(PLUGIN, { event: 'park-launch-failed', thread_id: threadID })
@@ -674,8 +674,8 @@ export default function (amp: PluginAPI) {
 
   // Exposed for the test harness / debugging only.
   amp.registerCommand(
-    'pm-os-task-liveness-status',
-    { title: 'Task liveness: tracked tasks', category: 'PM OS', description: 'Show router tasks this session is heartbeating' },
+    'switchboard-task-liveness-status',
+    { title: 'Task liveness: tracked tasks', category: 'switchboard', description: 'Show router tasks this session is heartbeating' },
     async (ctx) => {
       const lines: string[] = []
       for (const [threadID, byTask] of tracked) {

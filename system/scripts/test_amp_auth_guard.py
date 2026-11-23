@@ -23,7 +23,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
-HOOK = ROOT / ".claude" / "hooks" / "pm-os-guardrails.py"
+HOOK = ROOT / ".claude" / "hooks" / "switchboard-guardrails.py"
 
 
 def decide(command: str, tool: str = "Bash", cwd: str = "C:/invented", env: dict | None = None) -> tuple[str | None, str]:
@@ -111,7 +111,7 @@ class AmpHomeOverride(unittest.TestCase):
             "cd \"$LOCALAPPDATA/Temp/proj\" && timeout 60 ~/.amp/bin/amp skill list",
             "REAL=$HOME; echo $REAL",
             "HOME=/tmp/x python3 other.py",
-            "PM_OS_STATE_HOME=/tmp/s bash system/scripts/report.sh",
+            "SWITCHBOARD_STATE_HOME=/tmp/s bash system/scripts/report.sh",
             "ls .amp/in && grep -n USERPROFILE= notes.md",
             f'python3 "{clean.as_posix()}"',
             'git commit -m "docs: amp login opens a browser"',

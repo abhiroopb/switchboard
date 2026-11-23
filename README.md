@@ -24,7 +24,7 @@ It started as a personal setup for running a working day with agents, so the exa
 Open your coding agent (Claude Code, Codex, Amp, Cursor or another) in an empty folder and paste:
 
 ```
-Install switchboard from https://github.com/abhiroopb/switchboard. Clone it, read INSTALL.md, and follow it. Ask me only the questions it lists.
+Install switchboard from https://github.com/abhiroopb/switchboard. Clone it into ~/Development/switchboard-src, read INSTALL.md, and follow it. Ask me only the questions it lists.
 ```
 
 The agent checks your machine, asks you up to nine short questions (your name, your email, the folder to install into, which agents to set up, the full loop or a single session, your time zone, which services to connect now, how agents may use a browser, and which surfaces open each day), shows you a dry run, installs, and runs the checks. You run every sign-in yourself, and no token is written into the repo. The steps it follows are in [INSTALL.md](INSTALL.md), so you can also run them yourself.
@@ -86,7 +86,7 @@ switchboard's own code and docs are free for personal and other noncommercial us
 
 **Do I need to be a product manager?** No. The examples come from PM work, but the loop is the same for any work you can hand to an agent.
 
-**Why is the code full of `PM_OS` and `pm-os`?** That is the project's working name. Folder names, environment variables and script names keep it, so the scripts stay stable.
+**What are the names in the code?** Everything is called switchboard: folders, scripts, plugins and skills use `switchboard`, environment variables start with `SWITCHBOARD_`, per-user state lives in `~/.switchboard`, and the install manifest is in `.switchboard-kit/`. Two internal names share it: the connector command is `switchboard` (as in `switchboard mail show`), and the Chief of Staff tab's routine lives in `routines/switchboard/`.
 
 **Does it work on Linux?** The single-session mode does. The parallel loop needs cmux or wmux, which run on macOS and Windows.
 

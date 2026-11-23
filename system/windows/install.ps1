@@ -1,13 +1,13 @@
 <#
 .SYNOPSIS
-  Install the PM OS Kit Windows layer: wmux as the cmux backend, Git for
+  Install the switchboard Kit Windows layer: wmux as the cmux backend, Git for
   Windows bash plus Windows Python as the toolchain, Task Scheduler for the
   background loops, and the Obsidian review-pointer shim.
 
 .DESCRIPTION
   Run after `py install.py --apply` has rendered the kit. Native Windows is the
   default runtime for every scope: the scripts run under Git Bash with the
-  Windows Python and talk to wmux directly. -Runtime wsl (or PM_OS_RUNTIME=wsl)
+  Windows Python and talk to wmux directly. -Runtime wsl (or SWITCHBOARD_RUNTIME=wsl)
   keeps the older WSL2 path, where the toolchain lives inside a distro.
 
   Steps, each idempotent:
@@ -19,32 +19,32 @@
        <kit>\system\windows\install.ps1 -PrereqsOnly
     1. Prerequisites. Native: git.exe, Git for Windows bash.exe, py or python;
        wmux is checked and only warned about. WSL: wsl.exe plus a distro.
-    2. User environment: PM_OS_ROOT, PM_OS_MUX=wmux, PM_OS_RUNTIME,
-       PM_OS_WORKTREES_DIR, PM_OS_STATE_HOME, AMP_EDITOR, PM_OS_BOARD_AUTOSTART=0;
+    2. User environment: SWITCHBOARD_ROOT, SWITCHBOARD_MUX=wmux, SWITCHBOARD_RUNTIME,
+       SWITCHBOARD_WORKTREES_DIR, SWITCHBOARD_STATE_HOME, AMP_EDITOR, SWITCHBOARD_BOARD_AUTOSTART=0;
        PATH gains system\windows (cmux.cmd) and, unless an existing CLI with the
        same name as the shim is on PATH (the shim itself does not count),
-       system\connectors (the pmos shim).
-    3. %USERPROFILE%\.pm-os\env: created when missing, merged otherwise (keys
+       system\connectors (the switchboard shim).
+    3. %USERPROFILE%\.switchboard\env: created when missing, merged otherwise (keys
        install.py or the owner already set are never overwritten). It also
-       records PM_OS_PYTHON and PM_OS_TOOL_PATH (python, git, rg, bun, ruby
+       records SWITCHBOARD_PYTHON and SWITCHBOARD_TOOL_PATH (python, git, rg, bun, ruby
        folders) for scheduled tasks, which keep the PATH from sign-in, and
        WMUX_BIN when the wmux CLI is found in its install folder.
-    4. Shell hook: one `source .../system/windows/pm-os-env.sh` line in the
+    4. Shell hook: one `source .../system/windows/switchboard-env.sh` line in the
        Git Bash ~/.bashrc (or the distro's ~/.bashrc for wsl).
     5. The background loops in Task Scheduler (register-scheduled-tasks.ps1): six Amp loops, plus the claude-mem worker when claude-mem is the memory backend.
     6. wmux sidebar seed (seed-session.ps1) when a session exists.
 
-.PARAMETER PmOsRoot
+.PARAMETER SwitchboardRoot
   Windows path of the repo: any folder or drive, a synced folder such as
   Dropbox included. Omitted: asked on a terminal with the same question and
-  suggestion as install.py. The suggestion is $env:PM_OS_ROOT, else the
-  PM_OS_ROOT recorded in %USERPROFILE%\.pm-os\env by install.py, else the
-  installed repo this script sits in, else $HOME\Development\pm-os. A
+  suggestion as install.py. The suggestion is $env:SWITCHBOARD_ROOT, else the
+  SWITCHBOARD_ROOT recorded in %USERPROFILE%\.switchboard\env by install.py, else the
+  installed repo this script sits in, else $HOME\Development\switchboard. A
   non-interactive run takes the suggestion and says so. Every later step (the
   env file, the user environment, the Git Bash hook, the scheduled tasks, the
   printed next steps) uses the chosen folder.
 .PARAMETER Runtime
-  native (default; $env:PM_OS_RUNTIME honored) or wsl.
+  native (default; $env:SWITCHBOARD_RUNTIME honored) or wsl.
 .PARAMETER Distro
   WSL distribution (wsl runtime only; default: the WSL default distro).
 .PARAMETER WslRoot
@@ -61,9 +61,9 @@
 #>
 [CmdletBinding()]
 param(
-  [string]$PmOsRoot = "",
+  [string]$SwitchboardRoot = "",
   [ValidateSet("native", "wsl")]
-  [string]$Runtime = $(if ($env:PM_OS_RUNTIME -and $env:PM_OS_RUNTIME.ToLower() -eq "wsl") { "wsl" } else { "native" }),
+  [string]$Runtime = $(if ($env:SWITCHBOARD_RUNTIME -and $env:SWITCHBOARD_RUNTIME.ToLower() -eq "wsl") { "wsl" } else { "native" }),
   [string]$Distro = "",
   [string]$WslRoot = "",
   [switch]$SkipTasks,
@@ -79,10 +79,10 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $userProfile = if ($env:USERPROFILE) { $env:USERPROFILE } else { $HOME }
 
 # -- output helpers -----------------------------------------------------------
-function Step([string]$msg) { Write-Host "[pm-os] ==> $msg" -ForegroundColor Cyan }
-function Say([string]$msg)  { Write-Host "[pm-os]     $msg" }
-function Ok([string]$msg)   { Write-Host "[pm-os]     ok: $msg" -ForegroundColor Green }
-function Warn([string]$msg) { Write-Host "[pm-os]     warn: $msg" -ForegroundColor Yellow }
+function Step([string]$msg) { Write-Host "[switchboard] ==> $msg" -ForegroundColor Cyan }
+function Say([string]$msg)  { Write-Host "[switchboard]     $msg" }
+function Ok([string]$msg)   { Write-Host "[switchboard]     ok: $msg" -ForegroundColor Green }
+function Warn([string]$msg) { Write-Host "[switchboard]     warn: $msg" -ForegroundColor Yellow }
 
 # -- small helpers ------------------------------------------------------------
 function To-PosixPath([string]$win) {
@@ -189,8 +189,8 @@ function Report-Wmux([string]$cli) {
 
 function Get-SqKind {
   # "real", "shim" or "absent". One rule with system/connectors/company_cli.py: the
-  # first pmos on PATH counts as another program ("real") only when `pmos --version`
-  # does not say pmos-shim and it is not under system\connectors. Uses company_cli.py when Python and the file exist.
+  # first switchboard on PATH counts as another program ("real") only when `switchboard --version`
+  # does not say switchboard-shim and it is not under system\connectors. Uses company_cli.py when Python and the file exist.
   param([string]$Root, [string]$Python)
   $ErrorActionPreference = 'Continue'
   $script = if ($Root) { Join-Path $Root "system\connectors\company_cli.py" } else { "" }
@@ -198,12 +198,12 @@ function Get-SqKind {
     $out = (& $Python -I $script 2>$null) -join " "
     if ($out -match '^(real|shim|absent)\b') { return $Matches[1] }
   }
-  $pmos = Get-Command pmos -ErrorAction SilentlyContinue | Select-Object -First 1
-  if (-not $pmos) { return "absent" }
-  if ($pmos.Source -match '[\\/]system[\\/]connectors[\\/]') { return "shim" }
+  $switchboard = Get-Command switchboard -ErrorAction SilentlyContinue | Select-Object -First 1
+  if (-not $switchboard) { return "absent" }
+  if ($switchboard.Source -match '[\\/]system[\\/]connectors[\\/]') { return "shim" }
   try {
-    $v = (& $pmos.Source --version 2>&1) -join " "
-    if ($v -match 'pmos-shim') { return "shim" }
+    $v = (& $switchboard.Source --version 2>&1) -join " "
+    if ($v -match 'switchboard-shim') { return "shim" }
   } catch { return "absent" }
   return "real"
 }
@@ -253,7 +253,7 @@ function Merge-EnvFile([string]$path, [System.Collections.IDictionary]$wanted, [
   if ($DryRun) { return }
   $dir = Split-Path -Parent $path
   if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
-  $lines = @("# PM OS environment (KEY=VALUE). Written by install.py and install.ps1; edit by hand as needed.")
+  $lines = @("# switchboard environment (KEY=VALUE). Written by install.py and install.ps1; edit by hand as needed.")
   foreach ($k in $existing.Keys) { $lines += "$k=$($existing[$k])" }
   $enc = New-Object System.Text.UTF8Encoding $false
   [System.IO.File]::WriteAllText($path, (($lines -join "`n") + "`n"), $enc)
@@ -261,7 +261,7 @@ function Merge-EnvFile([string]$path, [System.Collections.IDictionary]$wanted, [
 
 function Add-BashrcLine([string]$bashrc, [string]$line, [string]$marker) {
   if ((Test-Path $bashrc) -and (Select-String -Path $bashrc -SimpleMatch $marker -Quiet)) {
-    Ok "$bashrc already sources pm-os-env.sh"; return
+    Ok "$bashrc already sources switchboard-env.sh"; return
   }
   Say "append to ${bashrc}: $line"
   if ($DryRun) { return }
@@ -273,7 +273,7 @@ function Add-BashrcLine([string]$bashrc, [string]$line, [string]$marker) {
     $cur = [System.IO.File]::ReadAllText($bashrc)
     if ($cur.Length -gt 0 -and -not $cur.EndsWith("`n")) { $prefix = "`n" }
   }
-  [System.IO.File]::AppendAllText($bashrc, "$prefix`n# PM OS Kit (wmux backend)`n$line`n", $enc)
+  [System.IO.File]::AppendAllText($bashrc, "$prefix`n# switchboard Kit (wmux backend)`n$line`n", $enc)
 }
 
 function Invoke-Child([string]$script, [string[]]$argv) {
@@ -283,11 +283,11 @@ function Invoke-Child([string]$script, [string[]]$argv) {
 
 # -- owner choice 1: the install folder (docs/install-decisions.md) -----------
 # Same question, same suggestion order, and the same synced-folder caveat as
-# install.py, so both installers agree on where PM OS lives.
+# install.py, so both installers agree on where switchboard lives.
 $DestinationPrompt = @"
-Where should PM OS live? This folder holds the repo, your notes, people profiles and
+Where should switchboard live? This folder holds the repo, your notes, people profiles and
 workstreams. Suggested: {0}. Type another path to choose a different
-folder or drive, or press Enter to accept. A synced folder such as Dropbox works; run PM OS
+folder or drive, or press Enter to accept. A synced folder such as Dropbox works; run switchboard
 from one device at a time there, because git locks and the background jobs clash across devices.
 "@
 # Path segments that mark a sync client's folder (install.py SYNCED_SEGMENTS).
@@ -296,8 +296,8 @@ $SyncedSegments = @("dropbox", "onedrive", "icloud", "com~apple~clouddocs", "mob
 
 function Test-Interactive {
   # A console with a person at it: no redirected stdin, no -NonInteractive host.
-  if ($env:PM_OS_INSTALL_INTERACTIVE -eq "1") { return $true }
-  if ($env:PM_OS_INSTALL_INTERACTIVE -eq "0") { return $false }
+  if ($env:SWITCHBOARD_INSTALL_INTERACTIVE -eq "1") { return $true }
+  if ($env:SWITCHBOARD_INSTALL_INTERACTIVE -eq "0") { return $false }
   if (-not [Environment]::UserInteractive) { return $false }
   try { if ([Console]::IsInputRedirected) { return $false } } catch { }
   foreach ($a in [Environment]::GetCommandLineArgs()) { if ($a -match '^-noni') { return $false } }
@@ -326,18 +326,18 @@ function Get-SyncedSegment([string]$path) {
 }
 
 function Get-FolderSuggestion([string]$envFilePath) {
-  # Returns @(path, source). Order: PM_OS_ROOT, the env file record, the
-  # installed repo around this script, then $HOME\Development\pm-os.
-  $fromEnv = $env:PM_OS_ROOT
-  if (-not $fromEnv) { $fromEnv = [Environment]::GetEnvironmentVariable("PM_OS_ROOT", "User") }
-  if ($fromEnv) { return @((Resolve-Folder $fromEnv), "PM_OS_ROOT") }
+  # Returns @(path, source). Order: SWITCHBOARD_ROOT, the env file record, the
+  # installed repo around this script, then $HOME\Development\switchboard.
+  $fromEnv = $env:SWITCHBOARD_ROOT
+  if (-not $fromEnv) { $fromEnv = [Environment]::GetEnvironmentVariable("SWITCHBOARD_ROOT", "User") }
+  if ($fromEnv) { return @((Resolve-Folder $fromEnv), "SWITCHBOARD_ROOT") }
   $rec = Read-EnvFile $envFilePath
-  if ($rec.Contains("PM_OS_ROOT") -and $rec["PM_OS_ROOT"]) {
-    return @((Resolve-Folder $rec["PM_OS_ROOT"]), "the folder recorded in $envFilePath")
+  if ($rec.Contains("SWITCHBOARD_ROOT") -and $rec["SWITCHBOARD_ROOT"]) {
+    return @((Resolve-Folder $rec["SWITCHBOARD_ROOT"]), "the folder recorded in $envFilePath")
   }
   $around = Split-Path -Parent (Split-Path -Parent $here)
-  if (Test-Path -LiteralPath (Join-Path $around ".pm-os-kit\install.json")) { return @($around, "the installed repo this script sits in") }
-  return @((Join-Path $HOME "Development\pm-os"), "the default")
+  if (Test-Path -LiteralPath (Join-Path $around ".switchboard-kit\install.json")) { return @($around, "the installed repo this script sits in") }
+  return @((Join-Path $HOME "Development\switchboard"), "the default")
 }
 
 # -- step 0: toolchain and PATH (native) ---------------------------------------
@@ -457,7 +457,7 @@ function Install-Toolchain {
   # ripgrep and Bun: winget often leaves them off PATH.
   $tools = @(
     @{ exe = "rg.exe"; prefixes = @("BurntSushi.ripgrep"); extra = @(); hint = "winget install --id BurntSushi.ripgrep.MSVC -e" },
-    @{ exe = "bun.exe"; prefixes = @("Oven-sh.Bun"); extra = @((Join-Path $userProfile ".bun\bin")); hint = "winget install --id Oven-sh.Bun -e (the PM OS Claude Code plugin hooks need it)" },
+    @{ exe = "bun.exe"; prefixes = @("Oven-sh.Bun"); extra = @((Join-Path $userProfile ".bun\bin")); hint = "winget install --id Oven-sh.Bun -e (the switchboard Claude Code plugin hooks need it)" },
     # jq: start-day.sh and cmux-helpers.sh still need it (the tick-path scripts use Python).
     @{ exe = "jq.exe"; prefixes = @("jqlang.jq"); extra = @((Join-Path $userProfile "bin")); hint = "winget install --id jqlang.jq -e, or put the jqlang release jq-windows-amd64.exe in ~\bin as jq.exe (start-day.sh needs it)" }
   )
@@ -503,30 +503,30 @@ function Install-Toolchain {
 if ($PrereqsOnly) {
   if ($Runtime -ne "native") { throw "-PrereqsOnly covers the native runtime; the wsl runtime keeps its toolchain inside the distro." }
   Install-Toolchain
-  Write-Host "[pm-os] Toolchain ready. Next, from a new terminal: py <kit>\install.py --apply   (docs/install-windows.md)"
+  Write-Host "[switchboard] Toolchain ready. Next, from a new terminal: py <kit>\install.py --apply   (docs/install-windows.md)"
   exit 0
 }
 
-$stateDir = if ($env:PM_OS_STATE_HOME) { Resolve-Folder $env:PM_OS_STATE_HOME } else { Join-Path $userProfile ".pm-os" }
+$stateDir = if ($env:SWITCHBOARD_STATE_HOME) { Resolve-Folder $env:SWITCHBOARD_STATE_HOME } else { Join-Path $userProfile ".switchboard" }
 $envFile = Join-Path $stateDir "env"
 
-if ($PmOsRoot) {
-  $PmOsRoot = Resolve-Folder $PmOsRoot
+if ($SwitchboardRoot) {
+  $SwitchboardRoot = Resolve-Folder $SwitchboardRoot
 } else {
   $suggestion = Get-FolderSuggestion $envFile
   if (Test-Interactive) {
     Write-Host ($DestinationPrompt -f $suggestion[0])
     $answer = Read-Host "Install folder [$($suggestion[0])]"
-    $PmOsRoot = if ($answer -and $answer.Trim()) { Resolve-Folder $answer } else { $suggestion[0] }
+    $SwitchboardRoot = if ($answer -and $answer.Trim()) { Resolve-Folder $answer } else { $suggestion[0] }
   } else {
-    $PmOsRoot = $suggestion[0]
-    Write-Host "[pm-os] no -PmOsRoot and no terminal: using the suggestion $PmOsRoot (from $($suggestion[1]); pass -PmOsRoot to choose)"
+    $SwitchboardRoot = $suggestion[0]
+    Write-Host "[switchboard] no -SwitchboardRoot and no terminal: using the suggestion $SwitchboardRoot (from $($suggestion[1]); pass -SwitchboardRoot to choose)"
   }
 }
-$syncedSegment = Get-SyncedSegment $PmOsRoot
-Write-Host "[pm-os] install folder: $PmOsRoot"
+$syncedSegment = Get-SyncedSegment $SwitchboardRoot
+Write-Host "[switchboard] install folder: $SwitchboardRoot"
 if ($syncedSegment) {
-  Write-Host "[pm-os] synced folder '$syncedSegment': allowed. Run PM OS from one device at a time there, because git locks and the background jobs clash across devices."
+  Write-Host "[switchboard] synced folder '$syncedSegment': allowed. Run switchboard from one device at a time there, because git locks and the background jobs clash across devices."
 }
 
 # =============================================================================
@@ -547,14 +547,14 @@ if ($Runtime -eq "native") {
   Ok "python: $($py.Source)"
   $wmuxCli = Find-Wmux
   Report-Wmux $wmuxCli
-  if (-not (Test-Path -LiteralPath $PmOsRoot)) {
-    $msg = "$PmOsRoot does not exist. Install there first: py <kit>\install.py --destination `"$PmOsRoot`" --apply"
+  if (-not (Test-Path -LiteralPath $SwitchboardRoot)) {
+    $msg = "$SwitchboardRoot does not exist. Install there first: py <kit>\install.py --destination `"$SwitchboardRoot`" --apply"
     if ($DryRun) { Warn $msg } else { throw $msg }
-  } elseif (-not (Test-Path -LiteralPath (Join-Path $PmOsRoot "system\windows\pm-os-env.sh"))) {
-    Warn "$PmOsRoot does not look like a rendered PM OS repo (system\windows\pm-os-env.sh missing); pass -PmOsRoot"
+  } elseif (-not (Test-Path -LiteralPath (Join-Path $SwitchboardRoot "system\windows\switchboard-env.sh"))) {
+    Warn "$SwitchboardRoot does not look like a rendered switchboard repo (system\windows\switchboard-env.sh missing); pass -SwitchboardRoot"
   }
-  $rootPosix = To-PosixPath $PmOsRoot
-  Ok "repo: $PmOsRoot  ($rootPosix)"
+  $rootPosix = To-PosixPath $SwitchboardRoot
+  Ok "repo: $SwitchboardRoot  ($rootPosix)"
 
   # Values the owner or install.py already chose win over the defaults.
   $fromFile = Read-EnvFile $envFile
@@ -564,24 +564,24 @@ if ($Runtime -eq "native") {
     if ($u) { return $u }
     return $fallback
   }
-  $worktrees = Pick "PM_OS_WORKTREES_DIR" (Join-Path $env:LOCALAPPDATA "pm-os\worktrees")
-  $stateHome = Pick "PM_OS_STATE_HOME" $stateDir
-  $ampEditor = "powershell -NoProfile -ExecutionPolicy Bypass -File `"" + (Join-Path $PmOsRoot "system\windows\amp-obsidian-editor.ps1") + "`""
+  $worktrees = Pick "SWITCHBOARD_WORKTREES_DIR" (Join-Path $env:LOCALAPPDATA "switchboard\worktrees")
+  $stateHome = Pick "SWITCHBOARD_STATE_HOME" $stateDir
+  $ampEditor = "powershell -NoProfile -ExecutionPolicy Bypass -File `"" + (Join-Path $SwitchboardRoot "system\windows\amp-obsidian-editor.ps1") + "`""
 
   Step "2. user environment"
-  Set-UserEnv "PM_OS_ROOT" $PmOsRoot
-  Set-UserEnv "PM_OS_MUX" "wmux"
-  Set-UserEnv "PM_OS_RUNTIME" "native"
-  Set-UserEnv "PM_OS_WORKTREES_DIR" $worktrees
-  Set-UserEnv "PM_OS_STATE_HOME" $stateHome
+  Set-UserEnv "SWITCHBOARD_ROOT" $SwitchboardRoot
+  Set-UserEnv "SWITCHBOARD_MUX" "wmux"
+  Set-UserEnv "SWITCHBOARD_RUNTIME" "native"
+  Set-UserEnv "SWITCHBOARD_WORKTREES_DIR" $worktrees
+  Set-UserEnv "SWITCHBOARD_STATE_HOME" $stateHome
   Set-UserEnv "AMP_EDITOR" $ampEditor
-  Set-UserEnv "PM_OS_BOARD_AUTOSTART" "0"
-  Add-UserPath (Join-Path $PmOsRoot "system\windows")
+  Set-UserEnv "SWITCHBOARD_BOARD_AUTOSTART" "0"
+  Add-UserPath (Join-Path $SwitchboardRoot "system\windows")
   # The shim on PATH does not count: only another CLI with the same name keeps the shim off PATH.
-  switch (Get-SqKind $PmOsRoot $script:RealPython) {
-    "real"   { Ok "another CLI named pmos is on PATH; connector shim not added" }
-    "shim"   { Ok "pmos on PATH is the PM OS connector shim"; Add-UserPath (Join-Path $PmOsRoot "system\connectors") }
-    default  { Say "no pmos on PATH; adding the connector shim"; Add-UserPath (Join-Path $PmOsRoot "system\connectors") }
+  switch (Get-SqKind $SwitchboardRoot $script:RealPython) {
+    "real"   { Ok "another CLI named switchboard is on PATH; connector shim not added" }
+    "shim"   { Ok "switchboard on PATH is the switchboard connector shim"; Add-UserPath (Join-Path $SwitchboardRoot "system\connectors") }
+    default  { Say "no switchboard on PATH; adding the connector shim"; Add-UserPath (Join-Path $SwitchboardRoot "system\connectors") }
   }
   foreach ($d in @($worktrees, $stateHome)) {
     if (-not (Test-Path $d)) { Say "mkdir $d"; if (-not $DryRun) { New-Item -ItemType Directory -Path $d | Out-Null } }
@@ -589,15 +589,15 @@ if ($Runtime -eq "native") {
 
   Step "3. $envFile"
   $envWanted = [ordered]@{
-    PM_OS_ROOT            = $PmOsRoot
-    PM_OS_WORKTREES_DIR   = $worktrees
-    PM_OS_STATE_HOME      = $stateHome
-    PM_OS_MUX             = "wmux"
-    PM_OS_RUNTIME         = "native"
-    PM_OS_SYNCED_SEGMENT  = $(if ($syncedSegment) { $syncedSegment } else { "" })
-    PM_OS_BOARD_AUTOSTART = "0"
+    SWITCHBOARD_ROOT            = $SwitchboardRoot
+    SWITCHBOARD_WORKTREES_DIR   = $worktrees
+    SWITCHBOARD_STATE_HOME      = $stateHome
+    SWITCHBOARD_MUX             = "wmux"
+    SWITCHBOARD_RUNTIME         = "native"
+    SWITCHBOARD_SYNCED_SEGMENT  = $(if ($syncedSegment) { $syncedSegment } else { "" })
+    SWITCHBOARD_BOARD_AUTOSTART = "0"
   }
-  $envReplace = @("PM_OS_ROOT", "PM_OS_SYNCED_SEGMENT")
+  $envReplace = @("SWITCHBOARD_ROOT", "SWITCHBOARD_SYNCED_SEGMENT")
   $existingEnv = Read-EnvFile $envFile
   function Test-StaleEnvPath([string]$key) {
     # True when the key is unset, or points at a file that is gone or at the Store stub.
@@ -607,7 +607,7 @@ if ($Runtime -eq "native") {
   }
   # Task Scheduler keeps the PATH from sign-in, so a scheduled task cannot see
   # tools installed or put on PATH since. Record the real Python and the tool
-  # folders here; pm-os-env.sh turns them into PATH entries and PM_OS_PYTHON.
+  # folders here; switchboard-env.sh turns them into PATH entries and SWITCHBOARD_PYTHON.
   $realPy = if ($script:RealPython) { $script:RealPython } else { Find-RealPython }
   if ($realPy) {
     $toolDirs = @((Split-Path -Parent $realPy))
@@ -615,17 +615,17 @@ if ($Runtime -eq "native") {
       $c = Get-Command $exe -ErrorAction SilentlyContinue | Select-Object -First 1
       if ($c) { $toolDirs += (Split-Path -Parent $c.Source) }
     }
-    $envWanted["PM_OS_TOOL_PATH"] = (@($toolDirs | ForEach-Object { $_ -replace '\\', '/' } | Select-Object -Unique) -join ";")
-    $envReplace += "PM_OS_TOOL_PATH"
-    $envWanted["PM_OS_PYTHON"] = ($realPy -replace '\\', '/')
-    if (Test-StaleEnvPath "PM_OS_PYTHON") { $envReplace += "PM_OS_PYTHON" }
+    $envWanted["SWITCHBOARD_TOOL_PATH"] = (@($toolDirs | ForEach-Object { $_ -replace '\\', '/' } | Select-Object -Unique) -join ";")
+    $envReplace += "SWITCHBOARD_TOOL_PATH"
+    $envWanted["SWITCHBOARD_PYTHON"] = ($realPy -replace '\\', '/')
+    if (Test-StaleEnvPath "SWITCHBOARD_PYTHON") { $envReplace += "SWITCHBOARD_PYTHON" }
   } else {
-    Warn "no real Python found; PM_OS_PYTHON and PM_OS_TOOL_PATH not recorded (scheduled tasks may not find python3)"
+    Warn "no real Python found; SWITCHBOARD_PYTHON and SWITCHBOARD_TOOL_PATH not recorded (scheduled tasks may not find python3)"
   }
   $rubyCmd = Get-Command ruby.exe -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($rubyCmd) {
-    $envWanted["PM_OS_RUBY"] = ($rubyCmd.Source -replace '\\', '/')
-    if (Test-StaleEnvPath "PM_OS_RUBY") { $envReplace += "PM_OS_RUBY" }
+    $envWanted["SWITCHBOARD_RUBY"] = ($rubyCmd.Source -replace '\\', '/')
+    if (Test-StaleEnvPath "SWITCHBOARD_RUBY") { $envReplace += "SWITCHBOARD_RUBY" }
   }
   if ($wmuxCli) {
     $envWanted["WMUX_BIN"] = ($wmuxCli -replace '\\', '/')
@@ -637,12 +637,12 @@ if ($Runtime -eq "native") {
   # Git Bash uses %HOME% when set, else %USERPROFILE%.
   $bashHome = if ($env:HOME) { $env:HOME } else { $userProfile }
   $bashrc = Join-Path $bashHome ".bashrc"
-  Add-BashrcLine $bashrc "source `"$rootPosix/system/windows/pm-os-env.sh`"" "system/windows/pm-os-env.sh"
+  Add-BashrcLine $bashrc "source `"$rootPosix/system/windows/switchboard-env.sh`"" "system/windows/switchboard-env.sh"
 
   Step "5. background loops (Task Scheduler)"
   if ($SkipTasks) { Warn "skipped (-SkipTasks)" }
   else {
-    $argv = @("-Runtime", "native", "-PmOsRoot", $PmOsRoot)
+    $argv = @("-Runtime", "native", "-SwitchboardRoot", $SwitchboardRoot)
     if ($DryRun) { $argv += "-DryRun" }
     Invoke-Child "register-scheduled-tasks.ps1" $argv
   }
@@ -651,7 +651,7 @@ if ($Runtime -eq "native") {
   $session = Join-Path $env:APPDATA "wmux\sessions\session.json"
   if ($SkipSeed) { Warn "skipped (-SkipSeed)" }
   elseif (-not (Test-Path $session)) {
-    Warn "no wmux session yet. Open wmux, run 'bash system/scripts/ensure-routine-workspaces.sh megadesk launchpad todo comms-triage' in a pane, then: powershell -File system\windows\seed-session.ps1 -Restart"
+    Warn "no wmux session yet. Open wmux, run 'bash system/scripts/ensure-routine-workspaces.sh switchboard launchpad todo comms-triage' in a pane, then: powershell -File system\windows\seed-session.ps1 -Restart"
   } elseif ($DryRun) {
     # seed-session.ps1 refuses a running wmux even for a preview; do not call it here.
     Say "dry run: would seed the sidebar with seed-session.ps1 (preview it with: powershell -File system\windows\seed-session.ps1 -DryRun)"
@@ -663,8 +663,8 @@ if ($Runtime -eq "native") {
 
   Step "done"
   Write-Host @"
-[pm-os] Next (open a new terminal first so the user environment is loaded). PM OS lives in: $PmOsRoot
-  1. Open wmux. In its pane run:  cd "$rootPosix" && bash system/scripts/ensure-routine-workspaces.sh megadesk launchpad todo comms-triage
+[switchboard] Next (open a new terminal first so the user environment is loaded). switchboard lives in: $SwitchboardRoot
+  1. Open wmux. In its pane run:  cd "$rootPosix" && bash system/scripts/ensure-routine-workspaces.sh switchboard launchpad todo comms-triage
      (opens CoS, Launchpad, Todo and Comms Triage; echo `$CMUX_BIN should print .../system/scripts/mux/cmux)
   2. From PowerShell:  powershell -ExecutionPolicy Bypass -File "$(Join-Path $here 'seed-session.ps1')" -Restart
      (quits wmux, writes pins, accent rails and order into session.json, applies sidebar prefs, relaunches wmux)
@@ -690,32 +690,32 @@ foreach ($tool in @("git", "python")) {
   if (Get-Command $tool -ErrorAction SilentlyContinue) { Ok "$tool on Windows PATH" } else { Warn "$tool not on Windows PATH (only needed for native-Windows callers; WSL has its own)" }
 }
 if (-not $WslRoot) {
-  $WslRoot = (wsl.exe -d $Distro -- wslpath -a ($PmOsRoot -replace '\\', '/') 2>$null)
+  $WslRoot = (wsl.exe -d $Distro -- wslpath -a ($SwitchboardRoot -replace '\\', '/') 2>$null)
   if ($WslRoot) { $WslRoot = $WslRoot.Trim() }
 }
-if (-not $WslRoot) { $WslRoot = To-WslPath $PmOsRoot }
-if (-not $WslRoot) { throw "could not derive the WSL path of $PmOsRoot; pass -WslRoot <path inside the distro>" }
-Ok "repo: $PmOsRoot  (WSL: $WslRoot)"
+if (-not $WslRoot) { $WslRoot = To-WslPath $SwitchboardRoot }
+if (-not $WslRoot) { throw "could not derive the WSL path of $SwitchboardRoot; pass -WslRoot <path inside the distro>" }
+Ok "repo: $SwitchboardRoot  (WSL: $WslRoot)"
 
 Step "2. user environment"
-Set-UserEnv "PM_OS_MUX" "wmux"
-Set-UserEnv "PM_OS_ROOT" $PmOsRoot
-Set-UserEnv "PM_OS_RUNTIME" "wsl"
-Set-UserEnv "PM_OS_WSL_ROOT" $WslRoot
-Set-UserEnv "PM_OS_WSL_DISTRO" $Distro
-Set-UserEnv "PM_OS_BOARD_AUTOSTART" "0"
+Set-UserEnv "SWITCHBOARD_MUX" "wmux"
+Set-UserEnv "SWITCHBOARD_ROOT" $SwitchboardRoot
+Set-UserEnv "SWITCHBOARD_RUNTIME" "wsl"
+Set-UserEnv "SWITCHBOARD_WSL_ROOT" $WslRoot
+Set-UserEnv "SWITCHBOARD_WSL_DISTRO" $Distro
+Set-UserEnv "SWITCHBOARD_BOARD_AUTOSTART" "0"
 Set-UserEnv "AMP_EDITOR" ("powershell -NoProfile -ExecutionPolicy Bypass -File `"" + (Join-Path $here "amp-obsidian-editor.ps1") + "`"")
 Add-UserPath $here
 
 Step "3. WSL shell hook"
-$line = "source `"$WslRoot/system/windows/pm-os-env.sh`""
-$check = "grep -qsF 'system/windows/pm-os-env.sh' ~/.bashrc && echo present || echo absent"
+$line = "source `"$WslRoot/system/windows/switchboard-env.sh`""
+$check = "grep -qsF 'system/windows/switchboard-env.sh' ~/.bashrc && echo present || echo absent"
 $state = (wsl.exe -d $Distro -- bash -lc $check 2>$null)
-if ("$state".Trim() -eq "present") { Ok "~/.bashrc already sources pm-os-env.sh" }
+if ("$state".Trim() -eq "present") { Ok "~/.bashrc already sources switchboard-env.sh" }
 else {
   Say "append to ~/.bashrc: $line"
   if (-not $DryRun) {
-    $append = "printf '\n# PM OS Kit (wmux backend)\n%s\n' '$line' >> ~/.bashrc && chmod +x '$WslRoot/system/windows/pm-os-env.sh' '$WslRoot/system/scripts/mux/cmux' 2>/dev/null; true"
+    $append = "printf '\n# switchboard Kit (wmux backend)\n%s\n' '$line' >> ~/.bashrc && chmod +x '$WslRoot/system/windows/switchboard-env.sh' '$WslRoot/system/scripts/mux/cmux' 2>/dev/null; true"
     wsl.exe -d $Distro -- bash -lc $append | Out-Null
   }
 }
@@ -723,7 +723,7 @@ else {
 Step "4. background loops (Task Scheduler)"
 if ($SkipTasks) { Warn "skipped (-SkipTasks)" }
 else {
-  $argv = @("-Runtime", "wsl", "-PmOsRoot", $WslRoot, "-Distro", $Distro)
+  $argv = @("-Runtime", "wsl", "-SwitchboardRoot", $WslRoot, "-Distro", $Distro)
   if ($DryRun) { $argv += "-DryRun" }
   Invoke-Child "register-scheduled-tasks.ps1" $argv
 }
@@ -732,7 +732,7 @@ Step "5. wmux sidebar seed"
 $session = Join-Path $env:APPDATA "wmux\sessions\session.json"
 if ($SkipSeed) { Warn "skipped (-SkipSeed)" }
 elseif (-not (Test-Path $session)) {
-  Warn "no wmux session yet. Open wmux, in a WSL pane run 'bash system/scripts/ensure-routine-workspaces.sh megadesk launchpad todo comms-triage', then: powershell -File system\windows\seed-session.ps1 -Runtime wsl -Restart"
+  Warn "no wmux session yet. Open wmux, in a WSL pane run 'bash system/scripts/ensure-routine-workspaces.sh switchboard launchpad todo comms-triage', then: powershell -File system\windows\seed-session.ps1 -Runtime wsl -Restart"
 } elseif ($DryRun) {
   Say "dry run: would seed the sidebar with seed-session.ps1 -Runtime wsl (preview it with: powershell -File system\windows\seed-session.ps1 -Runtime wsl -DryRun)"
 } elseif (Get-Process -Name wmux -ErrorAction SilentlyContinue) {
@@ -743,8 +743,8 @@ elseif (-not (Test-Path $session)) {
 
 Step "done"
 Write-Host @"
-[pm-os] Next (open a new wmux window first so the user environment is loaded):
-  1. In a WSL pane run:  bash system/scripts/ensure-routine-workspaces.sh megadesk launchpad todo comms-triage
+[switchboard] Next (open a new wmux window first so the user environment is loaded):
+  1. In a WSL pane run:  bash system/scripts/ensure-routine-workspaces.sh switchboard launchpad todo comms-triage
   2. From PowerShell:  powershell -ExecutionPolicy Bypass -File system\windows\seed-session.ps1 -Runtime wsl -Restart
   3. Verify in a WSL pane:  cmux identify   and   cd "$WslRoot" && bash system/scripts/verify-kit-install.sh
   4. Limits and the procedure for each: system\windows\README.md

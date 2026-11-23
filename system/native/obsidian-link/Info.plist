@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleExecutable</key>
-	<string>pm-os-obsidian-link</string>
+	<string>switchboard-obsidian-link</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.pm-os.obsidian-link</string>
+	<string>com.switchboard.obsidian-link</string>
 	<key>CFBundleName</key>
-	<string>PM OS Obsidian Link</string>
+	<string>switchboard Obsidian Link</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -22,10 +22,10 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>PM OS Obsidian note link</string>
+			<string>switchboard Obsidian note link</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>pmos-obsidian</string>
+				<string>switchboard-obsidian</string>
 			</array>
 		</dict>
 	</array>

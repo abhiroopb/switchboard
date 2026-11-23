@@ -1,8 +1,8 @@
-# Megadesk State
+# switchboard State
 
-This directory is the Megadesk state layer.
+This directory is the switchboard state layer.
 
-`system/state/` is the source of truth for the Megadesk. `system/today-plan.json`
+`system/state/` is the source of truth for the switchboard. `system/today-plan.json`
 still exists, but only as a compatibility artifact for older launch flows.
 
 `system/today-plan.json` may mark shortlisted workstreams with `open_now: true`.
@@ -11,7 +11,7 @@ Other planned workstreams stay queued unless you pass `--with-resolvers` or `--a
 
 ## Files
 
-- `todo.json`: canonical persistent to-do list (source of truth, tracked in git — the only tracked file here besides this README). All consumers read and write this path directly; the old `~/.config/amp/todo.json` location is retired, and `system/scripts/install-pm-os-bin.sh` recovers any stray file that reappears there. Sidecar `.lock` and `.bak-*` siblings stay untracked. Distinct from the derived snapshot at `sources/todo.json`.
+- `todo.json`: canonical persistent to-do list (source of truth, tracked in git — the only tracked file here besides this README). All consumers read and write this path directly; the old `~/.config/amp/todo.json` location is retired, and `system/scripts/install-switchboard-bin.sh` recovers any stray file that reappears there. Sidecar `.lock` and `.bak-*` siblings stay untracked. Distinct from the derived snapshot at `sources/todo.json`.
 - `events.jsonl`: append-only facts and workspace updates
 - `queue.json`: derived, ranked action cards
 - `now.json`: the single recommended action plus fallbacks
@@ -29,13 +29,13 @@ Other planned workstreams stay queued unless you pass `--with-resolvers` or `--a
 - `sources/workflow-upgrade-shadow.json`: shadow-mode comparison for recall, recurrence, and queue deltas before cutover
 - `sources/manual-open-workstreams.json`: temporary keep-open markers for workstreams {{OWNER_FIRST}} explicitly opened to take action on
 - `sources/workspace-status-published.json`: last rendered per-workspace sidebar payload, used to skip redundant cmux writes
-- `megadesk-status-published.json`: last rendered megadesk tile payload, used to skip redundant cmux writes
+- `switchboard-status-published.json`: last rendered switchboard tile payload, used to skip redundant cmux writes
 - `sidebar-arrangement.snapshot`: last workspace ordering snapshot, used to skip redundant sidebar reordering
 
 ## Calendar Source Of Truth
 
-- `daemon/calendar-api.sh` is the preferred calendar path for scheduler health, megadesk planning, pre-brief, and post-ingest.
-- The separate `gcal` / `pmos calendar` path is now treated as fallback-only when the direct path is unavailable.
+- `daemon/calendar-api.sh` is the preferred calendar path for scheduler health, switchboard planning, pre-brief, and post-ingest.
+- The separate `gcal` / `switchboard calendar` path is now treated as fallback-only when the direct path is unavailable.
 - The shared todo skill at `~/.agents/skills/todo/scripts/todo_cli.py` now follows the same pattern for calendar holds, freebusy checks, and reminder cleanup.
 
 ## Workspace Update Contract
@@ -65,9 +65,9 @@ python3 system/scripts/emit-workspace-update.py \
   --linked-review-on "2026-01-15"
 ```
 
-That appends an event, updates `sources/workspace-updates.json`, rebuilds the queue, and refreshes the Megadesk badge in cmux.
+That appends an event, updates `sources/workspace-updates.json`, rebuilds the queue, and refreshes the switchboard badge in cmux.
 
-The workspace and megadesk publishers keep a cache of the last visible payload, so frequent background refreshes only touch cmux when a tile's rendered state actually changed.
+The workspace and switchboard publishers keep a cache of the last visible payload, so frequent background refreshes only touch cmux when a tile's rendered state actually changed.
 
 For workstreams, `emit-workspace-update.py` also manages tab lifecycle:
 
@@ -75,7 +75,7 @@ For workstreams, `emit-workspace-update.py` also manages tab lifecycle:
 - Add `keep_open_when_waiting: true` to `workstreams/<slug>/config.yaml` only when the tab should stay open as part of an explicit watchlist.
 - Explicit manual opens via `cmux-helpers.sh launch <workstream>` also keep that workstream open temporarily for the active working session, even if later updates report `waiting` or `paused`.
 - If {{OWNER_FIRST}} explicitly asks to pause, defer, or close a workstream, call `emit-workspace-update.py` with `--close-workspace --clear-manual-open` so that temporary explicit-launch keep-open marker is removed and the workspace closes immediately.
-- If Megadesk or any outer routine is closing workstream tabs on {{OWNER_FIRST}}'s behalf, it should emit a fresh final `emit-workspace-update.py` summary for each workstream immediately before the close. Closing the cmux tab alone is not sufficient because `workspace-updates.json` should reflect the latest stopping point.
+- If switchboard or any outer routine is closing workstream tabs on {{OWNER_FIRST}}'s behalf, it should emit a fresh final `emit-workspace-update.py` summary for each workstream immediately before the close. Closing the cmux tab alone is not sufficient because `workspace-updates.json` should reflect the latest stopping point.
 - `auto_open` does not keep a waiting tab open.
 
 You can also update explicit todo items from a workspace update:
@@ -90,13 +90,13 @@ python3 system/scripts/emit-workspace-update.py \
 
 ## Todo Source Snapshot
 
-`sources/todo.json` keeps the raw `todo.json` file (this directory) compatible while giving the Megadesk a better lens:
+`sources/todo.json` keeps the raw `todo.json` file (this directory) compatible while giving the switchboard a better lens:
 
 - `summary`: counts for actionable, waiting, scheduled, someday, overdue, and unrouted high-priority items
 - `items`: the capped daily actionable backlog, normalized with routing and `requires_user` metadata when present
-- `backlog_items`: the broader non-done, de-duped backlog used by the Megadesk UI so the To Do lane can show more than the daily cap
+- `backlog_items`: the broader non-done, de-duped backlog used by the switchboard UI so the To Do lane can show more than the daily cap
 - `triage_candidates`: the full set of urgent actionable todos that still need routing
 - `stale_actionable`: weekly-checkpoint style list of 7+ day old actionable P2/P3 items that should be downgraded, rescheduled, routed, or closed
 - `duplicates`: likely duplicate ingests ignored for queue purposes
 - `auto_reconcile`: optional summary of items automatically closed from sent mail, Slack replies, Linear completion, or attended meetings during the latest refresh
-- `rules`: todo policy metadata such as `max_actionable_daily`, used to keep megadesk state aligned with the todo system's daily active-list cap
+- `rules`: todo policy metadata such as `max_actionable_daily`, used to keep switchboard state aligned with the todo system's daily active-list cap

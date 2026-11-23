@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""PM OS Obsidian Link handler (system/native/obsidian-link/main.swift).
+"""switchboard Obsidian Link handler (system/native/obsidian-link/main.swift).
 
 A background open can load the note behind cmux on a one-screen Mac, so
 nothing shows. The handler opens in the background
 only when Obsidian's window is at least half visible, and in front otherwise.
 Wrong impls: always `open -g` (the bug); always front (steals focus when
-Obsidian is already in view); a mode default other than auto; a pmos-obsidian
+Obsidian is already in view); a mode default other than auto; a switchboard-obsidian
 URL that passes anything but vault and file through to obsidian://.
 """
 from __future__ import annotations
@@ -27,7 +27,7 @@ class HandlerChoice(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
-        cls.bin = Path(cls.tmp.name) / "pm-os-obsidian-link"
+        cls.bin = Path(cls.tmp.name) / "switchboard-obsidian-link"
         subprocess.run(["swiftc", "-o", str(cls.bin), str(SRC)], check=True, capture_output=True)
 
     @classmethod

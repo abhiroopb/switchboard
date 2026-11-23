@@ -30,11 +30,11 @@ ROOT = Path(_TMP.name)
 STATE = ROOT / "system" / "state"
 STATE.mkdir(parents=True)
 os.environ["OWNER_TABS_ROOT"] = str(ROOT)
-os.environ["PM_OS_STATE_DIR"] = str(STATE)
+os.environ["SWITCHBOARD_STATE_DIR"] = str(STATE)
 os.environ["RUNNING_TASKS_FILE"] = str(STATE / "running-tasks.json")
-os.environ["PM_OS_TEST_SANDBOX"] = "1"
+os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"
 os.environ["ASK_COS_DRY_RUN"] = "1"
-os.environ.pop("PM_OS_PRIVATE_IDENTIFIERS", None)
+os.environ.pop("SWITCHBOARD_PRIVATE_IDENTIFIERS", None)
 os.environ.pop("OWNER_ACTION_CAPTURE_DISABLED", None)
 sys.path.insert(0, str(HERE))
 
@@ -114,7 +114,7 @@ class OwnerGate(unittest.TestCase):
             self.assertEqual(asks.followup_owner(what), want, what)
 
     def test_the_owner_first_name_comes_from_config(self) -> None:
-        # PM_OS_OWNER_FIRST names the owner; unset, the code's built-in default applies.
+        # SWITCHBOARD_OWNER_FIRST names the owner; unset, the code's built-in default applies.
         import importlib.util
         def load(env: dict) -> object:
             with mock.patch.dict(os.environ, env):
@@ -131,10 +131,10 @@ class OwnerGate(unittest.TestCase):
         # A kit tree holds the {{OWNER_FIRST}} placeholder until the installer renders it; both forms match.
         self.assertTrue(default.MUST.search(f"{default.OWNER_FIRST} must reboot the invented box"))
         self.assertTrue(default.WAITING_HEAD.match(f"waiting on {default.OWNER_FIRST}: pick a vendor"))
-        sam = load({"PM_OS_OWNER_FIRST": "Sam"})
+        sam = load({"SWITCHBOARD_OWNER_FIRST": "Sam"})
         self.assertTrue(sam.MUST.search("Sam must reboot the invented box"))
         self.assertFalse(sam.MUST.search("{{OWNER_FIRST}} must reboot the invented box"))
-        nobody = load({"PM_OS_OWNER_FIRST": ""})
+        nobody = load({"SWITCHBOARD_OWNER_FIRST": ""})
         self.assertFalse(nobody.MUST.search("{{OWNER_FIRST}} must reboot the invented box"))
         self.assertTrue(nobody.MUST.search("the owner must reboot the invented box"))
 
@@ -604,7 +604,7 @@ class QuestionsAndClosing(Base):
 
 
 class NoiseStaysOff(Base):
-    """The list never fills with titles like "Action from the PM OS Maintenance worker: read its
+    """The list never fills with titles like "Action from the Switchboard Maintenance worker: read its
     report (rt-…)", the same browser step three times, or asks CoS has already answered.
     Every report here is invented."""
 
@@ -761,7 +761,7 @@ class SandboxNeverWritesMain(unittest.TestCase):
         main = owner_tabs.main_checkout(HERE)
         self.assertTrue(owner_tabs.sandbox_reaching_main(main))
         self.assertFalse(owner_tabs.sandbox_reaching_main(ROOT), "a test's own temp repo still writes")
-        with mock.patch.dict(os.environ, {"PM_OS_TEST_SANDBOX": "0"}):
+        with mock.patch.dict(os.environ, {"SWITCHBOARD_TEST_SANDBOX": "0"}):
             self.assertFalse(owner_tabs.sandbox_reaching_main(main), "a real worker's close-out still lands")
 
     def test_record_on_main_refuses_in_the_sandbox(self) -> None:
@@ -775,7 +775,7 @@ class SandboxNeverWritesMain(unittest.TestCase):
     def test_the_result_card_writer_refuses_in_the_sandbox(self) -> None:
         with mock.patch.object(Path, "write_text", side_effect=AssertionError("wrote the real main")), \
                 mock.patch.object(owner_tabs, "commit_written_paths", side_effect=AssertionError("committed the real main")):
-            out = owner_tabs.write_latest_results(owner_tabs.main_checkout(HERE), "pm-os-maintenance", "rt-invented03", "invented card")
+            out = owner_tabs.write_latest_results(owner_tabs.main_checkout(HERE), "switchboard-maintenance", "rt-invented03", "invented card")
         self.assertFalse(out["written"])
 
 
@@ -800,14 +800,14 @@ class ReportToCos(unittest.TestCase):
         wrapper = self.run_.tmp / "todo_stub.py"
         wrapper.write_text(WRAPPER, encoding="utf-8")
         self.run_.env.update({"OWNER_ACTION_TODO_CLI": str(wrapper), "OWNER_TABS_ROOT": str(self.run_.tmp),
-                              "PM_OS_ROOT": str(self.run_.tmp)})
+                              "SWITCHBOARD_ROOT": str(self.run_.tmp)})
         self.run_.seed("rt-e2e0001")
 
     def items(self) -> list[dict]:
         return json.loads(self.todo.read_text(encoding="utf-8"))["items"]
 
     def send(self, summary: str, *extra: str) -> dict:
-        return self.run_.report("--task-id", "rt-e2e0001", "--workstream", "pm-os-maintenance", "--origin", "cos",
+        return self.run_.report("--task-id", "rt-e2e0001", "--workstream", "switchboard-maintenance", "--origin", "cos",
                                 "--status", "done", "--delivery", "direct", *extra, summary=summary)
 
     def test_a_done_report_with_an_owner_followup_lands_on_the_list(self) -> None:

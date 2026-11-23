@@ -353,9 +353,9 @@ class ProxyCases(unittest.TestCase):
         self.dir = Path(self.tmp.name)
         (self.dir / "fake.py").write_text(FAKE_SERVER, encoding="utf-8")
         self.calls = self.dir / "calls.jsonl"
-        self.env = {**os.environ, "PM_OS_OWNER_BROWSER_STATE": str(self.dir), "PM_OS_MACHINE": "INVENTED",
-                    "PM_OS_LOCAL_DIR": str(self.dir / "local"), "CLAUDE_CODE_SESSION_ATTENDED": "1"}
-        self.env.pop("PM_OS_WORKSTREAM_SLUG", None)
+        self.env = {**os.environ, "SWITCHBOARD_OWNER_BROWSER_STATE": str(self.dir), "SWITCHBOARD_MACHINE": "INVENTED",
+                    "SWITCHBOARD_LOCAL_DIR": str(self.dir / "local"), "CLAUDE_CODE_SESSION_ATTENDED": "1"}
+        self.env.pop("SWITCHBOARD_WORKSTREAM_SLUG", None)
 
     def drive(self, client: list[dict], env: dict | None = None, cwd: str = "C:/invented", lease=None,
               behavior: str = "", delay: float = 0.25, call_wait: float = 120) -> list[dict]:
@@ -409,8 +409,8 @@ class ProxyCases(unittest.TestCase):
         self.assertEqual(self.forwarded(), [])
 
     def test_scheduled_job_is_refused_and_pointed_at_headless(self):
-        for env, cwd in (({**self.env, "PM_OS_SCHEDULED_JOB": "1"}, "C:/invented"),
-                         ({**self.env, "PM_OS_WORKSTREAM_SLUG": "scheduled-jobs"}, "C:/invented"),
+        for env, cwd in (({**self.env, "SWITCHBOARD_SCHEDULED_JOB": "1"}, "C:/invented"),
+                         ({**self.env, "SWITCHBOARD_WORKSTREAM_SLUG": "scheduled-jobs"}, "C:/invented"),
                          ({**self.env, "CLAUDE_CODE_SESSION_ATTENDED": "0"}, "C:/invented"),
                          (self.env, "C:\\invented\\routines\\scheduled-jobs")):
             answers = self.drive([self.call(1, "list_pages")], env=env, cwd=cwd)
@@ -593,27 +593,27 @@ class ProfileCases(unittest.TestCase):
         self.assertTrue(opened)
 
     def test_scheduled_jobs_stay_on_headless_in_the_agent_profile_too(self):
-        answers = self.drive([self.call(1, "list_pages")], "agent", env={**self.env, "PM_OS_SCHEDULED_JOB": "1"})
+        answers = self.drive([self.call(1, "list_pages")], "agent", env={**self.env, "SWITCHBOARD_SCHEDULED_JOB": "1"})
         self.assertIn("chrome-devtools-headless", answers[0]["result"]["content"][0]["text"])
         self.assertEqual(self.forwarded(), [])
 
 
 class SandboxCases(unittest.TestCase):
-    """Under PM_OS_TEST_SANDBOX nothing reaches the owner's real Brave (CoS, 2026-11-09, after a stray Allow dialog)."""
+    """Under SWITCHBOARD_TEST_SANDBOX nothing reaches the owner's real Brave (CoS, 2026-11-09, after a stray Allow dialog)."""
 
     REAL = str(Path.home() / "AppData" / "Local")
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.env = {ob.KEY: "brave", "PM_OS_TEST_SANDBOX": "1", "PM_OS_OWNER_BROWSER_STATE": self.tmp.name,
-                    "PM_OS_MACHINE": "INVENTED", "LOCALAPPDATA": self.REAL}
+        self.env = {ob.KEY: "brave", "SWITCHBOARD_TEST_SANDBOX": "1", "SWITCHBOARD_OWNER_BROWSER_STATE": self.tmp.name,
+                    "SWITCHBOARD_MACHINE": "INVENTED", "LOCALAPPDATA": self.REAL}
 
     def test_the_real_owner_profile_is_blocked_only_under_the_sandbox(self):
         self.assertTrue(ob.sandbox_blocks_owner("brave", self.env))
         self.assertTrue(ob.sandbox_blocks_owner("brave", {**self.env, "LOCALAPPDATA": self.REAL.replace("\\", "/") + "/"}))
         self.assertFalse(ob.sandbox_blocks_owner("brave", {**self.env, "LOCALAPPDATA": self.tmp.name}))
-        self.assertFalse(ob.sandbox_blocks_owner("brave", {**self.env, "PM_OS_TEST_SANDBOX": ""}))
+        self.assertFalse(ob.sandbox_blocks_owner("brave", {**self.env, "SWITCHBOARD_TEST_SANDBOX": ""}))
         with mock.patch.object(ob.Path, "home", return_value=Path(self.tmp.name)):  # a test with a temporary home
             self.assertTrue(ob.sandbox_blocks_owner("brave", self.env))
 
@@ -639,7 +639,7 @@ class SandboxCases(unittest.TestCase):
             ob.check_broker_profile({"profile": real_profile}, empty)
         with self.assertRaises(RuntimeError):
             ob.check_broker_profile({"port": 1}, empty)  # names no profile, and this is a test
-        ob.check_broker_profile({"port": 1}, {**empty, "PM_OS_TEST_SANDBOX": ""})
+        ob.check_broker_profile({"port": 1}, {**empty, "SWITCHBOARD_TEST_SANDBOX": ""})
         ob.check_broker_profile({"profile": str(ob.profile_dir("brave", empty))}, empty)
         with mock.patch.object(ob, "stop_broker") as stopped, mock.patch.object(ob, "_broker_hello") as hello:
             ob.broker_path(empty).write_text(json.dumps({"port": 1, "token": "t", "profile": real_profile,
@@ -656,7 +656,7 @@ class AgentBrowserCases(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.env = {"PM_OS_OWNER_BROWSER_STATE": self.tmp.name, "PM_OS_MACHINE": "INVENTED",
+        self.env = {"SWITCHBOARD_OWNER_BROWSER_STATE": self.tmp.name, "SWITCHBOARD_MACHINE": "INVENTED",
                     "LOCALAPPDATA": "C:/InventedAppData"}
 
     def browser(self, listener, uses_dir=lambda pid, folder: True, started=lambda pid: 1000) -> "ob.AgentBrowser":
@@ -664,7 +664,7 @@ class AgentBrowserCases(unittest.TestCase):
 
     def test_profile_lives_in_appdata_not_the_dropbox_synced_local_folder(self):
         path = str(ob.agent_dir(self.env)).replace("\\", "/")
-        self.assertEqual(path, "C:/InventedAppData/pm-os/agent-brave")
+        self.assertEqual(path, "C:/InventedAppData/switchboard/agent-brave")
         self.assertNotIn("Dropbox", path)
 
     def test_child_attaches_to_the_local_port_only(self):
@@ -721,7 +721,7 @@ class AgentBrowserCases(unittest.TestCase):
         started.assert_not_called()
 
     def test_command_line_must_name_the_exact_folder(self):
-        folder = Path("C:/InventedAppData/pm-os/agent-brave")
+        folder = Path("C:/InventedAppData/switchboard/agent-brave")
         self.assertTrue(ob.names_dir(f'brave.exe --user-data-dir={folder} --remote-debugging-port=9333', folder))
         self.assertTrue(ob.names_dir(f'brave.exe "--user-data-dir={folder}"', folder))
         self.assertFalse(ob.names_dir(f'brave.exe --user-data-dir={folder}-old --x', folder))
@@ -733,7 +733,7 @@ class AgentBrowserCases(unittest.TestCase):
         (folder / "Default" / "Sessions" / "Session_1").write_text("invented", encoding="utf-8")
         (folder / "Default" / "Preferences").write_text(json.dumps({"profile": {"exit_type": "Crashed"}}),
                                                         encoding="utf-8")
-        ob.AgentBrowser({**self.env, "PM_OS_AGENT_BROWSER_DIR": str(folder)})._prepare()
+        ob.AgentBrowser({**self.env, "SWITCHBOARD_AGENT_BROWSER_DIR": str(folder)})._prepare()
         prefs = json.loads((folder / "Default" / "Preferences").read_text(encoding="utf-8"))
         self.assertEqual(prefs["profile"]["exit_type"], "Normal")
         self.assertEqual(prefs["session"]["restore_on_startup"], 5)
@@ -744,7 +744,7 @@ class SettingCases(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.env = {"PM_OS_LOCAL_DIR": self.tmp.name, "PM_OS_MACHINE": "INVENTED.local", "LOCALAPPDATA": "C:/InventedAppData"}
+        self.env = {"SWITCHBOARD_LOCAL_DIR": self.tmp.name, "SWITCHBOARD_MACHINE": "INVENTED.local", "LOCALAPPDATA": "C:/InventedAppData"}
 
     def test_default_is_off(self):
         self.assertEqual(ob.mode(self.env), "off")
@@ -752,18 +752,18 @@ class SettingCases(unittest.TestCase):
     def test_set_keeps_other_keys_and_round_trips(self):
         path = Path(self.tmp.name) / "machines" / "INVENTED.env"
         path.parent.mkdir()
-        path.write_text("PM_OS_COMMS_TRIAGE=off\n", encoding="utf-8")
+        path.write_text("SWITCHBOARD_COMMS_TRIAGE=off\n", encoding="utf-8")
         ob.set_mode("brave", self.env)
         self.assertEqual(ob.mode(self.env), "brave")
-        self.assertIn("PM_OS_COMMS_TRIAGE=off", path.read_text())
+        self.assertIn("SWITCHBOARD_COMMS_TRIAGE=off", path.read_text())
         ob.set_mode("off", self.env)
         self.assertEqual(ob.mode(self.env), "off")
-        self.assertEqual(path.read_text(), "PM_OS_COMMS_TRIAGE=off\n")
+        self.assertEqual(path.read_text(), "SWITCHBOARD_COMMS_TRIAGE=off\n")
 
     def test_another_machines_file_does_not_count(self):
         other = Path(self.tmp.name) / "machines" / "OTHERBOX.env"
         other.parent.mkdir()
-        other.write_text("PM_OS_OWNER_BROWSER=brave\n", encoding="utf-8")
+        other.write_text("SWITCHBOARD_OWNER_BROWSER=brave\n", encoding="utf-8")
         self.assertEqual(ob.mode(self.env), "off")
 
     def test_unknown_browser_is_off(self):
@@ -784,7 +784,7 @@ class SettingCases(unittest.TestCase):
         self.assertFalse(ob.release("anything", self.env))
 
     def test_release_only_frees_the_named_session(self):
-        env = {**self.env, ob.KEY: "brave", "PM_OS_OWNER_BROWSER_STATE": self.tmp.name, "PM_OS_WORKER_SESSION_ID": "sess-a"}
+        env = {**self.env, ob.KEY: "brave", "SWITCHBOARD_OWNER_BROWSER_STATE": self.tmp.name, "SWITCHBOARD_WORKER_SESSION_ID": "sess-a"}
         lease = ob.make_lease(env, pid=os.getpid())
         lease.acquire()
         self.assertFalse(ob.release("sess-b", env))
@@ -800,7 +800,7 @@ class InstallPathCases(unittest.TestCase):
             stub = Path(tmp) / "bin"
             stub.mkdir()
             (stub / "claude").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
-            env = {**os.environ, "PATH": f"{stub}{os.pathsep}{os.environ['PATH']}", "PM_OS_OWNER_BROWSER": switch}
+            env = {**os.environ, "PATH": f"{stub}{os.pathsep}{os.environ['PATH']}", "SWITCHBOARD_OWNER_BROWSER": switch}
             env.pop("CLAUDECODE", None)
             done = subprocess.run(
                 ["bash", str(SCRIPTS / "install-claude-code.sh"), "--dry-run", "--allow-nested", "--skip-plugins",
@@ -890,9 +890,9 @@ class BrokerCases(unittest.TestCase):
         self.dir = Path(self.tmp.name)
         (self.dir / "fake.py").write_text(FAKE_SERVER, encoding="utf-8")
         self.calls = self.dir / "calls.jsonl"
-        self.env = {**os.environ, "PM_OS_OWNER_BROWSER_STATE": str(self.dir), "PM_OS_MACHINE": "INVENTED",
-                    "PM_OS_LOCAL_DIR": str(self.dir / "local"), "CLAUDE_CODE_SESSION_ATTENDED": "1"}
-        self.env.pop("PM_OS_WORKSTREAM_SLUG", None)
+        self.env = {**os.environ, "SWITCHBOARD_OWNER_BROWSER_STATE": str(self.dir), "SWITCHBOARD_MACHINE": "INVENTED",
+                    "SWITCHBOARD_LOCAL_DIR": str(self.dir / "local"), "CLAUDE_CODE_SESSION_ATTENDED": "1"}
+        self.env.pop("SWITCHBOARD_WORKSTREAM_SLUG", None)
         self.path = ob.broker_path(self.env)
         self.threading = threading
 

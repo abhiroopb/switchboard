@@ -16,7 +16,7 @@
 # thread. An edited installed copy is saved to local/skill-edits/ and replaced
 # by the source, so it never sticks and is never lost.
 #
-# Commands (run from the main pm-os checkout):
+# Commands (run from the main switchboard checkout):
 #   python3 system/scripts/sync-skills.py                      # the full sync, as the tick runs it
 #   python3 system/scripts/install-claude-skills.py --check    # list drift, exit 1 when any
 #   python3 system/scripts/install-claude-skills.py --prune    # remove managed copies not listed here (cap 5)
@@ -26,7 +26,7 @@
 #   name      directory name under the destination (and under the source root).
 #             It must equal the SKILL.md frontmatter `name`, because Claude reads
 #             the folder name and Amp the frontmatter; --check fails otherwise.
-#   source    pm-os   -> <repo>/.agents/skills/<name>
+#   source    switchboard   -> <repo>/.agents/skills/<name>
 #             agents  -> ~/.agents/skills/<name>   (external managed skill library)
 #             vendor  -> <repo>/system/vendor/skills/<name> (pinned third-party copy)
 #             local   -> <repo>/local/skills/<name> (private, gitignored, out of the kit)
@@ -65,7 +65,7 @@
 destination: ~/.claude/skills
 
 sources:
-  pm-os: .agents/skills
+  switchboard: .agents/skills
   agents: ~/.agents/skills
   vendor: system/vendor/skills
   local: local/skills
@@ -79,27 +79,27 @@ claude_settings:
 x-kwp-connectors: &kwp-connectors
   files: SKILL.md
   find: "> If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../../CONNECTORS.md)."
-  replace: "> Connected tools in PM OS: the `pmos` connectors (Slack, Gmail, Google Drive, Calendar). Read `~/Development/pm-os/knowledge/` before drafting."
+  replace: "> Connected tools in switchboard: the `switchboard` connectors (Slack, Gmail, Google Drive, Calendar). Read `~/Development/switchboard/knowledge/` before drafting."
 x-kwp-args: &kwp-args
   files: SKILL.md
   find: "$ARGUMENTS"
   replace: "<input>"
 
 skills:
-  # ── PM OS core set from the external skill library under ~/.agents/skills ──
+  # ── switchboard core set from the external skill library under ~/.agents/skills ──
   # todo carries the tracked override in system/skill-overrides/todo, which
   # sync-skills.py applies before every copy. Add a name here when it joins
-  # CORE_SKILLS in system/bin/install-amp-skills.sh and PM OS depends on it.
+  # CORE_SKILLS in system/bin/install-amp-skills.sh and switchboard depends on it.
   - {name: todo, source: agents}
 
-  # ── PM OS owned skills ──────────────────────────────────────────────
+  # ── switchboard owned skills ──────────────────────────────────────────────
   # Canonical copies live in this repo under .agents/skills. One pattern installs
   # every folder there that holds a SKILL.md, so a new skill needs no edit here.
   # Named entries below keep a per-machine rule: an entry's only_on also stops the
   # pattern from bringing that skill back elsewhere, and absent_ok_on lists the
   # skills a machine may lack. A named entry always wins over a pattern match
   # for the same name.
-  - {pattern: "*", source: pm-os}
+  - {pattern: "*", source: switchboard}
 
 
   # ── Large families: directory skill full, members name-only ─────────

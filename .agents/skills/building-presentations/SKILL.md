@@ -7,7 +7,7 @@ description: "Builds presentations. Default path is the Reveal.js editorial shel
 
 **Default:** every deck starts on the Reveal.js editorial shell in this skill (Path A). When you keep your own React deck kit and the deck needs it, use Path B. Google Slides is never the authoring surface. It is an export target only when {{OWNER_FIRST}} explicitly asks for a Slides artifact, and the Reveal or React source stays the source of truth.
 
-Canonical tracked source for this skill: `~/Development/pm-os/.agents/skills/building-presentations/` (copied to `~/.claude/skills/` by `sync-skills.py`, which Claude and Amp read).
+Canonical tracked source for this skill: `~/Development/switchboard/.agents/skills/building-presentations/` (copied to `~/.claude/skills/` by `sync-skills.py`, which Claude and Amp read).
 
 ## Pick the path
 
@@ -24,7 +24,7 @@ When unsure, use the Reveal.js shell. Say which path you chose in the first repl
 - One directory per deck: `index.html` (self-contained shell, pinned Reveal.js 6.0.1 via jsdelivr CDN, no npm or build step), `slides.md`, `theme.css`, `assets/`.
 - Two shells: **editorial** (default: Inter Variable, 1600×900, fixed footer chrome with brand, counter, dash indicator, Help links, count-up stats, linear navigation) and **basic** (`--basic`, plain built-in theme). Forward is always `→`; mouse clicks never advance the deck.
 - The editorial shell keeps the counted Help slide (`data-section="Help"`) and the three footer links; `validate-presentation.sh` fails a deck missing any link. When you personalize the links, update the URL list in that script to match.
-- Default location: `~/Development/pm-os/outputs/presentations/<yyyy-mm-dd>-<slug>/`.
+- Default location: `~/Development/switchboard/outputs/presentations/<yyyy-mm-dd>-<slug>/`.
 
 Workflow:
 
@@ -50,7 +50,7 @@ This skill ships no React kit. If you keep one (for example a Vite + React + Tai
 
 ## Brand and design source
 
-Your organization's brand guidelines are the brand source; keep a PM OS encoding of them under `references/brand/` and read its deck guidance during the design step on either path.
+Your organization's brand guidelines are the brand source; keep a switchboard encoding of them under `references/brand/` and read its deck guidance during the design step on either path.
 
 - The editorial shell uses Inter Variable on a deep blue-black canvas. Keep that. The brand guidelines fill gaps; they do not replace `references/design-system.md`.
 - The single accent is the brand color (the `--brand` token in `theme.css`, or your kit's brand token); charts and magnitude bars use the brand data tone ramp; small text never sits on the accent, and text on the accent uses the canvas color (`--bg`).

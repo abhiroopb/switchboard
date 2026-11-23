@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""task_leftovers.py: stop the processes a finished PM OS task left behind.
+"""task_leftovers.py: stop the processes a finished switchboard task left behind.
 
 Why: two kinds of orphans can outlive their tasks. A prototype's dev server
 (cmd.exe, node.exe and conhost.exe, its parent gone) can run in a shared folder
@@ -16,7 +16,7 @@ What counts as a task's leftover (each is a "root"; a root's descendants go with
     cheap open-file list, so the command line stands in for it);
   * a process whose command line names a path there (the tail monitor);
   * a dev server (vite, next dev, npm run dev, http.server, ...) whose environment
-    carries PM_OS_WORKER_TASK_ID=<task-id>: every worker exports it and every child
+    carries SWITCHBOARD_WORKER_TASK_ID=<task-id>: every worker exports it and every child
     inherits it, wherever the server runs.
 
 Never stopped, whatever matches:
@@ -24,7 +24,7 @@ Never stopped, whatever matches:
   * a program that is not a shell, interpreter, dev tool, or console helper
     (KILLABLE): the owner's Brave, wmux, cmux, Obsidian, editors, Dropbox, and every
     claude session (the worker's own claude is kill_task_processes()' business);
-  * PM OS helpers that are parentless by design (PROTECTED_MARKERS): the owner Brave
+  * switchboard helpers that are parentless by design (PROTECTED_MARKERS): the owner Brave
     connection broker (owner_browser.py), the Obsidian link server (note-links.py),
     keep-awake (keep_awake.py), the scheduled `dispatch.py release`, the board, the
     command-center loop, report waiters and report-to-cos replays;
@@ -43,7 +43,7 @@ is never walked. Each stop is logged to stderr and appended to a JSONL log, with
 token-looking values in the command line redacted. Before a kill the PID is checked
 again (creation time on Windows, command line elsewhere).
 
-Kill switch: PM_OS_LEFTOVER_SWEEP=off. The test sandbox (PM_OS_TEST_SANDBOX=1) reads
+Kill switch: SWITCHBOARD_LEFTOVER_SWEEP=off. The test sandbox (SWITCHBOARD_TEST_SANDBOX=1) reads
 an empty process list and refuses to kill, so only fake process lists reach the
 planner in tests.
 
@@ -67,7 +67,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 TASK_ID = r"rt-[0-9a-f]{8,}"
-TASK_ENV = "PM_OS_WORKER_TASK_ID"
+TASK_ENV = "SWITCHBOARD_WORKER_TASK_ID"
 TERMINAL_STATUSES = {"blocked", "deferred", "done", "failed", "cancelled"}   # running-task-state.py
 
 # Program names (lowercase, no .exe, python3.12 -> python3) that may be stopped.
@@ -82,7 +82,7 @@ KILLABLE = {
 # outlive their launcher on purpose.
 PROTECTED_MARKERS = (
     "dispatch.py", "router-dispatch.sh", "owner_browser.py", "note-links.py", "keep_awake.py",
-    "pm-os-board.py", "cmux-shim.py", "command-center-loop.sh", "report-waiter.sh",
+    "switchboard-board.py", "cmux-shim.py", "command-center-loop.sh", "report-waiter.sh",
     "report-to-cos.sh", "end-of-day-close.sh", "/programs/wmux/", "/wmux/resources/", "cmux.app/",
 )
 INIT_PIDS = {0, 1}   # launchd / init adopt orphans on macOS and Linux; never an attachment
@@ -104,7 +104,7 @@ class Proc:
     cmdline: str = ""
     cwd: str = ""
     created: float | None = None   # epoch seconds
-    env_task: str = ""             # PM_OS_WORKER_TASK_ID from the process environment
+    env_task: str = ""             # SWITCHBOARD_WORKER_TASK_ID from the process environment
     open_paths: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -342,11 +342,11 @@ def sweep_targets(procs: list[Proc], tasks: list[dict[str, Any]], *, worktrees_r
 # --- process snapshot ------------------------------------------------------------------
 
 def sandboxed() -> bool:
-    return os.environ.get("PM_OS_TEST_SANDBOX") == "1"
+    return os.environ.get("SWITCHBOARD_TEST_SANDBOX") == "1"
 
 
 def disabled() -> bool:
-    return os.environ.get("PM_OS_LEFTOVER_SWEEP", "").strip().lower() in {"off", "0", "false", "no"}
+    return os.environ.get("SWITCHBOARD_LEFTOVER_SWEEP", "").strip().lower() in {"off", "0", "false", "no"}
 
 
 def snapshot() -> list[Proc]:
@@ -500,7 +500,7 @@ def parse_comm(out: str) -> dict[int, str]:
 
 
 def parse_env_tasks(out: str) -> dict[int, str]:
-    """`ps -axwwe -o pid=,command=` rows: the PM_OS_WORKER_TASK_ID each process carries."""
+    """`ps -axwwe -o pid=,command=` rows: the SWITCHBOARD_WORKER_TASK_ID each process carries."""
     found = {}
     for line in out.splitlines():
         parts = line.strip().split(None, 1)
@@ -656,7 +656,7 @@ def stop_in_worktree(task_id: str, worktree: str | os.PathLike[str], tasks: list
     """Before a worktree is removed or parked: stop what runs inside it or its scratch
     (path rule only). The caller has already settled that no worker runs there."""
     if disabled():
-        return {"stopped": 0, "skipped": "PM_OS_LEFTOVER_SWEEP=off"}
+        return {"stopped": 0, "skipped": "SWITCHBOARD_LEFTOVER_SWEEP=off"}
     procs = snapshot() if procs is None else procs
     if not procs:
         return {"stopped": 0}
@@ -674,7 +674,7 @@ def sweep(tasks: list[dict[str, Any]], *, repo_root: str | os.PathLike[str], wor
     """After reap: stop what every finished, reaped task left behind (path rule and
     env-tagged dev servers), including tasks whose worktree is already gone."""
     if disabled():
-        return {"stopped": 0, "skipped": "PM_OS_LEFTOVER_SWEEP=off"}
+        return {"stopped": 0, "skipped": "SWITCHBOARD_LEFTOVER_SWEEP=off"}
     procs = snapshot() if procs is None else procs
     if not procs:
         return {"stopped": 0}
@@ -699,8 +699,8 @@ def main(argv: list[str] | None = None) -> int:
     sys.path.insert(0, str(repo / "system" / "scripts"))
     from repo_paths import main_checkout  # noqa: E402
     main_root = main_checkout(repo)
-    worktrees = Path(os.environ.get("PM_OS_WORKTREES_DIR") or main_root / ".amp" / "worktrees")
-    state = Path(os.environ.get("PM_OS_STATE_DIR") or main_root / "system" / "state")
+    worktrees = Path(os.environ.get("SWITCHBOARD_WORKTREES_DIR") or main_root / ".amp" / "worktrees")
+    state = Path(os.environ.get("SWITCHBOARD_STATE_DIR") or main_root / "system" / "state")
     try:
         tasks = json.loads((state / "running-tasks.json").read_text(encoding="utf-8")).get("tasks") or []
     except (OSError, ValueError) as error:

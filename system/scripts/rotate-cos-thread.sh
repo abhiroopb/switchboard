@@ -6,7 +6,7 @@
 # (docs/runbooks/cos-latency-trial.md).
 #
 # What it does (guarded, non-fatal, once per PT date):
-#   1. Finds the live CoS workspace (source key `megadesk`) and its thread id.
+#   1. Finds the live CoS workspace (source key `switchboard`) and its thread id.
 #   2. Calls split-thread.sh: `amp threads handoff <old>` seeds a NEW thread with
 #      a bounded recall pack + the CoS continuation prompt, and opens a new
 #      cmux workspace running `amp threads continue -m <mode> <new>`.
@@ -14,7 +14,7 @@
 #      rotation always uses a fresh workspace, not an in-place relaunch.
 #   3. Makes the new workspace the CoS surface: title "🧭 CoS", pinned, top.
 #      The old workspace is renamed "📜 CoS (rotated <date>)" and unpinned so
-#      no resolver (find_workspace_ref_for_key megadesk) matches it again.
+#      no resolver (find_workspace_ref_for_key switchboard) matches it again.
 #   4. Announces the rotation in both places the owner looks: a guarded
 #      [COS ROTATION] line into the old thread (cig_safe_send; deferred sends
 #      fall back to a sidebar status badge) and a status badge on the new tab.
@@ -25,7 +25,7 @@
 #     --dry-run  print what would happen, change nothing
 #     --force    rotate even if the stamp says today already rotated
 # Output: one JSON line {status: rotated|skipped|failed, reason?, ...}.
-# Kill switch: PM_OS_COS_ROTATION_DISABLED=1.
+# Kill switch: SWITCHBOARD_COS_ROTATION_DISABLED=1.
 
 set -uo pipefail
 
@@ -78,14 +78,14 @@ PY
 
 skip() { logline "skipped: $1"; emit skipped "$1" "${@:2}"; exit 0; }
 
-if [[ "${PM_OS_COS_ROTATION_DISABLED:-0}" == "1" ]]; then
-    skip "disabled (PM_OS_COS_ROTATION_DISABLED=1)"
+if [[ "${SWITCHBOARD_COS_ROTATION_DISABLED:-0}" == "1" ]]; then
+    skip "disabled (SWITCHBOARD_COS_ROTATION_DISABLED=1)"
 fi
 # Rotation rides `amp threads handoff`, which has no Claude Code equivalent:
 # with the knob on claude (router.yaml `agent:`) CoS keeps its
 # session and Claude's own auto-compaction handles length.
-if [[ "$(pm_os_agent)" != "amp" ]]; then
-    skip "agent is $(pm_os_agent): rotation needs amp threads handoff"
+if [[ "$(switchboard_agent)" != "amp" ]]; then
+    skip "agent is $(switchboard_agent): rotation needs amp threads handoff"
 fi
 
 if [[ "$FORCE" -ne 1 && -f "$STAMP_FILE" ]]; then
@@ -95,21 +95,21 @@ if [[ "$FORCE" -ne 1 && -f "$STAMP_FILE" ]]; then
     fi
 fi
 
-OLD_REF="$(find_workspace_ref_for_key megadesk 2>/dev/null || true)"
+OLD_REF="$(find_workspace_ref_for_key switchboard 2>/dev/null || true)"
 [[ -n "$OLD_REF" ]] || skip "no live CoS workspace"
 
 OLD_THREAD="$(amp_thread_for_workspace "$OLD_REF" 2>/dev/null | tr -d '[:space:]' || true)"
 [[ "$OLD_THREAD" =~ ^T- ]] || skip "CoS workspace $OLD_REF has no bound Amp thread" "old_ref=$OLD_REF"
 
-MODE="$(resolve_agent_mode megadesk 2>/dev/null || echo ultra)"
+MODE="$(resolve_agent_mode switchboard 2>/dev/null || echo ultra)"
 
-PROMPT="You are the Chief of Staff (CoS) surface for PM OS, rotated at start of day ${TODAY_PT} from thread ${OLD_THREAD}. Read routines/megadesk/CONTEXT.md and system/prompts/dispatch-core.md, apply the recall pack above as bounded context (the full previous thread is searchable via @@), and then wait for the [START-DAY REVIEW] digest. Do not re-run start of day, do not redo work the previous thread finished, and do not reply to this seed with a summary."
+PROMPT="You are the Chief of Staff (CoS) surface for switchboard, rotated at start of day ${TODAY_PT} from thread ${OLD_THREAD}. Read routines/switchboard/CONTEXT.md and system/prompts/dispatch-core.md, apply the recall pack above as bounded context (the full previous thread is searchable via @@), and then wait for the [START-DAY REVIEW] digest. Do not re-run start of day, do not redo work the previous thread finished, and do not reply to this seed with a summary."
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
     logline "[DRY RUN] would rotate CoS $OLD_REF thread $OLD_THREAD (mode $MODE)"
     bash "$SYSTEM_DIR/scripts/split-thread.sh" "chief of staff start of day" "$PROMPT" \
         --dry-run --parent "$OLD_THREAD" --name "$COS_TITLE" --cwd "$REPO_ROOT" --mode "$MODE" \
-        --workstream megadesk >&2 || true
+        --workstream switchboard >&2 || true
     emit dry-run "" "old_thread=$OLD_THREAD" "old_ref=$OLD_REF" "mode=$MODE"
     exit 0
 fi
@@ -119,7 +119,7 @@ before_listing="$(cmux_cmd list-workspaces 2>/dev/null || true)"
 logline "rotating CoS $OLD_REF thread $OLD_THREAD (mode $MODE)"
 NEW_THREAD="$(bash "$SYSTEM_DIR/scripts/split-thread.sh" "chief of staff start of day" "$PROMPT" \
     --parent "$OLD_THREAD" --name "$COS_TITLE" --cwd "$REPO_ROOT" --mode "$MODE" \
-    --workstream megadesk 2>>"$LOG_FILE" | tail -1 | tr -d '[:space:]')"
+    --workstream switchboard 2>>"$LOG_FILE" | tail -1 | tr -d '[:space:]')"
 if [[ ! "$NEW_THREAD" =~ ^T- ]]; then
     logline "failed: split-thread.sh returned no thread id"
     emit failed "split-thread.sh returned no thread id" "old_thread=$OLD_THREAD" "old_ref=$OLD_REF"
@@ -154,7 +154,7 @@ fi
 cmux_cmd rename-workspace --workspace "$OLD_REF" "📜 CoS (rotated $TODAY_PT)" &>/dev/null || \
     logline "warn: could not rename old CoS workspace $OLD_REF"
 cmux_cmd workspace-action --workspace "$OLD_REF" --action unpin &>/dev/null || true
-style_megadesk_workspace "$NEW_REF"
+style_switchboard_workspace "$NEW_REF"
 set_workspace_status "$NEW_REF" "role" "Chief of Staff" "" "#4A90D9"
 set_workspace_status "$NEW_REF" "rotation" "new ${TODAY_PT} ← ${OLD_THREAD}" "" "#8E44AD"
 

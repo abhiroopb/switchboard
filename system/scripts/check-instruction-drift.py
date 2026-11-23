@@ -86,8 +86,8 @@ OWNER_BROWSER_RULE_TOKENS = [
     "signedInNeed",
 ]
 REVIEW_CONTRACT_TOKENS = [
-    "Markdown note inside the pm-os Obsidian vault",
-    "obsidian://open?vault=pm-os&file=",
+    "Markdown note inside the switchboard Obsidian vault",
+    "obsidian://open?vault=switchboard&file=",
     "Google Doc",
     "explicitly asks",
 ]
@@ -105,8 +105,8 @@ HOME_POINTER_SECTIONS = [
 # over about 40k characters, so the repo file, alone and with each profile's
 # section filled in by apply-profile.py, stays under this limit. Move detail to docs/runbooks/agents-md-detail.md instead.
 AGENTS_MD_CHAR_LIMIT = 40_000
-PROFILE_SECTION_START = "<!-- pm-os:profile-section:start (filled by system/scripts/apply-profile.py; edit profiles/<name>/ instead) -->"
-PROFILE_SECTION_END = "<!-- pm-os:profile-section:end -->"
+PROFILE_SECTION_START = "<!-- switchboard:profile-section:start (filled by system/scripts/apply-profile.py; edit profiles/<name>/ instead) -->"
+PROFILE_SECTION_END = "<!-- switchboard:profile-section:end -->"
 
 
 @dataclass
@@ -150,10 +150,10 @@ def agents_md_size_findings(repo_root: Path, limit: int = AGENTS_MD_CHAR_LIMIT) 
 def owner_browser_rule_findings(repo_root: Path) -> list[Finding]:
     """This machine's owner-browser switch and its written rule must agree."""
     local = repo_root / "local"
-    machine = (os.environ.get("PM_OS_MACHINE") or socket.gethostname()).split(".")[0].upper()
+    machine = (os.environ.get("SWITCHBOARD_MACHINE") or socket.gethostname()).split(".")[0].upper()
     env_text = read_text(local / "machines" / f"{machine}.env")
     switched_on = any(
-        line.partition("=")[0].strip() == "PM_OS_OWNER_BROWSER"
+        line.partition("=")[0].strip() == "SWITCHBOARD_OWNER_BROWSER"
         and line.partition("=")[2].strip().lower() not in ("", "off")
         for line in env_text.splitlines()
     )
@@ -165,7 +165,7 @@ def owner_browser_rule_findings(repo_root: Path) -> list[Finding]:
         missing.append(f"the machine name {machine}")
     if missing:
         return [Finding("error", "local/agents-local.md",
-                        "PM_OS_OWNER_BROWSER is on for this machine, but the rule lacks: " + ", ".join(missing))]
+                        "SWITCHBOARD_OWNER_BROWSER is on for this machine, but the rule lacks: " + ", ".join(missing))]
     return []
 
 
@@ -184,7 +184,7 @@ def has_heading(text: str, heading: str) -> bool:
 def pointer_lines(text: str, section: str) -> list[str]:
     """Non-heading lines that name `section` and point at the repo AGENTS.md."""
     pattern = re.compile(
-        rf"^(?!#)(?=.*\b{re.escape(section)}\b)(?=.*(?:pm-os/AGENTS\.md|repo AGENTS\.md)).+$",
+        rf"^(?!#)(?=.*\b{re.escape(section)}\b)(?=.*(?:switchboard/AGENTS\.md|repo AGENTS\.md)).+$",
         re.MULTILINE,
     )
     return pattern.findall(text)
@@ -344,7 +344,7 @@ def _base_checks(
     if home_agents and not has_heading(home_agents, "Canonical Calendar Rule") and matches_token_groups(home_agents, CANONICAL_CALENDAR_TOKEN_GROUPS):
         findings.append(Finding("warn", home_surface, "Home AGENTS restates the canonical calendar-sync rule body outside its section; the repo AGENTS.md owns it, keep only the pointer line."))
 
-    if "Canonical control-plane map for PM OS" not in behavior_map:
+    if "Canonical control-plane map for switchboard" not in behavior_map:
         findings.append(Finding("error", "system/behavior-map.md", "Behavior map file is missing or incomplete."))
 
     if not matches_token_groups(todo_prefs, CANONICAL_CALENDAR_TOKEN_GROUPS):
@@ -407,9 +407,9 @@ def _expanded_contract_checks(findings: list[Finding], repo_root: Path, home: Pa
         if "prefixing with a 🤖" in text and not has_marker:
             findings.append(Finding("warn", str(adapter), "Managed adapter specifies generic robot attribution instead of the canonical `:robot_face:` prefix; fix through its external owner."))
         if legacy_attribution in text:
-            findings.append(Finding("warn", str(adapter), "Adapter still restates the retired bot wording; the prefix is `:robot_face:` at the start of the first sentence (pm-os AGENTS.md Bot Attribution Prefix)."))
+            findings.append(Finding("warn", str(adapter), "Adapter still restates the retired bot wording; the prefix is `:robot_face:` at the start of the first sentence (switchboard AGENTS.md Bot Attribution Prefix)."))
         if has_marker and standalone_placement.search(text):
-            findings.append(Finding("warn", str(adapter), "Adapter still places the bot prefix alone on its own line; it opens the first sentence on the same line (pm-os AGENTS.md Bot Attribution Prefix)."))
+            findings.append(Finding("warn", str(adapter), "Adapter still places the bot prefix alone on its own line; it opens the first sentence on the same line (switchboard AGENTS.md Bot Attribution Prefix)."))
 
 
 
@@ -429,7 +429,7 @@ def run_checks(repo_root: Path, home: Path, runtime_skill_names: set[str] | None
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Check for instruction drift across PM OS control-plane surfaces.")
+    parser = argparse.ArgumentParser(description="Check for instruction drift across switchboard control-plane surfaces.")
     parser.add_argument("--strict", action="store_true", help="Exit non-zero when findings are present.")
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT, help=argparse.SUPPRESS)
     parser.add_argument("--home", type=Path, default=HOME, help=argparse.SUPPRESS)
@@ -443,7 +443,7 @@ def main() -> int:
     findings = run_checks(args.repo_root.resolve(), args.home.resolve(), runtime_names)
 
     if not findings:
-        print("No instruction drift detected across checked PM OS surfaces.")
+        print("No instruction drift detected across checked switchboard surfaces.")
         return 0
 
     print("Instruction drift report")

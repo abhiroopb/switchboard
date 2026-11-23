@@ -3,7 +3,7 @@
 
 "send draft r-…" in a Windows CoS hit `triage_ledger.py: can't open file`, because the
 kit install ships no Comms Triage ledger. A Gmail draft id now goes straight to
-`pmos mail show`. A stub pmos records the call; nothing reaches Google.
+`switchboard mail show`. A stub switchboard records the call; nothing reaches Google.
 """
 from __future__ import annotations
 
@@ -24,22 +24,22 @@ class CosShowDraftTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp(prefix="cos-show-draft-"))
         self.addCleanup(shutil.rmtree, self.tmp, True)
-        self.pmos = self.tmp / "pmos"
-        self.pmos.write_text('#!/usr/bin/env bash\necho "pmos $*"\n', encoding="utf-8", newline="\n")
-        self.pmos.chmod(0o755)
+        self.switchboard = self.tmp / "switchboard"
+        self.switchboard.write_text('#!/usr/bin/env bash\necho "switchboard $*"\n', encoding="utf-8", newline="\n")
+        self.switchboard.chmod(0o755)
         # A bare repo with no triage_ledger.py, like the Windows kit install.
         subprocess.run(["git", "init", "-q", str(self.tmp / "repo")], check=True)
 
     def run_it(self, handle: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
-        env = {**os.environ, "PM_OS_PMOS": str(self.pmos).replace("\\", "/")}
+        env = {**os.environ, "SWITCHBOARD_CLI": str(self.switchboard).replace("\\", "/")}
         return subprocess.run([BASH, str(SCRIPT).replace("\\", "/"), handle], cwd=cwd or self.tmp / "repo", env=env,
                               capture_output=True, text=True, encoding="utf-8", timeout=30)
 
-    def test_gmail_draft_id_goes_to_pmos_show_draft(self) -> None:
+    def test_gmail_draft_id_goes_to_switchboard_show_draft(self) -> None:
         for handle in ("r-1234567890123456789", "r1234567890123456789"):
             result = self.run_it(handle)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(result.stdout.strip(), f"pmos mail show --draft-id {handle}")
+            self.assertEqual(result.stdout.strip(), f"switchboard mail show --draft-id {handle}")
 
     def test_ledger_handle_without_a_ledger_says_so(self) -> None:
         for handle in ("2", "draft-2"):

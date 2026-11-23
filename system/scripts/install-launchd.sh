@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Install (or remove) the PM OS launchd agents shipped in system/launchd/.
+# Install (or remove) the switchboard launchd agents shipped in system/launchd/.
 #
 # Usage: bash system/scripts/install-launchd.sh [--dry-run] [--uninstall] [label ...]
-#   With no labels, every com.pm-os.*.plist in system/launchd/ is installed.
+#   With no labels, every com.switchboard.*.plist in system/launchd/ is installed.
 #   Idempotent: an already-loaded agent is bootout'ed and bootstrapped again
 #   so edits to the plist take effect.
 #
-# The plists are rendered at install time (install.py) with your PM_OS_ROOT and
+# The plists are rendered at install time (install.py) with your SWITCHBOARD_ROOT and
 # HOME, so run this from the installed checkout, not from the kit clone.
 
 set -euo pipefail
@@ -49,12 +49,12 @@ for arg in "$@"; do
 done
 
 if (( ${#labels[@]} == 0 )); then
-  for p in "$SRC"/com.pm-os.*.plist; do
+  for p in "$SRC"/com.switchboard.*.plist; do
     labels+=("$(basename "$p" .plist)")
   done
 fi
 
-if grep -rl '{{PM_OS_ROOT}}\|{{HOME}}' "$SRC" >/dev/null 2>&1; then
+if grep -rl '{{SWITCHBOARD_ROOT}}\|{{HOME}}' "$SRC" >/dev/null 2>&1; then
   echo "plists still contain install placeholders; run install.py first" >&2
   exit 1
 fi
@@ -77,4 +77,4 @@ for label in "${labels[@]}"; do
   launchctl bootstrap "gui/$uid" "$dest"
 done
 
-$dry_run || launchctl list | grep -E 'com\.pm-os\.' || true
+$dry_run || launchctl list | grep -E 'com\.switchboard\.' || true

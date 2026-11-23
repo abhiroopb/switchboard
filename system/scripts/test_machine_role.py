@@ -26,7 +26,7 @@ import machine_role as role  # noqa: E402
 
 MACHINE = "TESTBOX"
 TODAY = "2026-11-12"
-KEYS = (role.ROLE_KEY, role.KEEP_KEY, role.LOADED_KEY, "PM_OS_COMMS_TRIAGE")
+KEYS = (role.ROLE_KEY, role.KEEP_KEY, role.LOADED_KEY, "SWITCHBOARD_COMMS_TRIAGE")
 
 
 def find_bash() -> str | None:
@@ -50,22 +50,22 @@ class Base(unittest.TestCase):
         self.env_file = self.home / "machines" / f"{MACHINE}.env"
 
     def env(self, **extra: str) -> dict[str, str]:
-        return {"PM_OS_LOCAL_DIR": str(self.home), "PM_OS_MACHINE": MACHINE, **extra}
+        return {"SWITCHBOARD_LOCAL_DIR": str(self.home), "SWITCHBOARD_MACHINE": MACHINE, **extra}
 
     def write_env(self, text: str) -> None:
         self.env_file.parent.mkdir(exist_ok=True)
         self.env_file.write_text(text, encoding="utf-8")
 
     def proc_env(self, **extra: str) -> dict[str, str]:
-        base = {k: v for k, v in os.environ.items() if k not in KEYS and k != "PM_OS_MUX"}
-        return {**base, "PM_OS_LOCAL_DIR": self.home.as_posix(), "PM_OS_MACHINE": MACHINE,
-                "PM_OS_TEST_SANDBOX": "1", "PYTHONIOENCODING": "utf-8", **extra}
+        base = {k: v for k, v in os.environ.items() if k not in KEYS and k != "SWITCHBOARD_MUX"}
+        return {**base, "SWITCHBOARD_LOCAL_DIR": self.home.as_posix(), "SWITCHBOARD_MACHINE": MACHINE,
+                "SWITCHBOARD_TEST_SANDBOX": "1", "PYTHONIOENCODING": "utf-8", **extra}
 
 
 class RoleTests(Base):
     def test_no_file_or_unknown_value_is_work(self) -> None:
         self.assertEqual(role.role(self.env()), "work")
-        self.write_env("PM_OS_COMMS_TRIAGE=off\n")
+        self.write_env("SWITCHBOARD_COMMS_TRIAGE=off\n")
         self.assertEqual(role.role(self.env()), "work")
         self.write_env(f"{role.ROLE_KEY}=laptop\n")
         self.assertEqual(role.role(self.env()), "work", "an unknown role never hides a surface")
@@ -75,16 +75,16 @@ class RoleTests(Base):
         self.write_env(f'{role.ROLE_KEY}="Personal"\r\n')
         self.assertEqual(role.role(self.env()), "personal")
         self.assertEqual(role.on_demand(self.env(), TODAY), ["launchpad", "scheduled-jobs", "meetings"])
-        self.assertEqual(role.default_surfaces(self.env(), TODAY), ["megadesk", "todo", "comms-triage"])
-        self.write_env(f"{role.ROLE_KEY}=personal\nPM_OS_COMMS_TRIAGE=off\n")
-        self.assertEqual(role.default_surfaces(self.env(), TODAY), ["megadesk", "todo"],
+        self.assertEqual(role.default_surfaces(self.env(), TODAY), ["switchboard", "todo", "comms-triage"])
+        self.write_env(f"{role.ROLE_KEY}=personal\nSWITCHBOARD_COMMS_TRIAGE=off\n")
+        self.assertEqual(role.default_surfaces(self.env(), TODAY), ["switchboard", "todo"],
                          "Comms Triage keeps its own switch")
-        for key in ("megadesk", "todo"):
+        for key in ("switchboard", "todo"):
             self.assertTrue(role.opens_by_default(key, self.env(), TODAY))
 
     def test_role_follows_the_machine_and_the_environment(self) -> None:
         self.write_env(f"{role.ROLE_KEY}=personal\n")
-        self.assertEqual(role.role(self.env(PM_OS_MACHINE="example-MacBook.local")), "work", "another machine's file")
+        self.assertEqual(role.role(self.env(SWITCHBOARD_MACHINE="example-MacBook.local")), "work", "another machine's file")
         self.assertEqual(role.role(self.env(**{role.ROLE_KEY: "work"})), "work", "the environment wins")
 
     def test_loaded_today_counts_until_midnight_pacific(self) -> None:
@@ -126,7 +126,7 @@ class RoleTests(Base):
             "Load Launchpad": "launchpad",
             "load launch pad and keep it": "launchpad",
             "open the To Do tab": "todo",
-            "load CoS": "megadesk",
+            "load CoS": "switchboard",
             "load widgets": None,
         }
         for words, want in cases.items():
@@ -141,16 +141,16 @@ class BashTests(Base):
                               encoding="utf-8", errors="replace", env=self.proc_env(**extra), timeout=120)
 
     def test_bash_twin_agrees(self) -> None:
-        probe = ('source system/scripts/lib/machine-role.sh; pm_os_machine_role; '
-                 'for s in megadesk todo launchpad meetings scheduled-jobs; do '
-                 'pm_os_surface_opens_by_default $s && echo "$s=open" || echo "$s=wait"; done')
+        probe = ('source system/scripts/lib/machine-role.sh; switchboard_machine_role; '
+                 'for s in switchboard todo launchpad meetings scheduled-jobs; do '
+                 'switchboard_surface_opens_by_default $s && echo "$s=open" || echo "$s=wait"; done')
         done = self.run_bash(probe)
         self.assertIn("work", done.stdout)
         self.assertNotIn("=wait", done.stdout, "no file: the work path is unchanged")
         self.write_env(f"{role.ROLE_KEY}=personal\n{role.KEEP_KEY}=meetings\n")
         done = self.run_bash(probe)
         self.assertIn("personal", done.stdout)
-        for want in ("megadesk=open", "todo=open", "launchpad=wait", "meetings=open", "scheduled-jobs=wait"):
+        for want in ("switchboard=open", "todo=open", "launchpad=wait", "meetings=open", "scheduled-jobs=wait"):
             self.assertIn(want, done.stdout)
 
     def fixture(self) -> Path:
@@ -163,7 +163,7 @@ class BashTests(Base):
             shutil.copy(SCRIPTS / name, root / "system" / "scripts")
         for name in ("comms-triage.sh", "machine-role.sh"):
             shutil.copy(SCRIPTS / "lib" / name, lib)
-        for name in ("megadesk", "launchpad", "todo", "comms-triage", "meetings", "scheduled-jobs"):
+        for name in ("switchboard", "launchpad", "todo", "comms-triage", "meetings", "scheduled-jobs"):
             (root / "routines" / name).mkdir(parents=True)
             (root / "routines" / name / "CONTEXT.md").write_text("x\n", encoding="utf-8")
         (root / "system" / "cmux-helpers.sh").write_text(
@@ -191,9 +191,9 @@ class BashTests(Base):
         everything = ["routine:todo", "routine:launchpad", "routine:comms-triage", "routine:scheduled-jobs",
                       "routine:meetings"]
         self.assertEqual(self.ensure(root), everything, "no role: work, unchanged")
-        self.write_env(f"{role.ROLE_KEY}=personal\nPM_OS_COMMS_TRIAGE=off\n")
+        self.write_env(f"{role.ROLE_KEY}=personal\nSWITCHBOARD_COMMS_TRIAGE=off\n")
         self.assertEqual(self.ensure(root), ["routine:todo"])
-        self.assertEqual(self.ensure(root, "megadesk", "todo", "launchpad"), ["routine:megadesk", "routine:todo"],
+        self.assertEqual(self.ensure(root, "switchboard", "todo", "launchpad"), ["routine:switchboard", "routine:todo"],
                          "named by start of day or open-routines.ps1, still on demand")
         self.assertEqual(self.ensure(root, "scheduled-jobs", "meetings"), [], "named bottom routines still wait for load")
         self.write_env(f"{role.ROLE_KEY}=work\n")
@@ -246,7 +246,7 @@ class BashTests(Base):
 
     def test_refusals(self) -> None:
         root = self.fixture()
-        self.write_env("PM_OS_COMMS_TRIAGE=off\n")
+        self.write_env("SWITCHBOARD_COMMS_TRIAGE=off\n")
         done = self.run_bash("bash system/scripts/load-surface.sh Comms Triage", cwd=root, REPO_ROOT=root.as_posix())
         self.assertEqual(done.returncode, 3)
         done = self.run_bash("bash system/scripts/load-surface.sh widgets", cwd=root, REPO_ROOT=root.as_posix())
@@ -255,10 +255,10 @@ class BashTests(Base):
 
     def test_env_file_never_exports_the_role(self) -> None:
         old = self.home / "env"
-        old.write_text(f"{role.ROLE_KEY}=personal\n{role.LOADED_KEY}=x\nPM_OS_TEST_OTHER=kept\n", encoding="utf-8")
-        done = self.run_bash('source system/windows/pm-os-env.sh 2>/dev/null; '
-                             'echo "[${PM_OS_MACHINE_ROLE:-unset}] [${PM_OS_LOADED_SURFACES:-unset}] [${PM_OS_TEST_OTHER:-unset}]"',
-                             PM_OS_ENV_FILE=old.as_posix(), PM_OS_ROOT=REPO.as_posix())
+        old.write_text(f"{role.ROLE_KEY}=personal\n{role.LOADED_KEY}=x\nSWITCHBOARD_TEST_OTHER=kept\n", encoding="utf-8")
+        done = self.run_bash('source system/windows/switchboard-env.sh 2>/dev/null; '
+                             'echo "[${SWITCHBOARD_MACHINE_ROLE:-unset}] [${SWITCHBOARD_LOADED_SURFACES:-unset}] [${SWITCHBOARD_TEST_OTHER:-unset}]"',
+                             SWITCHBOARD_ENV_FILE=old.as_posix(), SWITCHBOARD_ROOT=REPO.as_posix())
         self.assertIn("[unset] [unset] [kept]", done.stdout)
 
 
@@ -272,16 +272,16 @@ class SeedSessionTests(Base):
                                f"& '{REPO / 'system' / 'windows' / 'seed-session.ps1'}' -DryRun -NoPrefs "
                                f"-SessionPath '{session}' -SettingsPath '{self.home / 'settings.json'}' -Sidecar ''"],
                               capture_output=True, text=True, encoding="utf-8", errors="replace",
-                              env=self.proc_env(USERPROFILE=str(self.home), PM_OS_LOCAL_DIR=str(self.home)), timeout=120)
+                              env=self.proc_env(USERPROFILE=str(self.home), SWITCHBOARD_LOCAL_DIR=str(self.home)), timeout=120)
         self.assertEqual(done.returncode, 0, done.stderr)
         return done.stdout
 
     def test_closed_launchpad_is_expected_on_a_personal_machine(self) -> None:
-        self.write_env("PM_OS_COMMS_TRIAGE=off\n")
+        self.write_env("SWITCHBOARD_COMMS_TRIAGE=off\n")
         self.assertIn("missing surfaces: Launchpad", self.seed(), "work: a closed Launchpad is reported")
-        self.write_env(f"PM_OS_COMMS_TRIAGE=off\n{role.ROLE_KEY}=personal\n")
+        self.write_env(f"SWITCHBOARD_COMMS_TRIAGE=off\n{role.ROLE_KEY}=personal\n")
         self.assertNotIn("missing surfaces", self.seed())
-        self.write_env(f"PM_OS_COMMS_TRIAGE=off\n{role.ROLE_KEY}=personal\n{role.KEEP_KEY}=launchpad\n")
+        self.write_env(f"SWITCHBOARD_COMMS_TRIAGE=off\n{role.ROLE_KEY}=personal\n{role.KEEP_KEY}=launchpad\n")
         self.assertIn("missing surfaces: Launchpad", self.seed(), "kept: reported again")
 
 
@@ -290,11 +290,11 @@ class WiringTests(unittest.TestCase):
         agents = (REPO / "AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("load <surface>", agents)
         self.assertIn("load-surface.sh", agents)
-        self.assertIn("PM_OS_MACHINE_ROLE", agents)
+        self.assertIn("SWITCHBOARD_MACHINE_ROLE", agents)
         skill = (REPO / ".agents" / "skills" / "chief-of-staff" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("load-surface.sh", skill)
         install = (REPO / "docs" / "install-windows.md").read_text(encoding="utf-8")
-        self.assertIn("PM_OS_MACHINE_ROLE", install)
+        self.assertIn("SWITCHBOARD_MACHINE_ROLE", install)
 
 
 if __name__ == "__main__":

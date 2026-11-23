@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Per-machine role: which fixed PM OS surfaces open by default.
+"""Per-machine role: which fixed switchboard surfaces open by default.
 
 A personal machine skips the work extras (Meetings, Launchpad, and Scheduled Jobs) that a
 work machine opens. The rule follows the machine's role, never its OS or host name.
 
-  PM_OS_MACHINE_ROLE=personal   CoS and To Do open by default. Launchpad, Meetings
+  SWITCHBOARD_MACHINE_ROLE=personal   CoS and To Do open by default. Launchpad, Meetings
                                 (the Meetings Registry), and Scheduled Jobs open only
                                 when the owner says "load <surface>" in CoS
                                 (system/scripts/load-surface.sh).
-  PM_OS_MACHINE_ROLE=work       every surface opens, as before.
+  SWITCHBOARD_MACHINE_ROLE=work       every surface opens, as before.
   (no key)                      work, so a machine with no file does not change.
 
 "Not opened" is not "off": the background work behind those tabs keeps running (the
@@ -18,9 +18,9 @@ automation-dispatch.sh leaves an envelope queued while Scheduled Jobs is closed,
 tab runs it on load. Comms Triage keeps its own switch (comms_triage_setting.py).
 
 Two more keys in the same file, both written by this script:
-  PM_OS_KEEP_SURFACES=launchpad,meetings   on-demand surfaces the owner chose to keep in
+  SWITCHBOARD_KEEP_SURFACES=launchpad,meetings   on-demand surfaces the owner chose to keep in
                                            the default set on a personal machine
-  PM_OS_LOADED_SURFACES=2026-01-15:launchpad   surfaces loaded today (Pacific date); they
+  SWITCHBOARD_LOADED_SURFACES=2026-01-15:launchpad   surfaces loaded today (Pacific date); they
                                            count as default for the rest of that day
 
 The file is local/machines/<MACHINE>.env on main's checkout (comms_triage_setting.py owns
@@ -51,19 +51,19 @@ from typing import Iterable, Mapping
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import comms_triage_setting as _comms  # noqa: E402  (path rule and machine name)
 
-ROLE_KEY = "PM_OS_MACHINE_ROLE"
-KEEP_KEY = "PM_OS_KEEP_SURFACES"
-LOADED_KEY = "PM_OS_LOADED_SURFACES"
+ROLE_KEY = "SWITCHBOARD_MACHINE_ROLE"
+KEEP_KEY = "SWITCHBOARD_KEEP_SURFACES"
+LOADED_KEY = "SWITCHBOARD_LOADED_SURFACES"
 ROLES = ("work", "personal")
 DEFAULT_ROLE = "work"
 
-# Routine keys in sidebar order. megadesk is the CoS tab.
-ALWAYS = ("megadesk", "todo")
+# Routine keys in sidebar order. switchboard is the CoS tab.
+ALWAYS = ("switchboard", "todo")
 ON_DEMAND = ("launchpad", "scheduled-jobs", "meetings")
-ALL = ("megadesk", "todo", "launchpad", "comms-triage", "scheduled-jobs", "meetings")
+ALL = ("switchboard", "todo", "launchpad", "comms-triage", "scheduled-jobs", "meetings")
 
 LABELS = {
-    "megadesk": "CoS",
+    "switchboard": "CoS",
     "todo": "To Do",
     "launchpad": "Launchpad",
     "comms-triage": "Comms Triage",
@@ -73,7 +73,7 @@ LABELS = {
 
 # The owner's words for each surface, lower case, spaces and dashes folded.
 ALIASES = {
-    "megadesk": ("cos", "chief of staff", "megadesk"),
+    "switchboard": ("cos", "chief of staff", "switchboard"),
     "todo": ("todo", "to do", "todos", "to dos", "to do list", "todo list"),
     "launchpad": ("launchpad", "launch pad"),
     "comms-triage": ("comms triage", "comms", "triage"),

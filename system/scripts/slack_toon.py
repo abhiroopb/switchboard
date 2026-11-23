@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Decode the TOON text `pmos slack` read commands print by default.
+"""Decode the TOON text `switchboard slack` read commands print by default.
 
 The Slack read tools (history, thread, search, ...) take ``--output-format auto|json`` with ``auto`` as the
 default, and ``auto`` returns TOON (Token-Oriented Object Notation) whenever it

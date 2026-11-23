@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for the pm-os Claude plugin hook hooks/cmux-heartbeat.py (rt-000000000014, 2026-11-02).
+"""Tests for the switchboard Claude plugin hook hooks/cmux-heartbeat.py (rt-000000000014, 2026-11-02).
 
 A worker tab was mid-turn in a
 10-minute sleep loop, its cmux pill read Running, and its sidebar row had no ⚡.
@@ -26,11 +26,11 @@ import unittest
 from pathlib import Path
 
 # Never reach a live cmux or wmux tab (2026-11-07, rt-00000000002e).
-os.environ["PM_OS_TEST_SANDBOX"] = "1"
+os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"
 
 REPO = Path(subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
                            cwd=Path(__file__).resolve().parent).stdout.strip())
-HOOK = REPO / "system" / "claude-marketplace" / "plugins" / "pm-os" / "hooks" / "cmux-heartbeat.py"
+HOOK = REPO / "system" / "claude-marketplace" / "plugins" / "switchboard" / "hooks" / "cmux-heartbeat.py"
 HOOKS_JSON = HOOK.parent / "hooks.json"
 
 # A fake cmux CLI: appends its argv and stdin to calls.jsonl, and fails with the
@@ -66,18 +66,18 @@ class CmuxHeartbeatTests(unittest.TestCase):
         if os.name == "nt":  # an extensionless script cannot start on Windows
             script, self.fake = self.fake, self.tmp / "cmux.cmd"
             self.fake.write_text(f'@"{sys.executable}" "{script}" %*\r\n')
-        self.config = self.tmp / "pm-os-plugin-config.json"
+        self.config = self.tmp / "switchboard-plugin-config.json"
         # WMUX* too: run inside a wmux pane, the real surface and wmux CLI would leak into
         # the cmux cases and send the hook down its wmux branch.
         self.env = {k: v for k, v in os.environ.items()
-                    if not k.startswith(("CMUX_", "PM_OS_", "WMUX"))}
+                    if not k.startswith(("CMUX_", "SWITCHBOARD_", "WMUX"))}
         self.env.update({
             "CMUX_SURFACE_ID": "1924BDC5-DF1C-4DFF-86C9-3387A1BE9E62",
             "CMUX_CLAUDE_HOOK_CMUX_BIN": str(self.fake),
             "CMUX_CLAUDE_PID": "90620",
             "FAKE_CMUX_DIR": str(self.tmp),
-            "PM_OS_CMUX_HEARTBEAT_DIR": str(self.tmp / "stamps"),
-            "PM_OS_PLUGIN_CONFIG": str(self.config),
+            "SWITCHBOARD_CMUX_HEARTBEAT_DIR": str(self.tmp / "stamps"),
+            "SWITCHBOARD_PLUGIN_CONFIG": str(self.config),
         })
 
     def run_hook(self, kind: str, tool: str = "Bash", **env: str) -> subprocess.CompletedProcess:

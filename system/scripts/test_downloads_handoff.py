@@ -28,7 +28,7 @@ class HandoffTests(unittest.TestCase):
         self.note.write_text("# Plan\n\nfull text\n", encoding="utf-8")
         self.cwd = os.getcwd()
         os.chdir(self.repo)
-        self.env = mock.patch.dict(os.environ, {"PM_OS_DOWNLOADS_DIR": str(self.dl)})
+        self.env = mock.patch.dict(os.environ, {"SWITCHBOARD_DOWNLOADS_DIR": str(self.dl)})
         self.env.start()
         self.top = dh.repo_root()
 

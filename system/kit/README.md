@@ -29,8 +29,8 @@ python3 system/kit/build_tier.py push --tier public --out <clone>
    The base is filtered with the rules the last committed build used (`local/kit/<tier>.last-rules/`, saved by every `--commit`, or `--base-rules <dir>`), and the new source with today's rules. A rule change therefore merges like a source change, and a new rule reaches lines that did not change.
 3. **Override.** `--override <dir>` replaces files with hand-resolved versions. It is for conflicts and for the rare line no rule can fix. The next build keeps the result, because it is now in ours.
 4. **Overlay.** `overlay/public/` lands at the root of the copy.
-5. **Gate.** The checks are the deny lists, the private identifier guard, `scan_public.py` and gitleaks (`PM_OS_GITLEAKS` names the binary). A file under a `drop_on_hit` glob that fails is left out and listed. Any other failure stops the build, and a stopped build writes nothing into the clone. `--skip-gate` is for fix-up passes and turns the build into a dry run.
-6. **Write.** The tree is synced into the clone, `.pm-os-kit/tier.json` records the source revision, and `--commit` commits under the target's neutral author.
+5. **Gate.** The checks are the deny lists, the private identifier guard, `scan_public.py` and gitleaks (`SWITCHBOARD_GITLEAKS` names the binary). A file under a `drop_on_hit` glob that fails is left out and listed. Any other failure stops the build, and a stopped build writes nothing into the clone. `--skip-gate` is for fix-up passes and turns the build into a dry run.
+6. **Write.** The tree is synced into the clone, `.switchboard-kit/tier.json` records the source revision, and `--commit` commits under the target's neutral author.
 
 ## Push
 

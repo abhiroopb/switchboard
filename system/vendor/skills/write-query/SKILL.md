@@ -6,7 +6,7 @@ argument-hint: "<description of what data you need>"
 
 # /write-query - Write Optimized SQL
 
-> Connected tools in PM OS: the `pmos` connectors (Slack, Gmail, Google Drive, Calendar). Read `~/Development/pm-os/knowledge/` before drafting.
+> Connected tools in switchboard: the `switchboard` connectors (Slack, Gmail, Google Drive, Calendar). Read `~/Development/switchboard/knowledge/` before drafting.
 
 Write a SQL query from a natural language description, optimized for your specific SQL dialect and following best practices.
 

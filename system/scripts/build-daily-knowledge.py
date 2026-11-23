@@ -17,11 +17,11 @@ Sources this kit can read on any machine:
 
     todo          system/state/todo.json
     workstream    workstreams/*/CONTEXT.md + config.yaml (status, next step)
-    pm_os_output  dated durable artifacts (YYYY-MM-DD-*.md) in workstreams/,
+    switchboard_output  dated durable artifacts (YYYY-MM-DD-*.md) in workstreams/,
                   outputs/, projects/, knowledge/decisions/, notes/daily/
-    calendar      this week and next through `pmos calendar`
-                  (the PM OS connector shim or another pmos CLI); skipped with
-                  --no-calendar or when pmos is not on PATH
+    calendar      this week and next through `switchboard calendar`
+                  (the switchboard connector shim or another switchboard CLI); skipped with
+                  --no-calendar or when switchboard is not on PATH
 
 A source whose read fails is listed in missing_source_classes, so a gap never
 looks like a quiet day. Comms collectors (Slack, Gmail, GitHub, Linear, Jira)
@@ -64,7 +64,7 @@ DEFAULT_FRESHNESS: dict[str, Any] = {
         "issues": 7,
         "todo": 7,
         "workstream": 7,
-        "pm_os_output": 7,
+        "switchboard_output": 7,
         "product_kb": 7,
     },
 }
@@ -110,7 +110,7 @@ def load_freshness(repo_root: Path) -> tuple[dict[str, Any], str]:
     if not path.exists():
         return config, "defaults"
     try:
-        import yaml  # PyYAML ships with every PM OS install
+        import yaml  # PyYAML ships with every switchboard install
 
         loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except Exception:
@@ -293,8 +293,8 @@ def collect_outputs(root: Path, now: datetime) -> list[dict[str, Any]]:
             rel_path = path.relative_to(root).as_posix()
             workstream = path.relative_to(root).parts[1] if rel_path.startswith("workstreams/") else None
             records.append({
-                "id": record_id("pm_os_output", rel_path),
-                "source_class": "pm_os_output",
+                "id": record_id("switchboard_output", rel_path),
+                "source_class": "switchboard_output",
                 "topic": first_heading(path) or path.stem,
                 "source_time": iso(min(mtime(path), now)),
                 "ingested_at": iso(now),
@@ -310,13 +310,13 @@ def collect_outputs(root: Path, now: datetime) -> list[dict[str, Any]]:
 
 
 def collect_calendar(root: Path, now: datetime) -> list[dict[str, Any]]:
-    pmos = shutil.which("pmos")
-    if not pmos:
-        raise RuntimeError("pmos not on PATH")
+    switchboard = shutil.which("switchboard")
+    if not switchboard:
+        raise RuntimeError("switchboard not on PATH")
     records = []
     for period in ("this_week", "next_week"):
         proc = subprocess.run(
-            [pmos, "calendar", "events",
+            [switchboard, "calendar", "events",
              "--time-period", json.dumps(period), "--output", "json"],
             capture_output=True, text=True, timeout=90, cwd=root,
         )
@@ -352,7 +352,7 @@ def collect_calendar(root: Path, now: datetime) -> list[dict[str, Any]]:
 COLLECTORS = {
     "todo": collect_todo,
     "workstream": collect_workstreams,
-    "pm_os_output": collect_outputs,
+    "switchboard_output": collect_outputs,
     "calendar": collect_calendar,
 }
 
@@ -390,7 +390,7 @@ def build(root: Path, knowledge_dir: Path, *, calendar: bool = True, now: dateti
         "classes": classes,
         "missing_source_classes": missing,
         "not_collected": NOT_COLLECTED,
-        "not_collected_note": "comms collectors do not ship in the PM OS kit",
+        "not_collected_note": "comms collectors do not ship in the switchboard kit",
         "freshness": origin,
     }
     knowledge_dir.mkdir(parents=True, exist_ok=True)

@@ -1,6 +1,6 @@
 # Temporal Contract
 
-Shared rules for every PM OS consumer that summarizes or surfaces facts:
+Shared rules for every switchboard consumer that summarizes or surfaces facts:
 start-of-day / chief-of-staff, meeting pre-briefs and updates, comms triage,
 workstream signals, queue ranking, command-center output, end-of-day summaries,
 and todo digests. Inline or reference this contract; do not restate weaker
@@ -57,11 +57,11 @@ that class of error.
    message seen by both a raw collector and comms triage is ONE record. A
    triage disposition (routed/todo/done/dropped) changes what needs doing,
    never whether the fact is current.
-10. **PM OS outputs close the loop, once.** Durable artifacts the owner creates in
-   PM OS (daily notes, decisions, PRDs, status updates, meeting notes,
+10. **switchboard outputs close the loop, once.** Durable artifacts the owner creates in
+   switchboard (daily notes, decisions, PRDs, status updates, meeting notes,
    research, dated rollups, workstream state) are re-ingested as
-   `source_class: pm_os_output` records (allowlist in
-   `system/scripts/collect-pm-os-outputs.py`) so later sessions build on
+   `source_class: switchboard_output` records (allowlist in
+   `system/scripts/collect-switchboard-outputs.py`) so later sessions build on
    them. Each artifact is ONE canonical record (latest capture wins by
    content hash); generated/derived surfaces (`system/state/knowledge/**`,
    `.signals/**`, `latest.md` aliases, KB inbox files) are never re-ingested
@@ -82,7 +82,7 @@ that class of error.
 
 Query current facts instead of re-deriving them:
 
-    python3 {{PM_OS_ROOT}}/system/scripts/query-knowledge.py \
+    python3 {{SWITCHBOARD_ROOT}}/system/scripts/query-knowledge.py \
         [--people slug,slug] [--workstream slug] [--days N] [--include-historical]
 
 The store is rebuilt by `system/scripts/build-daily-knowledge.py` (background

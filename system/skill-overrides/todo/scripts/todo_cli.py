@@ -55,16 +55,16 @@ def _path_from_env(name: str, fallback: Path) -> Path:
     return Path(raw).expanduser() if raw else fallback
 
 
-REPO_ROOT = _path_from_env("PM_OS_ROOT", Path.home() / "Development" / "pm-os")
+REPO_ROOT = _path_from_env("SWITCHBOARD_ROOT", Path.home() / "Development" / "switchboard")
 STATE_DIR = REPO_ROOT / "system" / "state"
 SOURCES_DIR = STATE_DIR / "sources"
 SCRIPTS_DIR = REPO_ROOT / "system" / "scripts"
 WORKSTREAMS_DIR = REPO_ROOT / "workstreams"
 
 TODO_PATH = STATE_DIR / "todo.json"
-TODO_CALENDAR_STATE_PATH = _path_from_env("PM_OS_TODO_CALENDAR_STATE", STATE_DIR / "todo-calendar.json")
-TODO_RESOLUTION_FLAGS_PATH = _path_from_env("PM_OS_TODO_RESOLUTION_FLAGS", STATE_DIR / "todo-resolution-flags.json")
-CONNECTORS_DIR = _path_from_env("PM_OS_CONNECTORS_DIR", Path.home() / ".pm-os" / "connectors")
+TODO_CALENDAR_STATE_PATH = _path_from_env("SWITCHBOARD_TODO_CALENDAR_STATE", STATE_DIR / "todo-calendar.json")
+TODO_RESOLUTION_FLAGS_PATH = _path_from_env("SWITCHBOARD_TODO_RESOLUTION_FLAGS", STATE_DIR / "todo-resolution-flags.json")
+CONNECTORS_DIR = _path_from_env("SWITCHBOARD_CONNECTORS_DIR", Path.home() / ".switchboard" / "connectors")
 
 MENTIONS_CACHE_PATH = SOURCES_DIR / "owner-mentions.jsonl"
 CHANNEL_SIGNALS_CACHE_PATH = SOURCES_DIR / "owner-channel-signals.jsonl"
@@ -100,7 +100,7 @@ DEFAULT_LOOKBACK_DAYS = 14
 EXTERNAL_TIMEOUT_SECONDS = 45
 HELPER_TIMEOUT_SECONDS = 180
 
-TODO_CALENDAR_SUMMARY = "To-dos (PM OS)"
+TODO_CALENDAR_SUMMARY = "To-dos (switchboard)"
 CALENDAR_API_BASE = "https://www.googleapis.com/calendar/v3"
 CALENDAR_FULL_SCOPE = "https://www.googleapis.com/auth/calendar"
 GOOGLE_TOKEN_URI = "https://oauth2.googleapis.com/token"
@@ -552,11 +552,11 @@ def _env_list(name: str) -> set[str]:
 
 
 def owner_slack_ids() -> set[str]:
-    return _env_list("PM_OS_OWNER_SLACK_IDS")
+    return _env_list("SWITCHBOARD_OWNER_SLACK_IDS")
 
 
 def owner_handles() -> set[str]:
-    return _env_list("PM_OS_OWNER_HANDLES")
+    return _env_list("SWITCHBOARD_OWNER_HANDLES")
 
 
 def _flag_says_me(record: dict[str, Any]) -> bool:
@@ -838,7 +838,7 @@ def _scripts_dir() -> Path:
 
 def _network_allowed() -> bool:
     """Test sandboxes and the offline switch keep every external call closed."""
-    return os.environ.get("PM_OS_TEST_SANDBOX") != "1" and os.environ.get("PM_OS_TODO_OFFLINE") != "1"
+    return os.environ.get("SWITCHBOARD_TEST_SANDBOX") != "1" and os.environ.get("SWITCHBOARD_TODO_OFFLINE") != "1"
 
 
 def _run_command(command: list[str], timeout: float = EXTERNAL_TIMEOUT_SECONDS) -> str | None:
@@ -853,10 +853,10 @@ def _run_command(command: list[str], timeout: float = EXTERNAL_TIMEOUT_SECONDS) 
 
 
 def run_workspace_tool(args: list[str], timeout: float = EXTERNAL_TIMEOUT_SECONDS) -> Any:
-    """Call `pmos ...` and parse its JSON. Any failure means no evidence."""
+    """Call `switchboard ...` and parse its JSON. Any failure means no evidence."""
     if not _network_allowed():
         return None
-    executable = shutil.which("pmos")
+    executable = shutil.which("switchboard")
     if not executable:
         return None
     output = _run_command([executable, *args], timeout)
@@ -1590,7 +1590,7 @@ def _record_calendar(calendar_id: str, origin: str) -> None:
 
 def todo_calendar_id(create: bool = True) -> str | None:
     """The dedicated to-do calendar id. Never the primary calendar."""
-    forced = os.environ.get("PM_OS_TODO_CALENDAR_ID", "").strip()
+    forced = os.environ.get("SWITCHBOARD_TODO_CALENDAR_ID", "").strip()
     if forced and forced.lower() != "primary":
         return forced
     if _CALENDAR_ID_CACHE.get("id"):
@@ -1795,7 +1795,7 @@ def _event_body(item: dict[str, Any], start: datetime, end: datetime) -> dict[st
 
 
 def deterministic_event_id(item: dict[str, Any]) -> str:
-    seed = f"pm-os:todo:{item.get('id')}:{item.get('calendar_create_generation') or ''}"
+    seed = f"switchboard:todo:{item.get('id')}:{item.get('calendar_create_generation') or ''}"
     return uuid.uuid5(uuid.NAMESPACE_URL, seed).hex
 
 
@@ -2714,7 +2714,7 @@ def _add_evidence(item_id: str, entry: dict[str, Any]) -> None:
 
 def _verify_bound(args: Any) -> int:
     try:
-        bound = max(1, int(os.environ.get("PM_OS_TODO_SURFACE_VERIFY_LIMIT", "25")))
+        bound = max(1, int(os.environ.get("SWITCHBOARD_TODO_SURFACE_VERIFY_LIMIT", "25")))
     except ValueError:
         bound = 25
     limit = getattr(args, "limit", None)
@@ -2782,7 +2782,7 @@ def verify_before_surface(args: Any) -> None:
     SURFACE_WOULD_CLOSE_BY_ID.clear()
     SURFACE_GATE_RESULT.clear()
     command = getattr(args, "command", None)
-    if command not in SURFACE_COMMANDS or os.environ.get("PM_OS_TODO_SURFACE_SKIP") == "1":
+    if command not in SURFACE_COMMANDS or os.environ.get("SWITCHBOARD_TODO_SURFACE_SKIP") == "1":
         return
     _load_resolution_flags()
     path = Path(getattr(args, "path", None) or TODO_PATH)
@@ -2915,7 +2915,7 @@ def verify_before_surface(args: Any) -> None:
 
 
 def run_live_gate(args: Any) -> None:
-    if os.environ.get("PM_OS_LD_RECONCILE_ACTIVE") == "1" or os.environ.get("PM_OS_LD_RECONCILE_SKIP") == "1":
+    if os.environ.get("SWITCHBOARD_LD_RECONCILE_ACTIVE") == "1" or os.environ.get("SWITCHBOARD_LD_RECONCILE_SKIP") == "1":
         return
     script = _scripts_dir() / "ld-reconcile.py"
     if not script.is_file():
@@ -2923,7 +2923,7 @@ def run_live_gate(args: Any) -> None:
     dry_run = bool(getattr(args, "dry_run", False))
     command = [sys.executable, str(script), "--todo-path", str(args.path), "--json", "--quiet",
                "--dry-run" if dry_run else "--apply"]
-    env = {**os.environ, "PM_OS_LD_RECONCILE_ACTIVE": "1"}
+    env = {**os.environ, "SWITCHBOARD_LD_RECONCILE_ACTIVE": "1"}
     try:
         finished = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace",
                                   timeout=HELPER_TIMEOUT_SECONDS, env=env, stdin=subprocess.DEVNULL)

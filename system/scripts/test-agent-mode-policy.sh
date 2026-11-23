@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # test-agent-mode-policy.sh — focused tests for the agent-mode policy:
 #
-#   * ultra is the PM OS default: missing/invalid modes
+#   * ultra is the switchboard default: missing/invalid modes
 #     resolve to ultra.
 #   * explicit ultra stays ultra; explicit high stays high (the owner's explicit
-#     choice via PM_OS_AGENT_MODE or agent_mode: config always wins).
+#     choice via SWITCHBOARD_AGENT_MODE or agent_mode: config always wins).
 #   * medium and low NEVER reach Amp — legacy inputs coerce to ultra, in both
 #     resolve_agent_mode and local_amp_launch_command (defense in depth).
 #   * simple routines explicitly configured high launch high.
@@ -15,9 +15,9 @@
 
 set -uo pipefail
 # Amp-shaped fixtures (`-m <mode>` launch strings, Amp screens): pin the agent
-# knob, which defaults to claude (system/scripts/pm_os_agent.py).
-# Claude launch strings are covered by test_dispatch.py and test_pm_os_agent.py.
-export PM_OS_AGENT=amp
+# knob, which defaults to claude (system/scripts/switchboard_agent.py).
+# Claude launch strings are covered by test_dispatch.py and test_switchboard_agent.py.
+export SWITCHBOARD_AGENT=amp
 
 REAL_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FIXTURE="$(mktemp -d "${TMPDIR:-/tmp}/agent-mode-test.XXXXXX")"
@@ -34,7 +34,7 @@ set +e  # helpers enable -e; tests must accumulate failures instead
 # The floor assertions below describe the steady state; the dated CoS mode
 # trial (router.yaml `cos_mode_trial:`) is tested on its own in
 # the "CoS mode trial" section, so keep it off everywhere else.
-export PM_OS_COS_MODE_TRIAL_DISABLED=1
+export SWITCHBOARD_COS_MODE_TRIAL_DISABLED=1
 
 PASS=0
 FAIL=0
@@ -51,7 +51,7 @@ write_config() {  # <kind> <name> [agent_mode]
 # --- resolve_agent_mode ------------------------------------------------------
 
 # No env var, no config -> ultra (policy default).
-unset PM_OS_AGENT_MODE
+unset SWITCHBOARD_AGENT_MODE
 mode=$(resolve_agent_mode "no-such-workstream" 2>/dev/null)
 [[ "$mode" == "ultra" ]] \
     && ok "no mode anywhere resolves to ultra" \
@@ -100,23 +100,23 @@ mode=$(resolve_agent_mode "typo-workstream" 2>/dev/null)
     || fail "invalid config value defaults to ultra (got: $mode)"
 
 # Env var precedence: explicit ultra/high pass, medium/low coerce.
-mode=$(PM_OS_AGENT_MODE=ultra resolve_agent_mode "plain-workstream" 2>/dev/null)
+mode=$(SWITCHBOARD_AGENT_MODE=ultra resolve_agent_mode "plain-workstream" 2>/dev/null)
 [[ "$mode" == "ultra" ]] \
     && ok "env ultra stays ultra" || fail "env ultra stays ultra (got: $mode)"
-mode=$(PM_OS_AGENT_MODE=high resolve_agent_mode "plain-workstream" 2>/dev/null)
+mode=$(SWITCHBOARD_AGENT_MODE=high resolve_agent_mode "plain-workstream" 2>/dev/null)
 [[ "$mode" == "high" ]] \
     && ok "env high stays high" || fail "env high stays high (got: $mode)"
-mode=$(PM_OS_AGENT_MODE=medium resolve_agent_mode "plain-workstream" 2>/dev/null)
+mode=$(SWITCHBOARD_AGENT_MODE=medium resolve_agent_mode "plain-workstream" 2>/dev/null)
 [[ "$mode" == "ultra" ]] \
     && ok "env medium coerces to ultra" || fail "env medium coerces to ultra (got: $mode)"
-mode=$(PM_OS_AGENT_MODE=low resolve_agent_mode "plain-workstream" 2>/dev/null)
+mode=$(SWITCHBOARD_AGENT_MODE=low resolve_agent_mode "plain-workstream" 2>/dev/null)
 [[ "$mode" == "ultra" ]] \
     && ok "env low coerces to ultra" || fail "env low coerces to ultra (got: $mode)"
 
 # Explicit user choice beats the ultra default: env high wins over a config
 # that says ultra, and config high wins over the default.
 write_config workstreams cfg-ultra-workstream ultra
-mode=$(PM_OS_AGENT_MODE=high resolve_agent_mode "cfg-ultra-workstream" 2>/dev/null)
+mode=$(SWITCHBOARD_AGENT_MODE=high resolve_agent_mode "cfg-ultra-workstream" 2>/dev/null)
 [[ "$mode" == "high" ]] \
     && ok "explicit env high overrides config ultra" \
     || fail "explicit env high overrides config ultra (got: $mode)"
@@ -129,11 +129,11 @@ mode=$(resolve_agent_mode "simple-routine" 2>/dev/null)
     || fail "simple routine configured high resolves to high (got: $mode)"
 
 # --- core-surface ultra floor ------------------------------------------------
-# CoS (megadesk), LaunchPad, Comms Triage, and Router always resolve to ultra:
+# CoS (switchboard), LaunchPad, Comms Triage, and Router always resolve to ultra:
 # no config, config high, legacy config, invalid config, and env high all floor.
 
-for surface in megadesk launchpad comms-triage router; do
-    unset PM_OS_AGENT_MODE
+for surface in switchboard launchpad comms-triage router; do
+    unset SWITCHBOARD_AGENT_MODE
     rm -rf "$FIXTURE/routines/$surface"
     mode=$(resolve_agent_mode "$surface" 2>/dev/null)
     [[ "$mode" == "ultra" ]] \
@@ -153,7 +153,7 @@ for surface in megadesk launchpad comms-triage router; do
         || fail "core surface $surface legacy config floors to ultra (got: $mode)"
 
     write_config routines "$surface" ultra
-    mode=$(PM_OS_AGENT_MODE=high resolve_agent_mode "$surface" 2>/dev/null)
+    mode=$(SWITCHBOARD_AGENT_MODE=high resolve_agent_mode "$surface" 2>/dev/null)
     [[ "$mode" == "ultra" ]] \
         && ok "core surface $surface env high floors to ultra" \
         || fail "core surface $surface env high floors to ultra (got: $mode)"
@@ -184,40 +184,40 @@ warn=$(resolve_agent_mode "launchpad" 2>&1 >/dev/null)
     || fail "floor override logs a WARN (got: $warn)"
 
 # --- CoS mode trial (router.yaml cos_mode_trial) ------------------------------
-# A dated window lowers CoS (megadesk) alone; every other core surface and
+# A dated window lowers CoS (switchboard) alone; every other core surface and
 # every worker keeps the ultra floor. Outside the window, or with the kill
 # switch set, CoS floors to ultra as before.
 trial_cfg="$FIXTURE/router-trial.yaml"
 today_pt=$(TZ=America/Los_Angeles date +%F)
 printf 'cos_mode_trial:\n  mode: high\n  start: %s\n  end: %s\n' "$today_pt" "$today_pt" > "$trial_cfg"
-unset PM_OS_AGENT_MODE
-rm -rf "$FIXTURE/routines/megadesk"
-mode=$(PM_OS_COS_MODE_TRIAL_DISABLED=0 ROUTER_CONFIG="$trial_cfg" resolve_agent_mode "megadesk" 2>/dev/null)
+unset SWITCHBOARD_AGENT_MODE
+rm -rf "$FIXTURE/routines/switchboard"
+mode=$(SWITCHBOARD_COS_MODE_TRIAL_DISABLED=0 ROUTER_CONFIG="$trial_cfg" resolve_agent_mode "switchboard" 2>/dev/null)
 [[ "$mode" == "high" ]] \
-    && ok "CoS mode trial: megadesk resolves to high inside the window" \
-    || fail "CoS mode trial: megadesk resolves to high inside the window (got: $mode)"
+    && ok "CoS mode trial: switchboard resolves to high inside the window" \
+    || fail "CoS mode trial: switchboard resolves to high inside the window (got: $mode)"
 for surface in launchpad comms-triage router; do
     rm -rf "$FIXTURE/routines/$surface"
-    mode=$(PM_OS_COS_MODE_TRIAL_DISABLED=0 ROUTER_CONFIG="$trial_cfg" resolve_agent_mode "$surface" 2>/dev/null)
+    mode=$(SWITCHBOARD_COS_MODE_TRIAL_DISABLED=0 ROUTER_CONFIG="$trial_cfg" resolve_agent_mode "$surface" 2>/dev/null)
     [[ "$mode" == "ultra" ]] \
         && ok "CoS mode trial: $surface stays ultra inside the window" \
         || fail "CoS mode trial: $surface stays ultra inside the window (got: $mode)"
 done
-mode=$(PM_OS_COS_MODE_TRIAL_DISABLED=0 ROUTER_CONFIG="$trial_cfg" resolve_agent_mode "plain-workstream" 2>/dev/null)
+mode=$(SWITCHBOARD_COS_MODE_TRIAL_DISABLED=0 ROUTER_CONFIG="$trial_cfg" resolve_agent_mode "plain-workstream" 2>/dev/null)
 [[ "$mode" == "ultra" ]] \
     && ok "CoS mode trial: a workstream stays ultra inside the window" \
     || fail "CoS mode trial: a workstream stays ultra inside the window (got: $mode)"
-mode=$(PM_OS_COS_MODE_TRIAL_DISABLED=1 ROUTER_CONFIG="$trial_cfg" resolve_agent_mode "megadesk" 2>/dev/null)
+mode=$(SWITCHBOARD_COS_MODE_TRIAL_DISABLED=1 ROUTER_CONFIG="$trial_cfg" resolve_agent_mode "switchboard" 2>/dev/null)
 [[ "$mode" == "ultra" ]] \
-    && ok "CoS mode trial: kill switch floors megadesk to ultra" \
-    || fail "CoS mode trial: kill switch floors megadesk to ultra (got: $mode)"
+    && ok "CoS mode trial: kill switch floors switchboard to ultra" \
+    || fail "CoS mode trial: kill switch floors switchboard to ultra (got: $mode)"
 printf 'cos_mode_trial:\n  mode: high\n  start: 2026-10-01\n  end: 2026-10-02\n' > "$trial_cfg"
-mode=$(PM_OS_COS_MODE_TRIAL_DISABLED=0 ROUTER_CONFIG="$trial_cfg" resolve_agent_mode "megadesk" 2>/dev/null)
+mode=$(SWITCHBOARD_COS_MODE_TRIAL_DISABLED=0 ROUTER_CONFIG="$trial_cfg" resolve_agent_mode "switchboard" 2>/dev/null)
 [[ "$mode" == "ultra" ]] \
-    && ok "CoS mode trial: a closed window floors megadesk to ultra" \
-    || fail "CoS mode trial: a closed window floors megadesk to ultra (got: $mode)"
+    && ok "CoS mode trial: a closed window floors switchboard to ultra" \
+    || fail "CoS mode trial: a closed window floors switchboard to ultra (got: $mode)"
 printf 'cos_mode_trial:\n  mode: medium\n  start: %s\n  end: %s\n' "$today_pt" "$today_pt" > "$trial_cfg"
-mode=$(PM_OS_COS_MODE_TRIAL_DISABLED=0 ROUTER_CONFIG="$trial_cfg" resolve_agent_mode "megadesk" 2>/dev/null)
+mode=$(SWITCHBOARD_COS_MODE_TRIAL_DISABLED=0 ROUTER_CONFIG="$trial_cfg" resolve_agent_mode "switchboard" 2>/dev/null)
 [[ "$mode" == "ultra" ]] \
     && ok "CoS mode trial: a retired trial mode is ignored" \
     || fail "CoS mode trial: a retired trial mode is ignored (got: $mode)"
@@ -225,7 +225,7 @@ rm -f "$trial_cfg"
 
 # --- real repo configs hold the canonical ultra value -------------------------
 # The floor is defense in depth; the documented source of truth must also say ultra.
-for cfg in routines/megadesk routines/launchpad routines/comms-triage routines/router; do
+for cfg in routines/switchboard routines/launchpad routines/comms-triage routines/router; do
     val=$(python3 -c "import yaml,sys; print((yaml.safe_load(open(sys.argv[1])) or {}).get('agent_mode',''))" "$REAL_REPO/$cfg/config.yaml" 2>/dev/null)
     [[ "$val" == "ultra" ]] \
         && ok "repo $cfg/config.yaml agent_mode is ultra" \
@@ -247,16 +247,16 @@ rg -q 'resolve_agent_mode "\$COS_WORKSPACE_NAME"' "$REAL_REPO/system/start-day.s
     || fail "start-day.sh resolves the CoS mode through resolve_agent_mode"
 
 # Same resolution against the real repo: the CoS launch resolves to ultra.
-mode=$(REPO_ROOT="$REAL_REPO" resolve_agent_mode "megadesk" 2>/dev/null)
+mode=$(REPO_ROOT="$REAL_REPO" resolve_agent_mode "switchboard" 2>/dev/null)
 [[ "$mode" == "ultra" ]] \
-    && ok "CoS (megadesk) resolves to ultra against the real repo" \
-    || fail "CoS (megadesk) resolves to ultra against the real repo (got: $mode)"
+    && ok "CoS (switchboard) resolves to ultra against the real repo" \
+    || fail "CoS (switchboard) resolves to ultra against the real repo (got: $mode)"
 
 # --- LaunchPad / Comms Triage startup emit -m ultra ---------------------------
 # Exercise the real launch-command builders with the real repo configs, the
 # same path `cmux-helpers.sh launch routine:<name>` and ensure-routine-workspaces
 # take through _boot_amp_in_workspace.
-for surface in launchpad comms-triage megadesk; do
+for surface in launchpad comms-triage switchboard; do
     mode=$(REPO_ROOT="$REAL_REPO" resolve_agent_mode "$surface" 2>/dev/null)
     cmd=$(local_amp_launch_command "$REAL_REPO" "$mode")
     [[ "$cmd" == *"-m ultra"* ]] \
@@ -277,7 +277,7 @@ cmd=$(local_amp_launch_command "$FIXTURE/workstreams/plain-workstream")
     || fail "launch command defaults to -m ultra (got: $cmd)"
 
 preamble=$(workstream_launch_preamble "workstream:plain-workstream")
-[[ "$preamble" == *"ultra is the default for every PM OS thread"* && \
+[[ "$preamble" == *"ultra is the default for every switchboard thread"* && \
    "$preamble" == *"press Ctrl+S and select ultra"* && \
    "$preamble" == *"cannot change the active mode yourself"* ]] \
     && ok "workstream preamble carries ultra-default guidance" \
@@ -345,7 +345,7 @@ PY
 export REPO_ROOT="$REAL_REPO"
 
 for pair in "meetings:ultra" "scheduled-jobs:ultra" "todo:ultra" \
-            "megadesk:ultra" "pm-os-signal-detection:ultra"; do
+            "switchboard:ultra" "switchboard-signal-detection:ultra"; do
     name="${pair%%:*}"
     want="${pair##*:}"
     mode=$(resolve_agent_mode "$name" 2>/dev/null)

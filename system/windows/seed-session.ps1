@@ -1,27 +1,27 @@
 <#
 .SYNOPSIS
-  Apply the PM OS sidebar layout (pins, accent colors) to the wmux
+  Apply the switchboard sidebar layout (pins, accent colors) to the wmux
   session file and the wmux sidebar prefs, so the next wmux start shows it.
 
 .DESCRIPTION
   wmux 2.49.0 has no CLI or IPC call that pins, colors, or reorders a
-  workspace, and its renderer lists workspaces in array order. The PM OS shim
+  workspace, and its renderer lists workspaces in array order. The switchboard shim
   (system/scripts/mux/cmux-shim.py) records pin, color, and order in its
-  sidecar (%USERPROFILE%\.pm-os\wmux-sidecar.json, or PM_OS_STATE_HOME). This
+  sidecar (%USERPROFILE%\.switchboard\wmux-sidecar.json, or SWITCHBOARD_STATE_HOME). This
   script copies that state into %APPDATA%\wmux\sessions\session.json so the
   native wmux sidebar matches at the next start:
 
     1. The fixed surfaces (CoS, To Do, Launchpad, Comms Triage) are pinned
        and tinted with their accent colors. This works with no sidecar at all
        (first run).
-       PM_OS_COMMS_TRIAGE=off in local/machines/<MACHINE>.env leaves Comms
-       Triage out. PM_OS_MACHINE_ROLE=personal there means a closed Launchpad
+       SWITCHBOARD_COMMS_TRIAGE=off in local/machines/<MACHINE>.env leaves Comms
+       Triage out. SWITCHBOARD_MACHINE_ROLE=personal there means a closed Launchpad
        is expected (it opens on "load Launchpad"), so it is not reported
        missing.
     2. Every workspace with a sidecar entry takes the sidecar `pinned` flag
        and `color` (an empty or missing color leaves the wmux color alone).
     3. The row order is left as wmux has it. wmux cannot order tabs, and
-       PM OS does not reorder them on wmux, so this script never sorts rows and ignores the sidecar `order_index`.
+       switchboard does not reorder them on wmux, so this script never sorts rows and ignores the sidecar `order_index`.
        The section order in system/scripts/sidebar_order.py is cmux only.
     4. %APPDATA%\wmux\settings.json gets `wmux-sidebar-prefs` merged with
        activeTabIndicator=leftRail, showNotificationMessage=true,
@@ -29,7 +29,7 @@
        bash.exe (Git Bash; other keys are kept). -NoPrefs skips this.
     5. The fixed-surface rows get `shell` = bash.exe too, because a restored
        row reopens with the shell frozen in it and wins over the default
-       preference. PM_OS_WMUX_SHELL overrides the spec; "default" leaves
+       preference. SWITCHBOARD_WMUX_SHELL overrides the spec; "default" leaves
        wmux's own pwsh choice alone. Native runtime only.
 
   Unread counts and lane status are not persisted by wmux; the shim pushes
@@ -46,13 +46,13 @@
   session file to settle (mtime advance or 15 s), seeds, then relaunches wmux.
 
 .PARAMETER Runtime
-  native (default; $env:PM_OS_RUNTIME honored) or wsl. Only affects where the
+  native (default; $env:SWITCHBOARD_RUNTIME honored) or wsl. Only affects where the
   sidecar is looked up.
 
 .PARAMETER Sidecar
-  Windows path to the shim sidecar. Default (native): $env:PM_OS_WMUX_SIDECAR,
-  else <PM_OS_STATE_HOME or %USERPROFILE%\.pm-os>\wmux-sidecar.json, with
-  PM_OS_STATE_HOME also read from %USERPROFILE%\.pm-os\env. Default (wsl):
+  Windows path to the shim sidecar. Default (native): $env:SWITCHBOARD_WMUX_SIDECAR,
+  else <SWITCHBOARD_STATE_HOME or %USERPROFILE%\.switchboard>\wmux-sidecar.json, with
+  SWITCHBOARD_STATE_HOME also read from %USERPROFILE%\.switchboard\env. Default (wsl):
   `wsl.exe` resolves the same path inside the distro. Pass an empty string to
   skip the sidecar and apply only the fixed surfaces.
 
@@ -66,7 +66,7 @@ param(
   [string]$SessionPath = (Join-Path $env:APPDATA "wmux\sessions\session.json"),
   [string]$SettingsPath = (Join-Path $env:APPDATA "wmux\settings.json"),
   [ValidateSet("native", "wsl")]
-  [string]$Runtime = $(if ($env:PM_OS_RUNTIME -and $env:PM_OS_RUNTIME.ToLower() -eq "wsl") { "wsl" } else { "native" }),
+  [string]$Runtime = $(if ($env:SWITCHBOARD_RUNTIME -and $env:SWITCHBOARD_RUNTIME.ToLower() -eq "wsl") { "wsl" } else { "native" }),
   [string]$Sidecar = $null,
   [switch]$Restart,
   [switch]$NoPrefs,
@@ -77,8 +77,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-function Say([string]$msg) { Write-Host "[pm-os] $msg" }
-function Warn([string]$msg) { Write-Host "[pm-os] warn: $msg" -ForegroundColor Yellow }
+function Say([string]$msg) { Write-Host "[switchboard] $msg" }
+function Warn([string]$msg) { Write-Host "[switchboard] warn: $msg" -ForegroundColor Yellow }
 
 # Accent per fixed surface (accents mirror the cmux-sidebar lane palette).
 # Pattern matches the title's trailing name; the emoji prefix is ignored.
@@ -116,7 +116,7 @@ function Set-Prop($obj, [string]$name, $value) {
 function Write-JsonFile([string]$path, $obj) {
   # UTF-8 without BOM (Electron's JSON.parse rejects a BOM), tmp + rename.
   $text = $obj | ConvertTo-Json -Depth 64
-  $tmp = "$path.pm-os.tmp"
+  $tmp = "$path.switchboard.tmp"
   $enc = New-Object System.Text.UTF8Encoding $false
   [System.IO.File]::WriteAllText($tmp, $text, $enc)
   Move-Item -Force $tmp $path
@@ -125,7 +125,7 @@ function Write-JsonFile([string]$path, $obj) {
 function Read-EnvFile {
   # KEY=VALUE lines written by install.py; returns a hashtable (may be empty).
   $map = @{}
-  $file = Join-Path $env:USERPROFILE ".pm-os\env"
+  $file = Join-Path $env:USERPROFILE ".switchboard\env"
   if (-not (Test-Path $file)) { return $map }
   foreach ($line in Get-Content $file) {
     $t = $line.Trim()
@@ -144,24 +144,24 @@ function Resolve-SidecarPath {
     if ($Sidecar -eq "") { return $null }
     return $Sidecar
   }
-  if ($env:PM_OS_WMUX_SIDECAR) { return $env:PM_OS_WMUX_SIDECAR }
+  if ($env:SWITCHBOARD_WMUX_SIDECAR) { return $env:SWITCHBOARD_WMUX_SIDECAR }
   if ($Runtime -eq "wsl") {
     $wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
     if (-not $wsl) { return $null }
     try {
-      $posix = (& wsl.exe -- bash -lc 'printf %s "${PM_OS_WMUX_SIDECAR:-${PM_OS_STATE_HOME:-$HOME/.pm-os}/wmux-sidecar.json}"' 2>$null)
+      $posix = (& wsl.exe -- bash -lc 'printf %s "${SWITCHBOARD_WMUX_SIDECAR:-${SWITCHBOARD_STATE_HOME:-$HOME/.switchboard}/wmux-sidecar.json}"' 2>$null)
       if (-not $posix) { return $null }
       $win = (& wsl.exe -- wslpath -w $posix 2>$null)
       if ($win) { return $win.Trim() }
     } catch { }
     return $null
   }
-  $stateHome = $env:PM_OS_STATE_HOME
+  $stateHome = $env:SWITCHBOARD_STATE_HOME
   if (-not $stateHome) {
     $fromFile = Read-EnvFile
-    if ($fromFile.ContainsKey("PM_OS_STATE_HOME")) { $stateHome = $fromFile["PM_OS_STATE_HOME"] }
+    if ($fromFile.ContainsKey("SWITCHBOARD_STATE_HOME")) { $stateHome = $fromFile["SWITCHBOARD_STATE_HOME"] }
   }
-  if (-not $stateHome) { $stateHome = Join-Path $env:USERPROFILE ".pm-os" }
+  if (-not $stateHome) { $stateHome = Join-Path $env:USERPROFILE ".switchboard" }
   return (Join-Path $stateHome "wmux-sidecar.json")
 }
 
@@ -343,17 +343,17 @@ function Seed-Session([hashtable]$side) {
 # -- main ---------------------------------------------------------------------
 
 # Default shell for every new wmux pane. wmux picks pwsh, then powershell,
-# then cmd on its own; PM OS scripts, the seeded surfaces, and the .bashrc
-# that sources pm-os-env.sh all assume Git Bash. The bare name "bash.exe" is
+# then cmd on its own; switchboard scripts, the seeded surfaces, and the .bashrc
+# that sources switchboard-env.sh all assume Git Bash. The bare name "bash.exe" is
 # the alias wmux resolves at Git's install root (never the WSL launcher in
-# System32) and starts with --login -i. PM_OS_WMUX_SHELL overrides; "default"
+# System32) and starts with --login -i. SWITCHBOARD_WMUX_SHELL overrides; "default"
 # leaves wmux's own choice in place.
 $DefaultShell = $null
-if ($null -ne $env:PM_OS_WMUX_SHELL) {
-  $DefaultShell = $env:PM_OS_WMUX_SHELL.Trim()
+if ($null -ne $env:SWITCHBOARD_WMUX_SHELL) {
+  $DefaultShell = $env:SWITCHBOARD_WMUX_SHELL.Trim()
 } else {
   $envFile = Read-EnvFile
-  if ($envFile.ContainsKey("PM_OS_WMUX_SHELL")) { $DefaultShell = $envFile["PM_OS_WMUX_SHELL"].Trim() }
+  if ($envFile.ContainsKey("SWITCHBOARD_WMUX_SHELL")) { $DefaultShell = $envFile["SWITCHBOARD_WMUX_SHELL"].Trim() }
 }
 if ($null -eq $DefaultShell) { $DefaultShell = "bash.exe" }
 if ($DefaultShell -in @("default", "wmux")) { $DefaultShell = "" }
@@ -365,14 +365,14 @@ if ($DefaultShell -and $Runtime -eq "native") { $WantedWorkspacePrefs.defaultShe
 function Read-MachineKey([string]$Key) {
   $val = [Environment]::GetEnvironmentVariable($Key)
   if ($val) { return $val }
-  $dir = $env:PM_OS_LOCAL_DIR
+  $dir = $env:SWITCHBOARD_LOCAL_DIR
   if (-not $dir) {
-    $root = $env:PM_OS_ROOT
-    if (-not $root) { $root = (Read-EnvFile)["PM_OS_ROOT"] }
+    $root = $env:SWITCHBOARD_ROOT
+    if (-not $root) { $root = (Read-EnvFile)["SWITCHBOARD_ROOT"] }
     if (-not $root) { $root = Split-Path (Split-Path $PSScriptRoot) }
     $dir = Join-Path $root "local"
   }
-  $machine = $env:PM_OS_MACHINE
+  $machine = $env:SWITCHBOARD_MACHINE
   if (-not $machine) { $machine = [System.Net.Dns]::GetHostName() }
   $file = Join-Path $dir ("machines\" + $machine.Split(".")[0].ToUpper() + ".env")
   $found = ""
@@ -384,9 +384,9 @@ function Read-MachineKey([string]$Key) {
   return $found
 }
 
-# Off switch: PM_OS_COMMS_TRIAGE=off leaves Comms Triage out of the fixed surfaces.
+# Off switch: SWITCHBOARD_COMMS_TRIAGE=off leaves Comms Triage out of the fixed surfaces.
 # No file or no key means on, as before.
-$commsTriage = Read-MachineKey "PM_OS_COMMS_TRIAGE"
+$commsTriage = Read-MachineKey "SWITCHBOARD_COMMS_TRIAGE"
 if ($commsTriage -and $commsTriage.Trim().ToLower() -in @("off", "0", "false", "no", "disabled")) {
   $Surfaces = @($Surfaces | Where-Object { $_.Match -ne "Comms Triage" })
 }
@@ -395,8 +395,8 @@ if ($commsTriage -and $commsTriage.Trim().ToLower() -in @("off", "0", "false", "
 # on "load Launchpad", so a closed one is expected, not missing. When it is open it still
 # gets its pin, color, and place under To Do. Scheduled Jobs and Meetings never warn.
 $script:OnDemandMatch = @()
-if ((Read-MachineKey "PM_OS_MACHINE_ROLE").Trim().ToLower() -eq "personal" -and
-    (Read-MachineKey "PM_OS_KEEP_SURFACES") -notmatch '(?i)launch ?pad') {
+if ((Read-MachineKey "SWITCHBOARD_MACHINE_ROLE").Trim().ToLower() -eq "personal" -and
+    (Read-MachineKey "SWITCHBOARD_KEEP_SURFACES") -notmatch '(?i)launch ?pad') {
   $script:OnDemandMatch = @("Launchpad")
 }
 

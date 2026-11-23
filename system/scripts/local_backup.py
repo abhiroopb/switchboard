@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Nightly backup of ~/.claude, ~/.pm-os and the owner files into local/backups/<hostname>/<date>/.
+"""Nightly backup of ~/.claude, ~/.switchboard and the owner files into local/backups/<hostname>/<date>/.
 
-local/ sits inside the PM OS repo, gitignored and left out of the kit, so a
+local/ sits inside the switchboard repo, gitignored and left out of the kit, so a
 synced repo folder (such as Dropbox) carries the copy off the laptop. One dated backup:
 
     local/backups/<hostname>/<YYYY-MM-DD>/
         manifest.json    counts, sizes, SHA-256 of every file and archive
         LEFT-OUT.txt     what was left out, why, and how to get each one back
         claude.zip       ~/.claude
-        pm-os.zip        ~/.pm-os
+        switchboard.zip        ~/.switchboard
         owner.zip        local/agents-local.md, local/user-lens.yaml, local/machines/, local/skills/
         repo.bundle      git bundle of all refs (.git never syncs through Dropbox)
 
@@ -78,11 +78,11 @@ MAX_PLAIN_BYTES = 64 * 1024 * 1024  # non-transcript files larger than this are 
 STATE_FILE = "system/state/local-backup.json"
 BUNDLE_NAME = "repo.bundle"
 OWNER_ROOT = "owner"
-ROOT_NAMES = ("claude", "pm-os", OWNER_ROOT)
+ROOT_NAMES = ("claude", "switchboard", OWNER_ROOT)
 # The only paths read under local/. Named one by one, so local/backups is never walked
 # and a new folder there stays out until someone adds it here.
 OWNER_PATHS = ("agents-local.md", "user-lens.yaml", "machines", "skills")
-OWNER_SCRATCH_DIR = "pm-os-local"  # stands in for local/ under an explicit home
+OWNER_SCRATCH_DIR = "switchboard-local"  # stands in for local/ under an explicit home
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 ZIP_TIME_FLOOR = (1980, 1, 1, 0, 0, 0)
 
@@ -90,34 +90,34 @@ ZIP_TIME_FLOOR = (1980, 1, 1, 0, 0, 0)
 
 RECOVERY = {
     "claude-login": "Sign in again: run claude, then /login. Nothing else depends on this file.",
-    "google-connector": "Run: pmos login google. It opens the consent page and writes a new token.",
+    "google-connector": "Run: switchboard login google. It opens the consent page and writes a new token.",
     "google-client": "Download the OAuth client JSON again from Google Cloud Console (APIs & Services, Credentials), "
-                     "save it to ~/.pm-os/connectors/google-oauth-client.json, then run: pmos login google.",
-    "slack-connector": "Run: pmos login slack.",
-    "dropbox-connector": "Run: pmos login dropbox --app-key <KEY>. The app key is on the app's page at "
+                     "save it to ~/.switchboard/connectors/google-oauth-client.json, then run: switchboard login google.",
+    "slack-connector": "Run: switchboard login slack.",
+    "dropbox-connector": "Run: switchboard login dropbox --app-key <KEY>. The app key is on the app's page at "
                          "https://www.dropbox.com/developers/apps.",
     "secret-file": "Copy it from its source or issue a new one. It holds a credential, so it never goes to Dropbox.",
     "secret-content": "The file matched a token pattern (listed), so it was left out whole. Copy it by hand after "
                       "removing the token, or recreate it.",
-    "env-secret": "The line was removed from the backed-up env file. Add KEY=VALUE back to ~/.pm-os/env by hand; "
+    "env-secret": "The line was removed from the backed-up env file. Add KEY=VALUE back to ~/.switchboard/env by hand; "
                   "issue a new value from the service if the old one is gone.",
     "shell-snapshot": "Nothing to do. Claude Code writes new shell snapshots. These can hold exported secrets.",
     "plugin-cache": "Run: bash system/scripts/install-claude-code.sh. Plugins and marketplaces download again.",
-    "transient": "Nothing to do. Claude Code or PM OS recreates this as it runs.",
+    "transient": "Nothing to do. Claude Code or switchboard recreates this as it runs.",
     "undo-history": "Not recoverable. It is Claude Code's per-session edit undo history.",
-    "secure-store": "Nothing to do. Files in ~/.pm-os/secure stay on this machine and never go to Dropbox, and they are never "
+    "secure-store": "Nothing to do. Files in ~/.switchboard/secure stay on this machine and never go to Dropbox, and they are never "
                     "opened by a backup.",
-    "transcripts-off": "PM_OS_BACKUP_TRANSCRIPTS=off is set. Remove that line from ~/.pm-os/env to back them up again.",
+    "transcripts-off": "SWITCHBOARD_BACKUP_TRANSCRIPTS=off is set. Remove that line from ~/.switchboard/env to back them up again.",
     "history-secret": "Commit history holds a token shape, so repo.bundle was left out of this backup. Remove it from "
-                      "history, or set PM_OS_BACKUP_ALLOW_HISTORY=on in ~/.pm-os/env if it is a false alarm.",
+                      "history, or set SWITCHBOARD_BACKUP_ALLOW_HISTORY=on in ~/.switchboard/env if it is a false alarm.",
     "too-large": "Copy it by hand if you need it. It is over the 64 MB limit for a non-transcript file.",
     "unreadable": "The file was locked or vanished during the run. The next night's run picks it up.",
     "claude-json": "Run: bash system/scripts/install-claude-code.sh for MCP servers, then sign in to Claude Code. "
                    "Project trust prompts come back once each.",
     "figma-token": "Issue a new personal access token in Figma (Settings, Security), then save it to ~/.figma-token.",
     "amp-secrets": "Recreate ~/.config/amp/secrets.env from each service's settings page.",
-    "gcal-credentials": "Run the gcal skill's sign-in again, or use: pmos login google.",
-    "gdrive-credentials": "Run the gdrive skill's sign-in again, or use: pmos login google.",
+    "gcal-credentials": "Run the gcal skill's sign-in again, or use: switchboard login google.",
+    "gdrive-credentials": "Run the gdrive skill's sign-in again, or use: switchboard login google.",
 }
 
 # First path segment under ~/.claude (or a longer prefix) -> recovery key.
@@ -143,7 +143,7 @@ CLAUDE_SKIP_PREFIXES = {
     "ide": "transient",
     "file-history": "undo-history",
 }
-PMOS_SKIP_PREFIXES = {
+SWITCHBOARD_SKIP_PREFIXES = {
     "connectors/google-token.json": "google-connector",
     "connectors/google-oauth-client.json": "google-client",
     "connectors/slack-token.json": "slack-connector",
@@ -155,7 +155,7 @@ PMOS_SKIP_PREFIXES = {
     "wmux-session-store.json": "transient",
     "wmux-sidecar.json": "transient",
 }
-SKIP_PREFIXES = {"claude": CLAUDE_SKIP_PREFIXES, "pm-os": PMOS_SKIP_PREFIXES, OWNER_ROOT: {}}
+SKIP_PREFIXES = {"claude": CLAUDE_SKIP_PREFIXES, "switchboard": SWITCHBOARD_SKIP_PREFIXES, OWNER_ROOT: {}}
 
 TRANSIENT_NAME_RE = re.compile(r"^(\.last-.*|\.pre-restore-.*|\.session-.*\.tmp|\.sidecar-.*\.tmp|.*\.lock|\.DS_Store|Thumbs\.db)$")
 # File names that hold a credential by their nature. skills/ is exempt from the
@@ -283,7 +283,7 @@ CANNOT_RESTORE = (
     "Claude Code undo history (file-history), shell snapshots, session state, and plugin caches (they download again).",
     "Text a transcript's token pattern replaced stays [REDACTED:<kind>] in the restored copy.",
     "Anything changed after the backup ran, up to about a day of work.",
-    "Project memory is keyed by folder path. If PM OS moves to a different folder, rename the matching folder under "
+    "Project memory is keyed by folder path. If switchboard moves to a different folder, rename the matching folder under "
     "~/.claude/projects or Claude Code starts that project's memory empty.",
     "Scheduled tasks, launchd agents, PATH edits and installed programs live outside these folders: install-all.sh "
     "rebuilds them.",
@@ -338,13 +338,13 @@ def os_name() -> str:
 def home_roots(home: Path | None = None, env: dict[str, str] | None = None, repo: Path | None = None) -> dict[str, Path]:
     """Where each root lives. An explicit home ignores every override and the repo, so a
     scratch run or restore can never reach the real folders. The owner files live in the
-    PM OS folder, so with no home and no repo that root is absent."""
+    switchboard folder, so with no home and no repo that root is absent."""
     if home is not None:
-        return {"claude": home / ".claude", "pm-os": home / ".pm-os", OWNER_ROOT: home / OWNER_SCRATCH_DIR}
+        return {"claude": home / ".claude", "switchboard": home / ".switchboard", OWNER_ROOT: home / OWNER_SCRATCH_DIR}
     env = os.environ if env is None else env
     base = Path.home()
     roots = {"claude": Path(env.get("CLAUDE_CONFIG_DIR") or base / ".claude"),
-             "pm-os": Path(env.get("PM_OS_STATE_HOME") or base / ".pm-os")}
+             "switchboard": Path(env.get("SWITCHBOARD_STATE_HOME") or base / ".switchboard")}
     if repo is not None:
         roots[OWNER_ROOT] = repo / "local"
     return roots
@@ -594,11 +594,11 @@ def member_info(arc: str, mtime: float) -> zipfile.ZipInfo:
 
 
 def env_setting(roots: dict[str, Path], key: str) -> str | None:
-    """A setting from the environment, else from ~/.pm-os/env."""
+    """A setting from the environment, else from ~/.switchboard/env."""
     value = os.environ.get(key)
     if value is None:
         try:
-            for line in (roots["pm-os"] / "env").read_text(encoding="utf-8", errors="ignore").splitlines():
+            for line in (roots["switchboard"] / "env").read_text(encoding="utf-8", errors="ignore").splitlines():
                 if line.strip().startswith(f"{key}="):
                     value = line.split("=", 1)[1].strip()
         except OSError:
@@ -607,8 +607,8 @@ def env_setting(roots: dict[str, Path], key: str) -> str | None:
 
 
 def transcripts_enabled(roots: dict[str, Path]) -> bool:
-    """PM_OS_BACKUP_TRANSCRIPTS=off leaves transcripts out."""
-    return (env_setting(roots, "PM_OS_BACKUP_TRANSCRIPTS") or "on").lower() not in ("off", "0", "no", "false")
+    """SWITCHBOARD_BACKUP_TRANSCRIPTS=off leaves transcripts out."""
+    return (env_setting(roots, "SWITCHBOARD_BACKUP_TRANSCRIPTS") or "on").lower() not in ("off", "0", "no", "false")
 
 
 # ---------------------------------------------------------------- archive
@@ -703,7 +703,7 @@ def copy_member(archive: zipfile.ZipFile, root_name: str, rel: str, path: Path, 
                 out.write(clean)
     else:
         data = path.read_bytes()
-        if root_name == "pm-os" and ENV_NAME_RE.match(PurePosixPath(rel).name):
+        if root_name == "switchboard" and ENV_NAME_RE.match(PurePosixPath(rel).name):
             data, dropped = scrub_env(data)
             for key in dropped:
                 left.rows.append({"root": root_name, "path": f"{rel} line {key}", "recovery": "env-secret",
@@ -860,7 +860,7 @@ def write_bundle(repo: Path, target: Path, allow_history: bool = False) -> dict[
         first = hits[0]
         return {"error": f"git history holds a token shape, so the bundle was withheld: {first['kind']} in {first['path']} "
                          f"at commit {first['commit'][:10]} ({len(hits)} hit(s)). Remove it from history, or set "
-                         "PM_OS_BACKUP_ALLOW_HISTORY=on if it is a false alarm", "history_hits": hits}
+                         "SWITCHBOARD_BACKUP_ALLOW_HISTORY=on if it is a false alarm", "history_hits": hits}
     made = run_git(["-C", str(repo), "bundle", "create", "--quiet", str(target), "--all"])
     if made.returncode or not target.exists():
         return {"error": f"git bundle create failed: {(made.stderr or made.stdout).strip()[:300]}"}
@@ -974,8 +974,8 @@ def check_not_collapsed(root_info: dict[str, Any], previous: dict[str, Any] | No
     # The owner files live in the repo, so they say nothing about a wiped home.
     total = sum(info["files"] for name, info in root_info.items() if name != OWNER_ROOT)
     if total == 0:
-        raise BackupError("no files found in ~/.claude or ~/.pm-os, so nothing was published (check CLAUDE_CONFIG_DIR "
-                          "and PM_OS_STATE_HOME)")
+        raise BackupError("no files found in ~/.claude or ~/.switchboard, so nothing was published (check CLAUDE_CONFIG_DIR "
+                          "and SWITCHBOARD_STATE_HOME)")
     if not previous:
         return
     for name, info in root_info.items():
@@ -1038,7 +1038,7 @@ def run_backup(repo: Path, home: Path | None = None, day: str | None = None, hos
         if fail_after_archives:
             raise BackupError("test failure after archives")
         archives_done = now_utc()
-        allow_history = (env_setting(roots, "PM_OS_BACKUP_ALLOW_HISTORY") or "off").lower() in ("on", "1", "yes", "true")
+        allow_history = (env_setting(roots, "SWITCHBOARD_BACKUP_ALLOW_HISTORY") or "off").lower() in ("on", "1", "yes", "true")
         bundle = write_bundle(repo, staging / BUNDLE_NAME, allow_history=allow_history)
         if bundle.get("skipped") and previous and (previous.get("git_bundle") or {}).get("file"):
             bundle = {"error": f"the last copy had a git bundle, and now {bundle['skipped']}"}
@@ -1047,7 +1047,7 @@ def run_backup(repo: Path, home: Path | None = None, day: str | None = None, hos
             raise BackupError(f"{bundle['error']}; the earlier copy from {day} stays")
         manifest = {
             "schema": SCHEMA, "host": host, "platform": os_name(), "date": day, "started_at": iso(started),
-            "archives_done_at": iso(archives_done), "finished_at": iso(now_utc()), "pm_os_root": str(repo),
+            "archives_done_at": iso(archives_done), "finished_at": iso(now_utc()), "switchboard_root": str(repo),
             "transcripts": include_transcripts, "partial": bool(bundle.get("error")),
             "roots": root_info, "files": all_files, "git_bundle": bundle,
             "left_out": left.all() + outside_rows(home),
@@ -1219,7 +1219,7 @@ def resolve_backup(ref: str | None, repo: Path, host: str | None = None) -> Path
 # Files full of this machine's paths: skipped when the backup came from another OS.
 OTHER_OS_SKIP = {"claude": ("settings.json", "CLAUDE.md", "plugins/installed_plugins.json",
                             "plugins/known_marketplaces.json"),
-                 "pm-os": ("env",)}
+                 "switchboard": ("env",)}
 
 
 def safe_target(base: Path, rel: str) -> Path:
@@ -1314,7 +1314,7 @@ def plan_skips(plan: dict[str, Any]) -> list[str]:
     """Plain lines for everything a restore will not write, beyond the newer-file rule."""
     lines = [f"{i['root']}:{i['path']} not restored: a link or junction is in the way" for i in plan["skip_link"]]
     lines += [f"{i['root']}:{i['path']} not restored: the name is not valid on this machine" for i in plan["skip_unsafe"]]
-    lines += [f"{name} files not restored: no PM OS folder was named" for name in plan["no_target"]]
+    lines += [f"{name} files not restored: no switchboard folder was named" for name in plan["no_target"]]
     for name, info in plan["manifest"].get("roots", {}).items():
         lines += [f"{name}:{l['path']} was a link to {l['target']} and is not recreated" for l in info.get("links", [])]
     return lines
@@ -1352,7 +1352,7 @@ def apply_restore(plan: dict[str, Any], roots: dict[str, Path]) -> dict[str, Any
                     copy.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(target, copy)
                     safety += 1
-                    if name == "pm-os" and row["p"] == "env":
+                    if name == "switchboard" and row["p"] == "env":
                         tmp.write_bytes(merge_env(target.read_bytes(), tmp.read_bytes()))
                         merged = True
                 os.replace(tmp, target)
@@ -1413,17 +1413,17 @@ def search_folders(destination: Path | None, home: Path | None = None, env: dict
     folders: list[Path] = []
     if destination is not None:
         folders.append(backups_root(destination))
-    if env.get("PM_OS_ROOT"):
-        folders.append(backups_root(Path(env["PM_OS_ROOT"])))
-    env_file = Path(env.get("PM_OS_STATE_HOME") or base / ".pm-os") / "env"
+    if env.get("SWITCHBOARD_ROOT"):
+        folders.append(backups_root(Path(env["SWITCHBOARD_ROOT"])))
+    env_file = Path(env.get("SWITCHBOARD_STATE_HOME") or base / ".switchboard") / "env"
     try:
         for line in env_file.read_text(encoding="utf-8", errors="ignore").splitlines():
-            if line.startswith("PM_OS_ROOT=") and line.split("=", 1)[1].strip():
+            if line.startswith("SWITCHBOARD_ROOT=") and line.split("=", 1)[1].strip():
                 folders.append(backups_root(Path(line.split("=", 1)[1].strip())))
     except OSError:
         pass
     for root in dropbox_roots(base, env):
-        folders.append(backups_root(root / "Development" / "pm-os"))
+        folders.append(backups_root(root / "Development" / "switchboard"))
     return list(dict.fromkeys(folders))
 
 
@@ -1516,7 +1516,7 @@ def installer_offer(destination: Path | None, answer: str = "ask", dry_run: bool
     log(f"backup: what was left out and how to get each one back: {backup / 'LEFT-OUT.txt'}")
     if bundle.get("file"):
         log(f'backup: commit history, for a folder with no .git: python3 "{(script or Path(__file__).resolve()).as_posix()}" '
-            f'restore-git --backup "{backup.as_posix()}" --into "<PM OS folder>"')
+            f'restore-git --backup "{backup.as_posix()}" --into "<switchboard folder>"')
     return result
 
 
@@ -1570,13 +1570,13 @@ def send_cos_alert(repo: Path, text: str) -> bool:
     True once report-to-cos.sh has taken the line: a busy CoS gets it from the waiter, and
     a retry here would only add a second task. One task id per day, because that script
     delivers a duplicate id once."""
-    if os.environ.get("PM_OS_TEST_SANDBOX") == "1":
+    if os.environ.get("SWITCHBOARD_TEST_SANDBOX") == "1":
         return False
     stamp = datetime.now().strftime("%Y%m%d")
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
     env["REPORT_TO_COS_NO_HOOKS"] = "1"
     cmd = ["bash", str(repo / "system/scripts/report-to-cos.sh"), "--task-id", f"local-backup-{stamp}", "--origin", "cos",
-           "--workstream", "pm-os-maintenance", "--status", "blocked", "--urgent", "--create-if-missing", text]
+           "--workstream", "switchboard-maintenance", "--status", "blocked", "--urgent", "--create-if-missing", text]
     try:
         done = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=180, stdin=subprocess.DEVNULL,
                               creationflags=NO_WINDOW)
@@ -1586,7 +1586,7 @@ def send_cos_alert(repo: Path, text: str) -> bool:
 
 
 def alert_text(reason: str) -> str:
-    return (f"PM OS backup needs a look: {reason}. "
+    return (f"switchboard backup needs a look: {reason}. "
             "Options: (a) run python3 system/scripts/local_backup.py run now and read its error; "
             "(b) wait for the 02:30 PT run. Lean: a because the next night may fail the same way.")
 
@@ -1684,7 +1684,7 @@ def cmd_restore(args: argparse.Namespace) -> int:
     plan = restore_plan(backup, roots)
     counts = plan_counts(plan)
     print(f"backup: {backup}")
-    print(f"into: {roots['claude']}, {roots['pm-os']} and {roots[OWNER_ROOT]}")
+    print(f"into: {roots['claude']}, {roots['switchboard']} and {roots[OWNER_ROOT]}")
     print(f"adds {counts['new']}, replaces {counts['replace_older']} older, keeps {counts['keep_newer']} newer local, "
           f"{counts['same']} identical, {counts['skip_other_os']} skipped (other OS)")
     for line in plan_skips(plan)[:50]:
@@ -1724,7 +1724,7 @@ def cmd_health(args: argparse.Namespace) -> int:
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--repo", type=Path, default=None, help="PM OS folder (default: the main checkout)")
+    parser.add_argument("--repo", type=Path, default=None, help="switchboard folder (default: the main checkout)")
     parser.add_argument("--home", type=Path, default=None, help="read and restore under this home instead of the real one")
     parser.add_argument("--host", default=None, help="host folder under local/backups (default: this machine, then the rest)")
     sub = parser.add_subparsers(dest="command", required=True)

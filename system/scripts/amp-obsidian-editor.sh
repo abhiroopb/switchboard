@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AMP_EDITOR shim: a clicked file:// link to a pm-os vault note opens in Obsidian.
+# AMP_EDITOR shim: a clicked file:// link to a switchboard vault note opens in Obsidian.
 #
 # Why: some Amp CLI versions open only http(s)
 # links on click ("Only http and https links can be opened."), so the
@@ -9,12 +9,12 @@
 # and hands anything else (prompt editing, `amp settings edit`, a non-vault
 # file) to the real editor unchanged.
 #
-# Install: `export AMP_EDITOR={{PM_OS_ROOT}}/system/scripts/amp-obsidian-editor.sh`
+# Install: `export AMP_EDITOR={{SWITCHBOARD_ROOT}}/system/scripts/amp-obsidian-editor.sh`
 # in ~/.zshrc (every Amp launch path inherits the shell env). The real editor
 # is AMP_REAL_EDITOR, else VISUAL, else EDITOR, else vim.
 #
-# Vault: $PM_OS_VAULT_ROOT / $PM_OS_VAULT_NAME when set, else the pm-os vault
-# registered in Obsidian's obsidian.json, else {{PM_OS_ROOT}}.
+# Vault: $SWITCHBOARD_VAULT_ROOT / $SWITCHBOARD_VAULT_NAME when set, else the switchboard vault
+# registered in Obsidian's obsidian.json, else {{SWITCHBOARD_ROOT}}.
 # A note inside a task worktree (<vault>/.amp/worktrees/<id>/<rel>) maps to
 # <rel> on main when main holds that file (the branch has landed), else it
 # falls through to the editor.
@@ -24,8 +24,8 @@ real_editor() {
     exec "${AMP_REAL_EDITOR:-${VISUAL:-${EDITOR:-vim}}}" "$@"
 }
 
-vault_root="${PM_OS_VAULT_ROOT:-}"
-vault_name="${PM_OS_VAULT_NAME:-pm-os}"
+vault_root="${SWITCHBOARD_VAULT_ROOT:-}"
+vault_name="${SWITCHBOARD_VAULT_NAME:-switchboard}"
 if [[ -z "$vault_root" ]]; then
     vault_root="$(python3 - "$vault_name" <<'PY' 2>/dev/null
 import json, os, sys
@@ -43,7 +43,7 @@ for v in vaults.values():
 PY
 )"
 fi
-vault_root="${vault_root:-{{PM_OS_ROOT}}}"
+vault_root="${vault_root:-{{SWITCHBOARD_ROOT}}}"
 vault_root="${vault_root%/}"
 
 [[ $# -eq 1 ]] || real_editor "$@"
@@ -128,7 +128,7 @@ PY
 )"
 # macOS: `open -g`, so the note loads in Obsidian behind the app the owner is using
 #. Claude Code in cmux
-# gets the same result through the pmos-obsidian:// handler app.
+# gets the same result through the switchboard-obsidian:// handler app.
 # Elsewhere (WSL2 under wmux, Linux): wslview hands the URI to Windows, then
 # PowerShell, then xdg-open.
 if [[ -x /usr/bin/open && "$(uname -s)" == "Darwin" ]]; then

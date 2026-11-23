@@ -26,16 +26,16 @@ try:
     import fcntl
 except ImportError:  # Windows: flock() over msvcrt, system/scripts/flock_compat.py
     import os as _os, sys as _sys
-    _sys.path.insert(0, _os.environ.get("PM_OS_SCRIPTS_DIR") or _os.path.join(_os.environ.get("PM_OS_ROOT") or _os.path.expanduser("~/Development/pm-os"), "system", "scripts"))
+    _sys.path.insert(0, _os.environ.get("SWITCHBOARD_SCRIPTS_DIR") or _os.path.join(_os.environ.get("SWITCHBOARD_ROOT") or _os.path.expanduser("~/Development/switchboard"), "system", "scripts"))
     import flock_compat as fcntl
 import os
 from pathlib import Path
 import time
 
-state = Path.home() / ".cache/pm-os/amp-start-gate"
+state = Path.home() / ".cache/switchboard/amp-start-gate"
 state.parent.mkdir(parents=True, exist_ok=True)
 # Test seam; ordinary launches use 12 seconds.
-interval = float(os.environ.get("PM_OS_AMP_START_INTERVAL_SECONDS", "12"))
+interval = float(os.environ.get("SWITCHBOARD_AMP_START_INTERVAL_SECONDS", "12"))
 if not 0 < interval <= 60:
     raise SystemExit("Amp launch interval must be > 0 and <= 60 seconds")
 with state.open("a+") as lock:

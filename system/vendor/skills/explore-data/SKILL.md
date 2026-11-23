@@ -6,7 +6,7 @@ argument-hint: "<table or file>"
 
 # /explore-data - Profile and Explore a Dataset
 
-> Connected tools in PM OS: the `pmos` connectors (Slack, Gmail, Google Drive, Calendar). Read `~/Development/pm-os/knowledge/` before drafting.
+> Connected tools in switchboard: the `switchboard` connectors (Slack, Gmail, Google Drive, Calendar). Read `~/Development/switchboard/knowledge/` before drafting.
 
 Generate a comprehensive data profile for a table or uploaded file. Understand its shape, quality, and patterns before diving into analysis.
 

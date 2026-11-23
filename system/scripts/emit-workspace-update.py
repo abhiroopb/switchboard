@@ -443,20 +443,20 @@ def main() -> None:
             "startup-hydration demotion and land in the purple To Review "
             "lane (do NOT escalate to 'needs review' for this — that status "
             "paints the red urgent lane). Pass the review note as the value: "
-            "a Markdown note inside the pm-os Obsidian vault (repo-relative or "
-            "absolute path, or obsidian://open?vault=pm-os&file=<path>), or a "
+            "a Markdown note inside the switchboard Obsidian vault (repo-relative or "
+            "absolute path, or obsidian://open?vault=switchboard&file=<path>), or a "
             "Google Doc / hosted page URL when the owner explicitly asked for that "
             "surface. A .md that does not exist or lives outside the vault is "
             "rejected (review-surface gate). A note that so far "
             "exists only in the calling task's worktree is accepted "
-            "(--task-id, $PM_OS_WORKER_TASK_ID, $PM_OS_WORKTREE, or the cwd's "
+            "(--task-id, $SWITCHBOARD_WORKER_TASK_ID, $SWITCHBOARD_WORKTREE, or the cwd's "
             "worktree)."
         ),
     )
     parser.add_argument(
         "--task-id",
-        default=os.environ.get("PM_OS_WORKER_TASK_ID") or None,
-        help="Reporting task whose worktree may hold the review note before its branch lands (default: $PM_OS_WORKER_TASK_ID)",
+        default=os.environ.get("SWITCHBOARD_WORKER_TASK_ID") or None,
+        help="Reporting task whose worktree may hold the review note before its branch lands (default: $SWITCHBOARD_WORKER_TASK_ID)",
     )
     parser.add_argument("--todo-update", action="append", default=[], help="id|status|when(optional)")
     parser.add_argument("--linked-todos", choices=["open", "waiting", "scheduled", "someday", "done"])
@@ -478,7 +478,7 @@ def main() -> None:
     source_dir.mkdir(parents=True, exist_ok=True)
 
     # Review-surface gate: a review deliverable for the owner must be a
-    # Markdown note inside the pm-os Obsidian vault (normalised to an obsidian://
+    # Markdown note inside the switchboard Obsidian vault (normalised to an obsidian://
     # URI) or, when explicitly requested, an approved live URL. Nonexistent or
     # out-of-vault Markdown fails closed BEFORE any state write so a dead pointer
     # never reaches workspace-updates.json, the review lane, or the digest.
@@ -618,7 +618,7 @@ def main() -> None:
         rebuild = subprocess.run(
             [
                 sys.executable,
-                str(repo_root / "system" / "scripts" / "rebuild-megadesk-state.py"),
+                str(repo_root / "system" / "scripts" / "rebuild-switchboard-state.py"),
                 "--write",
                 "--event-source",
                 args.source,
@@ -628,19 +628,19 @@ def main() -> None:
         if rebuild.returncode != 0:
             refresh_failed = True
             print(
-                f"[emit-workspace-update] WARNING: rebuild-megadesk-state.py exited {rebuild.returncode}; "
+                f"[emit-workspace-update] WARNING: rebuild-switchboard-state.py exited {rebuild.returncode}; "
                 "the update was saved but queue.json/now.json may be stale "
-                "(repair: python3 system/scripts/rebuild-megadesk-state.py --write)",
+                "(repair: python3 system/scripts/rebuild-switchboard-state.py --write)",
                 file=sys.stderr,
             )
         publish = subprocess.run(
             # Through bash: Windows cannot execute a .sh file directly (WinError 193).
-            ["bash", str(repo_root / "system" / "scripts" / "publish-megadesk-status.sh")],
+            ["bash", str(repo_root / "system" / "scripts" / "publish-switchboard-status.sh")],
             check=False,
         )
         if publish.returncode != 0:
             print(
-                f"[emit-workspace-update] WARNING: publish-megadesk-status.sh exited {publish.returncode}; "
+                f"[emit-workspace-update] WARNING: publish-switchboard-status.sh exited {publish.returncode}; "
                 "the sidebar tile may be stale (state files are up to date)",
                 file=sys.stderr,
             )

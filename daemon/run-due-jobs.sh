@@ -4,8 +4,8 @@
 set -euo pipefail
 
 DAEMON_DIR="$(cd "$(dirname "$0")" && pwd)"
-PM_OS_DIR="$(dirname "$DAEMON_DIR")"
-STATE_DIR="$PM_OS_DIR/.state"
+SWITCHBOARD_DIR="$(dirname "$DAEMON_DIR")"
+STATE_DIR="$SWITCHBOARD_DIR/.state"
 QUEUE_FILE="$STATE_DIR/due-jobs.json"
 LOCK_DIR="$STATE_DIR/due-jobs.lock"
 LOG_FILE="$STATE_DIR/scheduled-jobs.log"
@@ -25,12 +25,12 @@ if [ -e "$LOCK_DIR" ]; then
 fi
 # shellcheck source=../system/scripts/lib/dir-lock.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/system/scripts/lib/dir-lock.sh"
-if pm_os_is_windows_shell; then
-  if ! pm_os_dir_lock_acquire "$LOCK_DIR.win" 0; then
+if switchboard_is_windows_shell; then
+  if ! switchboard_dir_lock_acquire "$LOCK_DIR.win" 0; then
     log "Another due-jobs invocation holds the lock"
     exit 75
   fi
-  trap pm_os_dir_lock_release EXIT
+  trap switchboard_dir_lock_release EXIT
 else
 exec 9>>"$LOCK_DIR.flock"
 if ! python3 - <<'PY'

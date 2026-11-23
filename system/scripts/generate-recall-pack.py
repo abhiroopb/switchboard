@@ -193,7 +193,7 @@ def query_canonical_knowledge(workstream: str | None, limit: int = 8) -> dict:
     historical}) or {} on any failure — recall packs are best-effort and
     must never block the caller. Workstream-scoped queries look back a week;
     unscoped queries stay tight (2 days) to avoid firehose noise.
-    PM_OS_KNOWLEDGE_DIR overrides the knowledge dir for hermetic tests.
+    SWITCHBOARD_KNOWLEDGE_DIR overrides the knowledge dir for hermetic tests.
     """
     if not QUERY_KNOWLEDGE.exists():
         return {}
@@ -205,7 +205,7 @@ def query_canonical_knowledge(workstream: str | None, limit: int = 8) -> dict:
     ]
     if workstream:
         cmd += ["--workstream", workstream]
-    knowledge_dir = os.environ.get("PM_OS_KNOWLEDGE_DIR")
+    knowledge_dir = os.environ.get("SWITCHBOARD_KNOWLEDGE_DIR")
     if knowledge_dir:
         cmd += ["--knowledge-dir", knowledge_dir]
     try:
@@ -412,7 +412,7 @@ def append_debug(task: str, pack: dict) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate a bounded recall pack for substantive PM OS tasks.")
+    parser = argparse.ArgumentParser(description="Generate a bounded recall pack for substantive switchboard tasks.")
     parser.add_argument("--task", required=True)
     parser.add_argument("--workstream")
     parser.add_argument("--limit", type=int, default=5)

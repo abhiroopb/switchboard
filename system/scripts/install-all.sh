@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# One command to finish a PM OS install on any machine, with no questions:
+# One command to finish a switchboard install on any machine, with no questions:
 # macOS + cmux, Windows + wmux (run from Git Bash), or Linux (policy and skills).
 #
 #   bash system/scripts/install-all.sh                 detect everything and install
 #   bash system/scripts/install-all.sh --dry-run       print the plan only
 #   bash system/scripts/install-all.sh --profile company|personal   force the organisation profile
-#   bash system/scripts/install-all.sh --agent claude|amp         default agent for PM OS launches
+#   bash system/scripts/install-all.sh --agent claude|amp         default agent for switchboard launches
 #   bash system/scripts/install-all.sh --skip-services            no launchd / Task Scheduler
 #
 # Run it after install.py has written the checkout (README steps 1 to 4). It is
@@ -13,13 +13,13 @@
 # (amp, claude, cmux, wmux) is skipped with one line saying how to add it later.
 #
 # Steps, in order:
-#   1. organisation profile   system/scripts/apply-profile.py (company when the real pmos is on PATH)
+#   1. organisation profile   system/scripts/apply-profile.py (company when the real switchboard is on PATH)
 #   2. skills                 system/bin/install-amp-skills.sh (~/.agents/skills for Amp and Codex,
 #                             ~/.claude/skills for Claude Code)
 #   3. adapters               adapters/install-adapters.sh --apply (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md)
 #   4. Amp                    system/scripts/install-amp-plugins.sh, when `amp` is installed
 #   5. Claude Code            system/scripts/install-claude-code.sh, when `claude` is installed
-#   5b. reader and graph      Obsidian (winget / brew cask), the pm-os vault
+#   5b. reader and graph      Obsidian (winget / brew cask), the switchboard vault
 #                             (register-obsidian-vault.py), on Windows the .md opener
 #                             (system/windows/register-obsidian-notes.ps1), graphify
 #                             (uv tool) and the first knowledge graph build
@@ -44,7 +44,7 @@ while (($#)); do
   shift
 done
 
-say() { printf '[pm-os] %s\n' "$*"; }
+say() { printf '[switchboard] %s\n' "$*"; }
 run() {  # run a step; never stop the whole install on one failure
   local label="$1"; shift
   if ((DRY)); then say "would run ($label): $*"; return 0; fi
@@ -59,11 +59,11 @@ case "$(uname -s)" in
   Linux) if grep -qi microsoft /proc/version 2>/dev/null; then OS=wsl; else OS=linux; fi ;;
   *) OS=unknown ;;
 esac
-if [[ "$OS" == windows && -f system/windows/pm-os-env.sh ]]; then
-  # shellcheck source=../windows/pm-os-env.sh
-  source system/windows/pm-os-env.sh >/dev/null 2>&1 || true
+if [[ "$OS" == windows && -f system/windows/switchboard-env.sh ]]; then
+  # shellcheck source=../windows/switchboard-env.sh
+  source system/windows/switchboard-env.sh >/dev/null 2>&1 || true
 fi
-PY="${PM_OS_PYTHON:-$(command -v python3 || command -v python)}"
+PY="${SWITCHBOARD_PYTHON:-$(command -v python3 || command -v python)}"
 MUX=none
 if [[ "$OS" == macos ]] && { command -v cmux >/dev/null 2>&1 || [[ -x /Applications/cmux.app/Contents/Resources/bin/cmux ]]; }; then MUX=cmux; fi
 if [[ "$OS" == windows ]] && { command -v wmux >/dev/null 2>&1 || [[ -f "${LOCALAPPDATA:-}/Programs/wmux/resources/cli/wmux.js" ]]; }; then MUX=wmux; fi
@@ -74,7 +74,7 @@ say "os=$OS mux=$MUX amp=$HAVE_AMP claude=$HAVE_CLAUDE python=$PY profile=$PROFI
 # 1. organisation profile
 if ((DRY)); then run "profile" "$PY" system/scripts/apply-profile.py --profile "$PROFILE" --dry-run
 else run "profile" "$PY" system/scripts/apply-profile.py --profile "$PROFILE"; fi
-[[ -f "${PM_OS_STATE_HOME:-$HOME/.pm-os}/env" ]] && export "$(grep -m1 '^PM_OS_PROFILE=' "${PM_OS_STATE_HOME:-$HOME/.pm-os}/env" || echo PM_OS_PROFILE=personal)"
+[[ -f "${SWITCHBOARD_STATE_HOME:-$HOME/.switchboard}/env" ]] && export "$(grep -m1 '^SWITCHBOARD_PROFILE=' "${SWITCHBOARD_STATE_HOME:-$HOME/.switchboard}/env" || echo SWITCHBOARD_PROFILE=personal)"
 
 # 2-3. skills and adapters (both harnesses read these)
 run "skills (Amp, Codex, Claude Code)" bash system/bin/install-amp-skills.sh
@@ -90,9 +90,9 @@ if ((HAVE_CLAUDE)); then
   run "Claude Code (skills, plugins, MCP servers, bypass permissions)" bash system/scripts/install-claude-code.sh "${nested[@]}"
 else say "    skip: Claude Code not installed (install it, then rerun this script)"; fi
 
-# 5b. Obsidian (how the owner reads PM OS notes), and the knowledge graph.
-# Obsidian is only the reader: review links are obsidian://open?vault=pm-os&file=…,
-# so the checkout must be a registered vault named pm-os. graphify and memory are
+# 5b. Obsidian (how the owner reads switchboard notes), and the knowledge graph.
+# Obsidian is only the reader: review links are obsidian://open?vault=switchboard&file=…,
+# so the checkout must be a registered vault named switchboard. graphify and memory are
 # separate tools that never need Obsidian. Memory is chosen in step 5
 # (install-claude-code.sh --memory builtin|claude-mem; amp-mem ships with Amp).
 case "$OS" in
@@ -112,14 +112,14 @@ case "$OS" in
 esac
 if [[ "$OS" == windows || "$OS" == macos ]]; then
   # Closes and reopens Obsidian once when it is running (it rewrites its vault list while open).
-  if ((DRY)); then run "Obsidian vault pm-os" "$PY" system/scripts/register-obsidian-vault.py --dry-run
-  else run "Obsidian vault pm-os" "$PY" system/scripts/register-obsidian-vault.py; fi
+  if ((DRY)); then run "Obsidian vault switchboard" "$PY" system/scripts/register-obsidian-vault.py --dry-run
+  else run "Obsidian vault switchboard" "$PY" system/scripts/register-obsidian-vault.py; fi
 fi
 if [[ "$OS" == windows ]]; then
   # Obsidian.exe ignores a bare .md argument, so a clicked note link opened nothing.
   notes_ps1="$(cygpath -w "$ROOT/system/windows/register-obsidian-notes.ps1" 2>/dev/null || echo "$ROOT/system/windows/register-obsidian-notes.ps1")"
   dry_flag=(); ((DRY)) && dry_flag=(-DryRun)
-  run "Markdown notes open in their Obsidian vault" powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$notes_ps1" -PmOsRoot "$(cygpath -w "$ROOT" 2>/dev/null || echo "$ROOT")" "${dry_flag[@]}"
+  run "Markdown notes open in their Obsidian vault" powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$notes_ps1" -SwitchboardRoot "$(cygpath -w "$ROOT" 2>/dev/null || echo "$ROOT")" "${dry_flag[@]}"
 fi
 GRAPHIFY_VERSION="$(sed -n 's/^TESTED_GRAPHIFY_VERSION = "\(.*\)"/\1/p' system/scripts/build-knowledge-graph.py)"
 if command -v uv >/dev/null 2>&1; then
@@ -158,11 +158,11 @@ if [[ "$OS" == windows ]]; then
     rm -rf "$gh_tmp"
   fi
   # Note links: wmux opens only http(s) links, so vault-note links in reports go
-  # through this 127.0.0.1 server (the com.pm-os.note-links task keeps it up).
+  # through this 127.0.0.1 server (the com.switchboard.note-links task keeps it up).
   ((DRY)) || run "note links server (wmux)" "$PY" system/scripts/mux/note-links.py ensure
 fi
 
-# 6. default agent for PM OS launches
+# 6. default agent for switchboard launches
 if [[ -n "$AGENT" ]]; then
   if ((DRY)); then say "would set agent: $AGENT in system/config/router.yaml"
   else run "default agent: $AGENT" bash system/scripts/set-agent.sh "$AGENT"; fi
@@ -178,7 +178,7 @@ if ((SERVICES)); then
     windows)
       ps1="$(cygpath -w "$ROOT/system/windows/install.ps1" 2>/dev/null || echo "$ROOT/system/windows/install.ps1")"
       win_root="$(cygpath -w "$ROOT" 2>/dev/null || echo "$ROOT")"
-      run "Windows env, PATH and scheduled tasks" powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ps1" -PmOsRoot "$win_root" -SkipSeed
+      run "Windows env, PATH and scheduled tasks" powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ps1" -SwitchboardRoot "$win_root" -SkipSeed
       [[ "$MUX" == wmux ]] || say "    note: wmux not found; install it from https://wmux.org, then rerun" ;;
     *) say "    skip: no background services on $OS (policy and skills tier)" ;;
   esac
@@ -188,8 +188,8 @@ fi
 if ((! DRY)); then
   run "verify (quick)" bash system/scripts/verify-kit-install.sh --quick
   run "profile leak check" "$PY" system/scripts/check-profile-leaks.py
-  if [[ "${PM_OS_PROFILE:-personal}" == personal ]]; then
-    say "connectors: $(pmos status 2>/dev/null | head -1 || echo 'run: pmos login google')"
+  if [[ "${SWITCHBOARD_PROFILE:-personal}" == personal ]]; then
+    say "connectors: $(switchboard status 2>/dev/null | head -1 || echo 'run: switchboard login google')"
     say "connector setup: profiles/personal/CONNECTORS.md"
   else
     say "connector setup: profiles/company/CONNECTORS.md"
@@ -200,7 +200,7 @@ if ((! DRY)); then
     [[ -n "$devmode_hint" ]] && say "$devmode_hint"
   fi
   case "$MUX" in
-    cmux) say "next: open cmux, then: bash system/scripts/ensure-routine-workspaces.sh megadesk launchpad todo comms-triage" ;;
+    cmux) say "next: open cmux, then: bash system/scripts/ensure-routine-workspaces.sh switchboard launchpad todo comms-triage" ;;
     wmux) say "next: in any wmux pane (PowerShell or bash): powershell -File system/windows/open-routines.ps1" ;;
   esac
 fi

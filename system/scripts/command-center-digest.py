@@ -76,7 +76,7 @@ TRIAGE_LEDGER_FILE = Path(
 HISTORY_DIR = STATE_DIR / "command-center-history"
 CMUX_LINKS_DIR = STATE_DIR / "cmux-links"
 CMUX_BIN = os.environ.get("CMUX_BIN", "/Applications/cmux.app/Contents/Resources/bin/cmux")
-CMUX_SESSION_STORE = Path(os.environ.get("PM_OS_CMUX_SESSION_JSON") or Path.home() / "Library" / "Application Support" / "cmux" / "session-com.cmuxterm.app.json")
+CMUX_SESSION_STORE = Path(os.environ.get("SWITCHBOARD_CMUX_SESSION_JSON") or Path.home() / "Library" / "Application Support" / "cmux" / "session-com.cmuxterm.app.json")
 # cmux session-store agent kind -> statusEntries key (mirrors
 # workspace-session-state.py AGENT_STATUS_KEYS).
 AGENT_STATUS_KEYS = {"amp": "amp", "claude": "claude_code"}
@@ -356,7 +356,7 @@ _WORKSPACE_UPDATES_CACHE: dict | None = None
 
 def workspace_review_url(slug: str | None) -> str:
     """Review surface recorded by the latest emit-workspace-update for this
-    workstream, or "": an obsidian:// link to a note in the pm-os vault
+    workstream, or "": an obsidian:// link to a note in the switchboard vault
     (default) or an approved https URL (Google Doc / hosted page, on request).
     Only pointers that passed the review-surface gate are stored, so a raw
     filesystem path can never be returned."""
@@ -423,8 +423,8 @@ def load_todos() -> list[dict]:
     # every interactive `todo` command, so re-running both here would only add
     # seconds to every tick. Callers that set these vars explicitly still win.
     env = dict(os.environ)
-    env.setdefault("PM_OS_LD_RECONCILE_SKIP", "1")
-    env.setdefault("PM_OS_TODO_SURFACE_SKIP", "1")
+    env.setdefault("SWITCHBOARD_LD_RECONCILE_SKIP", "1")
+    env.setdefault("SWITCHBOARD_TODO_SURFACE_SKIP", "1")
     env.setdefault("THREAD_GATE_OFFLINE", "1")
     completed = subprocess.run(
         [

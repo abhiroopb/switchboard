@@ -23,11 +23,11 @@ _TMP = tempfile.TemporaryDirectory()
 TMP = Path(_TMP.name)
 (TMP / "state" / "worker-dispatch").mkdir(parents=True)
 os.environ.update({
-    "PM_OS_TEST_SANDBOX": "1",
-    "PM_OS_STATE_DIR": str(TMP / "state"),
+    "SWITCHBOARD_TEST_SANDBOX": "1",
+    "SWITCHBOARD_STATE_DIR": str(TMP / "state"),
     "RUNNING_TASKS_FILE": str(TMP / "state" / "running-tasks.json"),
-    "PM_OS_WORKTREES_DIR": str(TMP / "worktrees"),
-    "PM_OS_LOCKS_DIR": str(TMP / "locks"),
+    "SWITCHBOARD_WORKTREES_DIR": str(TMP / "worktrees"),
+    "SWITCHBOARD_LOCKS_DIR": str(TMP / "locks"),
     "CC_CMUX_SESSION_JSON": str(TMP / "no-session-store.json"),
 })
 _spec = importlib.util.spec_from_file_location("dispatch", SCRIPTS / "dispatch.py")
@@ -127,7 +127,7 @@ class ReapKillTests(unittest.TestCase):
         seen = {}
 
         def fake_run(cmd, **kw):
-            seen["task"] = kw["env"]["PMOS_KILL_TASK"]
+            seen["task"] = kw["env"]["SWITCHBOARD_KILL_TASK"]
             return type("R", (), {"stdout": '{"matched": 2, "killed": 2}\n'})()
 
         with patch.object(dispatch, "_on_windows", return_value=True), patch.object(dispatch, "run", fake_run):

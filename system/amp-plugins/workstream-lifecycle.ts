@@ -13,16 +13,16 @@
 import { readFile } from 'node:fs/promises'
 import type { PluginAPI } from '@ampcode/plugin'
 import {
-  PM_OS_REPO,
+  SWITCHBOARD_REPO,
   isHeadless,
   isPluginEnabled,
   logEvent,
   runDetached,
   workstreamSlugFromContext,
-} from './pm-os/lib'
+} from './switchboard/lib'
 
 const PLUGIN = 'workstream-lifecycle'
-const UPDATES_PATH = `${PM_OS_REPO}/system/state/sources/workspace-updates.json`
+const UPDATES_PATH = `${SWITCHBOARD_REPO}/system/state/sources/workspace-updates.json`
 
 interface WorkspaceUpdate {
   update_id?: string
@@ -47,7 +47,7 @@ async function readUpdate(source: string): Promise<WorkspaceUpdate | null> {
 
 export default function (amp: PluginAPI) {
   // Supplemental workers own task callbacks, not the owner's aggregate status.
-  if (process.env.PM_OS_WORKER_ID) return
+  if (process.env.SWITCHBOARD_WORKER_ID) return
 
   let config: Record<string, unknown> = {}
   amp.configuration.subscribe(v => { config = v })
@@ -66,7 +66,7 @@ export default function (amp: PluginAPI) {
       : ['--only-if-current-timestamp', current.timestamp]
 
     const spawned = await runDetached('python3', [
-      `${PM_OS_REPO}/system/scripts/emit-workspace-update.py`,
+      `${SWITCHBOARD_REPO}/system/scripts/emit-workspace-update.py`,
       '--source', source,
       '--status', 'to review',
       '--summary', current.summary ?? 'Agent turn completed; the result is ready for review.',
@@ -74,7 +74,7 @@ export default function (amp: PluginAPI) {
       '--only-if-current-status', 'active',
       '--skip-auto-close',
       ...guardArgs,
-    ], { cwd: PM_OS_REPO, label: `${PLUGIN}:${source}` })
+    ], { cwd: SWITCHBOARD_REPO, label: `${PLUGIN}:${source}` })
 
     await logEvent(PLUGIN, {
       action: spawned ? 'reconcile-review' : 'spawn-failed',

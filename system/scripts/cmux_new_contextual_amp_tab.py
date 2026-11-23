@@ -23,7 +23,7 @@ THREAD_ID = re.compile(
     r"^T-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
-# Policy: PM OS launches use only high/ultra, and ultra is the
+# Policy: switchboard launches use only high/ultra, and ultra is the
 # default for every new thread. high is honored only as an explicit config
 # choice. Legacy medium/low configs coerce to ultra; missing/invalid modes
 # default to ultra. Mirrors resolve_agent_mode in system/cmux-helpers.sh.
@@ -61,7 +61,7 @@ class PlanError(RuntimeError):
 class LaunchPlan:
     cwd: Path
     mode: str
-    pm_os_root: Path | None
+    switchboard_root: Path | None
     prompt: str
     sibling_thread_ids: tuple[str, ...]
     workstream_slug: str | None
@@ -181,14 +181,14 @@ def cwd_candidates(
     return result
 
 
-def find_pm_os_root(candidates: list[Path], script_path: Path) -> Path:
+def find_switchboard_root(candidates: list[Path], script_path: Path) -> Path:
     roots: list[Path] = []
-    env_root = os.environ.get("PM_OS_ROOT")
+    env_root = os.environ.get("SWITCHBOARD_ROOT")
     if env_root:
         roots.append(Path(env_root).expanduser())
     roots.append(script_path.resolve().parent.parent.parent)
     roots.extend(candidates)
-    roots.append(Path.home() / "Development" / "pm-os")
+    roots.append(Path.home() / "Development" / "switchboard")
 
     visited: set[Path] = set()
     for start in roots:
@@ -202,7 +202,7 @@ def find_pm_os_root(candidates: list[Path], script_path: Path) -> Path:
             visited.add(candidate)
             if (candidate / "workstreams").is_dir() and (candidate / "system").is_dir():
                 return candidate
-    raise PlanError("Could not locate the owning PM OS repository.")
+    raise PlanError("Could not locate the owning switchboard repository.")
 
 
 def yaml_scalar(path: Path, key: str) -> str:
@@ -231,10 +231,10 @@ def normalized_title(value: str) -> str:
 
 
 def detect_workstream(
-    pm_os_root: Path, cwd_values: list[Path], workspace: dict[str, Any]
+    switchboard_root: Path, cwd_values: list[Path], workspace: dict[str, Any]
 ) -> tuple[str, Path]:
-    workstreams = pm_os_root / "workstreams"
-    explicit = os.environ.get("PM_OS_WORKSTREAM_SLUG", "").strip()
+    workstreams = switchboard_root / "workstreams"
+    explicit = os.environ.get("SWITCHBOARD_WORKSTREAM_SLUG", "").strip()
     if explicit:
         directory = workstreams / explicit
         if (directory / "CONTEXT.md").is_file():
@@ -261,7 +261,7 @@ def detect_workstream(
             aliases.add(name)
         if title in {normalized_title(alias) for alias in aliases}:
             return directory.name, directory
-    raise PlanError("Could not map this workspace to a PM OS workstream.")
+    raise PlanError("Could not map this workspace to a switchboard workstream.")
 
 
 def resolve_mode(config_path: Path) -> str:
@@ -275,7 +275,7 @@ def resolve_mode(config_path: Path) -> str:
 
 
 def build_prompt(
-    pm_os_root: Path,
+    switchboard_root: Path,
     workstream_slug: str,
     workstream_dir: Path,
     sibling_ids: tuple[str, ...],
@@ -289,13 +289,13 @@ def build_prompt(
             paths.append(optional)
     sources = workstream_dir / "sources"
 
-    relative_paths = [path.relative_to(pm_os_root).as_posix() for path in paths]
+    relative_paths = [path.relative_to(switchboard_root).as_posix() for path in paths]
     read_steps = "\n".join(f"- Read `{path}`." for path in relative_paths)
     if sources.is_dir():
-        read_steps += f"\n- Read the relevant source material under `{sources.relative_to(pm_os_root).as_posix()}/` recursively."
+        read_steps += f"\n- Read the relevant source material under `{sources.relative_to(switchboard_root).as_posix()}/` recursively."
     mentions = " ".join(f"@{thread_id}" for thread_id in sibling_ids)
 
-    return f"""This is a parallel Amp tab for PM OS workstream `{workstream_slug}`. It is a fresh local thread, not a continuation of any live sibling.
+    return f"""This is a parallel Amp tab for switchboard workstream `{workstream_slug}`. It is a fresh local thread, not a continuation of any live sibling.
 
 Before acting:
 {read_steps}
@@ -356,10 +356,10 @@ def make_plan(
         cwd = Path.home()
 
     try:
-        pm_os_root = find_pm_os_root(candidates, script_path)
-        slug, workstream_dir = detect_workstream(pm_os_root, candidates, workspace)
+        switchboard_root = find_switchboard_root(candidates, script_path)
+        slug, workstream_dir = detect_workstream(switchboard_root, candidates, workspace)
     except PlanError:
-        pm_os_root = None
+        switchboard_root = None
         slug = None
         workstream_dir = None
 
@@ -370,10 +370,10 @@ def make_plan(
             if workstream_dir is not None
             else DEFAULT_MODE
         ),
-        pm_os_root=pm_os_root,
+        switchboard_root=switchboard_root,
         prompt=(
-            build_prompt(pm_os_root, slug, workstream_dir, siblings)
-            if pm_os_root is not None and slug is not None and workstream_dir is not None
+            build_prompt(switchboard_root, slug, workstream_dir, siblings)
+            if switchboard_root is not None and slug is not None and workstream_dir is not None
             else build_generic_prompt(cwd, workspace, siblings)
         ),
         sibling_thread_ids=siblings,
@@ -552,11 +552,11 @@ def install_shortcuts(config_path: Path, helper_path: Path) -> Path | None:
 
     expected = {
         "cmux.newTerminal": shortcut_action(helper_path, "cmd+t"),
-        "pm-os.newContextualAmpTabCtrl": shortcut_action(helper_path, "ctrl+t"),
+        "switchboard.newContextualAmpTabCtrl": shortcut_action(helper_path, "ctrl+t"),
         "cmux.splitRight": split_action(helper_path, "right"),
         "cmux.splitDown": split_action(helper_path, "down"),
     }
-    migrated_action = actions.pop("pm-os.newContextualAmpTabCmd", None) is not None
+    migrated_action = actions.pop("switchboard.newContextualAmpTabCmd", None) is not None
     changed = migrated_vault or migrated_action or any(
         actions.get(key) != value for key, value in expected.items()
     )
@@ -582,8 +582,8 @@ def install_shortcuts(config_path: Path, helper_path: Path) -> Path | None:
 def record_contextual_binding(cmux, workspace, surface_id, plan, stopped, role="worker"):
     """Observe only the new surface, never borrow a sibling thread's identity."""
     # The sidebar installer copies this launcher alone, so resolve the shared
-    # writer from the PM OS checkout already discovered by make_plan.
-    sys.path.insert(0, str(plan.pm_os_root / "system/scripts"))
+    # writer from the switchboard checkout already discovered by make_plan.
+    sys.path.insert(0, str(plan.switchboard_root / "system/scripts"))
     from workstream_thread_bindings import record_binding
 
     deadline = time.monotonic() + 60
@@ -595,7 +595,7 @@ def record_contextual_binding(cmux, workspace, surface_id, plan, stopped, role="
             thread_id = binding.get("checkpoint_id") or ""
             if (binding.get("kind") == "amp" and THREAD_ID.fullmatch(thread_id)
                     and thread_id not in plan.sibling_thread_ids and not stopped.is_set()):
-                record_binding(plan.pm_os_root, thread_id, plan.workstream_slug,
+                record_binding(plan.switchboard_root, thread_id, plan.workstream_slug,
                                workspace["id"], workspace["ref"], role=role,
                                evidence={"surface_id": surface_id, "launcher": "contextual"})
                 return
@@ -689,9 +689,9 @@ def execute(workspace_id: str, cmux: str, current_surface_id: str | None) -> int
 
     environment = dict(os.environ)
     if plan.workstream_slug:
-        environment["PM_OS_WORKSTREAM_SLUG"] = plan.workstream_slug
+        environment["SWITCHBOARD_WORKSTREAM_SLUG"] = plan.workstream_slug
     else:
-        environment.pop("PM_OS_WORKSTREAM_SLUG", None)
+        environment.pop("SWITCHBOARD_WORKSTREAM_SLUG", None)
     stopped = threading.Event()
     observer = None
     if plan.workstream_slug and current_surface_id:

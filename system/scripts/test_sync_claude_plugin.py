@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""sync-claude-plugin.py keeps the installed pm-os plugin in step with the repo.
+"""sync-claude-plugin.py keeps the installed switchboard plugin in step with the repo.
 
 An installed copy that never updates keeps hook fixes from reaching live sessions. Wrong impls: copy nothing because the version did not change, undo the
 Windows hook profile by restoring the heartbeat, delete files only the install has, or
@@ -40,7 +40,7 @@ class SyncClaudePlugin(unittest.TestCase):
         src = self.repo / sync_mod.PLUGIN_REL
         (src / "hooks").mkdir(parents=True)
         (src / ".claude-plugin").mkdir()
-        (src / ".claude-plugin" / "plugin.json").write_text('{"name": "pm-os", "version": "0.1.0"}\n')
+        (src / ".claude-plugin" / "plugin.json").write_text('{"name": "switchboard", "version": "0.1.0"}\n')
         (src / "hooks" / "hooks.json").write_text(json.dumps(HOOKS, indent=2))
         (src / "hooks" / "surface-context.py").write_text("print('new')\n")
         (src / "hooks" / "__pycache__").mkdir()
@@ -49,7 +49,7 @@ class SyncClaudePlugin(unittest.TestCase):
         shutil.copy(REPO / "system" / "windows" / "apply-hook-profile.py", self.repo / "system" / "windows")
         subprocess.run(["git", "init", "-q", str(self.repo)], check=True)
         self.base = self.tmp / "claude"
-        self.installed = self.base / "plugins" / "cache" / "pm-os-local" / "pm-os" / "0.1.0"
+        self.installed = self.base / "plugins" / "cache" / "switchboard-local" / "switchboard" / "0.1.0"
         (self.installed / "hooks").mkdir(parents=True)
         (self.installed / "hooks" / "surface-context.py").write_text("print('old')\n")
         (self.installed / "hooks" / "only-installed.py").write_text("x\n")
@@ -82,8 +82,8 @@ class SyncClaudePlugin(unittest.TestCase):
     def test_hook_profile_keeps_the_heartbeat_out(self) -> None:
         (self.base / "settings.json").write_text(json.dumps(
             {"hooks": {"Stop": [{"hooks": [{"command": "node wmux-hook.js --event Stop"}]}]}}))
-        os.environ["PM_OS_HOOK_PROFILE_ANY_OS"] = "1"
-        self.addCleanup(os.environ.pop, "PM_OS_HOOK_PROFILE_ANY_OS", None)
+        os.environ["SWITCHBOARD_HOOK_PROFILE_ANY_OS"] = "1"
+        self.addCleanup(os.environ.pop, "SWITCHBOARD_HOOK_PROFILE_ANY_OS", None)
         self.assertTrue(self.run_sync()["heartbeat_stripped"])
         installed = json.loads((self.installed / "hooks" / "hooks.json").read_text())
         self.assertNotIn("PreToolUse", installed["hooks"])

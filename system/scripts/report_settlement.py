@@ -93,7 +93,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=["check"])
     parser.add_argument("--task-id", required=True)
-    parser.add_argument("--state-dir", default=os.environ.get("PM_OS_STATE_DIR") or str(Path(__file__).resolve().parents[1] / "state"))
+    parser.add_argument("--state-dir", default=os.environ.get("SWITCHBOARD_STATE_DIR") or str(Path(__file__).resolve().parents[1] / "state"))
     args = parser.parse_args()
     state_dir = Path(args.state_dir)
     ledger = Path(os.environ.get("RUNNING_TASKS_FILE") or state_dir / "running-tasks.json")

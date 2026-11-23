@@ -2,7 +2,7 @@
 """Build the one JSON feed the CoS Review app reads.
 
 The app (its own cos-review repo, /Applications/CoS Review.app)
-never parses raw PM OS state. This script turns the last month of worker
+never parses raw switchboard state. This script turns the last month of worker
 reports, live ledger rows and held Comms Triage drafts into five fixed sections
 (feed v3):
 
@@ -79,9 +79,9 @@ LIVE = {"routing", "queued", "active"}
 
 LINE_MARK = re.compile(r"\s*⏎\s*")
 FENCED = re.compile(r"```.*?```", re.S)
-MD_LINK = re.compile(r"\[(?P<label>[^\]\n]+)\]\((?P<url>(?:https?|(?:pmos-)?obsidian)://[^\s)]+)\)")
+MD_LINK = re.compile(r"\[(?P<label>[^\]\n]+)\]\((?P<url>(?:https?|(?:switchboard-)?obsidian)://[^\s)]+)\)")
 SLACK_LINK = re.compile(r"<(?P<url>https?://[^|>\s]+)\|(?P<label>[^>]+)>")
-BARE_URL = re.compile(r"(?P<url>(?:https?|(?:pmos-)?obsidian)://[^\s)>\]\"'`|]+)")
+BARE_URL = re.compile(r"(?P<url>(?:https?|(?:switchboard-)?obsidian)://[^\s)>\]\"'`|]+)")
 NOTE_PATH = re.compile(r"(?<![\w/])(workstreams/[\w./-]+?\.(?:md|pdf|png|jpg|json|yaml|html))\b")
 SLACK_THREAD_REF = re.compile(r"\b(?:thread|channel)\s+(C[A-Z0-9]{8,})\s+ts\s+(\d{10})\.(\d{6})")
 LABEL_RESIDUE = re.compile(
@@ -158,7 +158,7 @@ def git_toplevel(path: Path) -> Path | None:
 
 
 def repo_root() -> Path:
-    """Main checkout: from the cwd's git toplevel when it is a pm-os checkout, else this file's."""
+    """Main checkout: from the cwd's git toplevel when it is a switchboard checkout, else this file's."""
     for candidate in (git_toplevel(Path.cwd()), SCRIPT_DIR.parents[1]):
         if candidate and (candidate / "system" / "scripts").is_dir():
             return main_checkout(candidate)
@@ -170,8 +170,8 @@ def ledger_path(root: Path) -> Path:
 
 
 def state_dir(root: Path) -> Path:
-    """``PM_OS_STATE_DIR`` (hermetic tests, dispatch.py's own override) or ``<root>/system/state``."""
-    return Path(os.environ.get("PM_OS_STATE_DIR") or root / "system" / "state")
+    """``SWITCHBOARD_STATE_DIR`` (hermetic tests, dispatch.py's own override) or ``<root>/system/state``."""
+    return Path(os.environ.get("SWITCHBOARD_STATE_DIR") or root / "system" / "state")
 
 
 def feed_path(root: Path) -> Path:
@@ -492,7 +492,7 @@ def resolve_note_url(url: str, root: Path) -> str:
             candidates.append("/".join([parts[0], "_archive", variant, *parts[2:]]))
     for candidate in candidates:
         if (root / f"{candidate}.md").is_file():
-            return f"obsidian://open?vault=pm-os&file={candidate}"
+            return f"obsidian://open?vault=switchboard&file={candidate}"
     return ""
 
 
@@ -636,7 +636,7 @@ def fetch_title(kind: str, url: str) -> dict[str, Any]:
         match = GOOGLE_ID.search(urlsplit(url).path) or re.search(r"[?&]id=(?P<id>[\w-]{10,})", url)
         if not match:
             return {}
-        out = run_lookup(["pmos", "drive", "info", "--file-id-or-url", match.group("id")])
+        out = run_lookup(["switchboard", "drive", "info", "--file-id-or-url", match.group("id")])
         data = load_json_text(out)
         file = data.get("file") if isinstance(data.get("file"), dict) else data
         name = str(file.get("name") or "").strip() if isinstance(file, dict) else ""
@@ -664,9 +664,9 @@ def extract_links(text: str, root: Path) -> list[dict[str, Any]]:
     slots: dict[str, dict[str, Any]] = {}
 
     def add(url: str, hint: str = "") -> None:
-        if url.startswith("pmos-obsidian://"):
+        if url.startswith("switchboard-obsidian://"):
             # The Claude click link for a note is the same pointer as its obsidian:// URI.
-            url = url[len("pmos-"):]
+            url = url[len("switchboard-"):]
         url = canonical_url(url)
         if "<" in url or ">" in url:
             return   # a placeholder ("<token>") a note never filled in
@@ -699,7 +699,7 @@ def extract_links(text: str, root: Path) -> list[dict[str, Any]]:
         if rel.endswith(".md"):
             # ``add`` resolves the note through ``resolve_note_url``, so a bare path to a note whose
             # workstream has since moved to ``_archive/`` resolves the same way an obsidian URL does.
-            add(f"obsidian://open?vault=pm-os&file={rel[:-3]}")
+            add(f"obsidian://open?vault=switchboard&file={rel[:-3]}")
         elif (root / rel).exists():
             add((root / rel).resolve().as_uri())
     return list(slots.values())

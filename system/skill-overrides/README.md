@@ -19,7 +19,7 @@ system/skill-overrides/
 ```
 
 Skills that became fully repo-owned (canonical copies in
-`.agents/skills/` in pm-os, copied whole into `~/.claude/skills` by `system/scripts/sync-skills.py`)
+`.agents/skills/` in switchboard, copied whole into `~/.claude/skills` by `system/scripts/sync-skills.py`)
 must NOT keep partial overrides here: a stale override silently reverts the
 canonical copy when this sync runs standalone. Removed for that reason:
 `chief-of-staff`, `drafting-docs`.

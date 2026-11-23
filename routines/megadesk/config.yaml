@@ -1,8 +1,0 @@
-name: "Megadesk"
-# Dispatcher that synthesizes state across all sources to pick the next best
-# action — substantive multi-source judgment, so ultra.
-# A dated CoS mode trial in system/config/router.yaml `cos_mode_trial:`
-# overrides this for megadesk alone while its window is open.
-agent_mode: ultra
-priority: high
-startup_instruction: "Read routines/megadesk/CONTEXT.md, refresh system/state if needed, then tell the owner the single best action to do next plus up to three fallbacks. Stay in dispatcher mode unless explicitly asked to launch a resolver workstream."

@@ -128,7 +128,7 @@ sources:
   local: local/skills
 skills:
   - {name: present, source: agents}
-  - {pattern: "*", source: local, machine_gate: PM_OS_TEST_GATE, absent_ok_on: [win32, darwin, linux]}
+  - {pattern: "*", source: local, machine_gate: SWITCHBOARD_TEST_GATE, absent_ok_on: [win32, darwin, linux]}
 """
 
 
@@ -142,10 +142,10 @@ class LocalBase(Base):
         patcher = mock.patch.object(installer, "ROOT", self.repo)
         patcher.start()
         self.addCleanup(patcher.stop)
-        env = mock.patch.dict(installer.os.environ, {"PM_OS_MACHINE": "thisbox"})
+        env = mock.patch.dict(installer.os.environ, {"SWITCHBOARD_MACHINE": "thisbox"})
         env.start()
         self.addCleanup(env.stop)
-        installer.os.environ.pop("PM_OS_TEST_GATE", None)
+        installer.os.environ.pop("SWITCHBOARD_TEST_GATE", None)
         self.local_manifest = self.config / "claude-skills-manifest.yaml"
         self.local_manifest.write_text(LOCAL_MANIFEST, encoding="utf-8")
         self.dest = self.home / ".claude" / "skills"
@@ -153,7 +153,7 @@ class LocalBase(Base):
     def gate_on(self, machine: str = "THISBOX") -> None:
         path = self.repo / "local" / "machines" / f"{machine}.env"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("OTHER=1\nPM_OS_TEST_GATE=on\n", encoding="utf-8")
+        path.write_text("OTHER=1\nSWITCHBOARD_TEST_GATE=on\n", encoding="utf-8")
 
     def source(self, name: str, body: str = "body\n") -> Path:
         skill = self.repo / "local" / "skills" / name
@@ -210,7 +210,7 @@ class LocalSource(LocalBase):
         code, out = self.run_local("win32", "--prune")
         self.assertEqual(code, 0, out)
         self.assertTrue(copy.exists(), out)
-        self.assertIn("PM_OS_TEST_GATE is not on for this machine", out)
+        self.assertIn("SWITCHBOARD_TEST_GATE is not on for this machine", out)
 
     def test_a_dry_prune_with_a_missing_root_plans_no_delete(self) -> None:
         self.gate_on()
@@ -270,22 +270,22 @@ class LocalSource(LocalBase):
         path = self.repo / "local" / "machines" / "THISBOX.env"
         path.parent.mkdir(parents=True)
         for value in ("off", "0", "no", "false", "", "maybe"):
-            path.write_text(f"PM_OS_TEST_GATE={value}\n", encoding="utf-8")
+            path.write_text(f"SWITCHBOARD_TEST_GATE={value}\n", encoding="utf-8")
             self.run_local("win32")
             self.assertFalse((self.dest / "private-one").exists(), value)
-        path.write_bytes("﻿PM_OS_TEST_GATE=\"on\"\r\n".encode("utf-8"))
+        path.write_bytes("﻿SWITCHBOARD_TEST_GATE=\"on\"\r\n".encode("utf-8"))
         self.assertEqual(self.run_local("win32")[0], 0)
         self.assertTrue((self.dest / "private-one" / "SKILL.md").exists())
 
     def test_host_name_is_used_up_to_its_first_dot_in_upper_case(self) -> None:
         self.gate_on("THISBOX")
-        with mock.patch.dict(installer.os.environ, {"PM_OS_MACHINE": "thisbox.local"}):
-            self.assertEqual(installer.machine_setting("PM_OS_TEST_GATE"), "on")
+        with mock.patch.dict(installer.os.environ, {"SWITCHBOARD_MACHINE": "thisbox.local"}):
+            self.assertEqual(installer.machine_setting("SWITCHBOARD_TEST_GATE"), "on")
 
     def test_the_environment_wins_over_the_file(self) -> None:
         self.gate_on()
-        with mock.patch.dict(installer.os.environ, {"PM_OS_TEST_GATE": "off"}):
-            self.assertEqual(installer.machine_setting("PM_OS_TEST_GATE"), "off")
+        with mock.patch.dict(installer.os.environ, {"SWITCHBOARD_TEST_GATE": "off"}):
+            self.assertEqual(installer.machine_setting("SWITCHBOARD_TEST_GATE"), "off")
 
     def test_open_gate_installs_copies_byte_for_byte_and_never_a_link(self) -> None:
         self.gate_on()
@@ -358,7 +358,7 @@ class RealManifest(Base):
         self.real = self.config / "claude-skills-manifest.yaml"
         shutil.copy2(HERE.parent / "config" / "claude-skills-manifest.yaml", self.real)
         # Stays away from the real local/ on this machine, whatever its gate says.
-        env = mock.patch.dict(installer.os.environ, {"PM_OS_PERSONAL_SKILLS": "off"})
+        env = mock.patch.dict(installer.os.environ, {"SWITCHBOARD_PERSONAL_SKILLS": "off"})
         env.start()
         self.addCleanup(env.stop)
 
@@ -661,11 +661,11 @@ class RealSkills(unittest.TestCase):
 
     def test_the_manifest_installs_repo_skills_through_one_pattern(self) -> None:
         data = installer.yaml.safe_load((HERE.parent / "config" / "claude-skills-manifest.yaml").read_text(encoding="utf-8"))
-        patterns = [e for e in data["skills"] if e.get("source") == "pm-os" and "pattern" in e]
-        self.assertEqual(patterns, [{"pattern": "*", "source": "pm-os"}])
-        named = [e for e in data["skills"] if e.get("source") == "pm-os" and "name" in e]
+        patterns = [e for e in data["skills"] if e.get("source") == "switchboard" and "pattern" in e]
+        self.assertEqual(patterns, [{"pattern": "*", "source": "switchboard"}])
+        named = [e for e in data["skills"] if e.get("source") == "switchboard" and "name" in e]
         self.assertTrue(all(e.get("only_on") or e.get("absent_ok_on") for e in named),
-                        "a named pm-os entry exists only to carry a per-machine rule")
+                        "a named switchboard entry exists only to carry a per-machine rule")
 
 
 class ReviewFixes(LocalBase):
@@ -729,9 +729,9 @@ class ReviewFixes(LocalBase):
         self.assertEqual(code, 2, out)
         self.assertFalse((real / ".claude" / "skills" / "wt-two").exists())
 
-    def test_codex_mode_may_write_into_the_library_root_for_pm_os_only(self) -> None:
+    def test_codex_mode_may_write_into_the_library_root_for_switchboard_only(self) -> None:
         manifest = self.config / "codex.yaml"
-        manifest.write_text(LOCAL_MANIFEST.replace("  local: local/skills", "  local: local/skills\n  pm-os: local/skills"),
+        manifest.write_text(LOCAL_MANIFEST.replace("  local: local/skills", "  local: local/skills\n  switchboard: local/skills"),
                             encoding="utf-8")
         dest = str(self.home / ".agents" / "skills")
         code, out = self.run_installer("win32", "--destination", dest, manifest=manifest)

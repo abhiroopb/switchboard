@@ -9,13 +9,13 @@
 #
 # The tab runs what a hand-started CoS runs, plus the CoS-only Remote Control flag, in the
 # main checkout (never a task worktree, which is removed when its task lands):
-#   cd <main> && PM_OS_COS_REMOTE_CONTROL_LAUNCH=1 claude --dangerously-skip-permissions
+#   cd <main> && SWITCHBOARD_COS_REMOTE_CONTROL_LAUNCH=1 claude --dangerously-skip-permissions
 #     --model <m> --effort <e> --settings <tab settings> --remote-control CoS CoS
 # The seed prompt "CoS" is cos_autobind.py's trigger, so the tab registers itself as CoS
 # (titled "🧭 CoS", pinned, session bound) and replies "Ready.", as when the owner types
 # `claude` then `CoS`. An older CoS tab is renamed "🧭 CoS (old …)", never closed.
 #
-# --at-logon (Windows Task Scheduler, com.pm-os.cos-autostart in
+# --at-logon (Windows Task Scheduler, com.switchboard.cos-autostart in
 # system/windows/register-scheduled-tasks.ps1): starts wmux when it is not running, then
 # polls inside the restore window. wmux resumes the CoS it had with `claude --resume`, and a
 # resumed session that had Remote Control turns it back on, so a restored live CoS is kept and
@@ -29,10 +29,10 @@
 # One run at a time: a lock folder (stale after LAUNCH_COS_LOCK_SECONDS, default 300) also
 # covers the minute a new tab is still booting under its "CoS starting" title.
 # Amp: Remote Control is a Claude Code feature, so with router.yaml agent: amp this opens CoS
-# through ensure-routine-workspaces.sh megadesk instead.
+# through ensure-routine-workspaces.sh switchboard instead.
 #
-# Switches (environment, else local/machines/<MACHINE>.env): PM_OS_COS_AUTOSTART=off skips
-# --at-logon and --if-missing runs; PM_OS_COS_REMOTE_CONTROL=off drops the flag
+# Switches (environment, else local/machines/<MACHINE>.env): SWITCHBOARD_COS_AUTOSTART=off skips
+# --at-logon and --if-missing runs; SWITCHBOARD_COS_REMOTE_CONTROL=off drops the flag
 # (cmux-helpers.sh). Waits: COS_RESTORE_WAIT_SECONDS (default 90), COS_MUX_WAIT_SECONDS
 # (default 180). Tests: system/scripts/test_launch_cos.py.
 set -uo pipefail
@@ -40,7 +40,7 @@ set -uo pipefail
 say() { printf '[launch-cos %s] %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*"; }
 
 # Scripts come from the checkout this runs in; CoS itself opens in the main checkout.
-CODE_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { say "failed: run inside the pm-os repo"; exit 2; }
+CODE_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { say "failed: run inside the switchboard repo"; exit 2; }
 common="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || common="$CODE_ROOT/.git"
 COS_ROOT="${LAUNCH_COS_ROOT:-$(dirname "$common")}"
 [[ -d "$COS_ROOT/system" ]] || COS_ROOT="$CODE_ROOT"
@@ -67,28 +67,28 @@ REPO_ROOT="$CODE_ROOT"
 # shellcheck source=/dev/null
 source "$CODE_ROOT/system/scripts/lib/machine-role.sh" || { say "failed: machine-role.sh did not load"; exit 1; }
 if (( if_missing )); then
-    case "$(pm_os_machine_value PM_OS_COS_AUTOSTART | tr '[:upper:]' '[:lower:]')" in
-        off|0|false|no) say "skipped: PM_OS_COS_AUTOSTART=off"; exit 0 ;;
+    case "$(switchboard_machine_value SWITCHBOARD_COS_AUTOSTART | tr '[:upper:]' '[:lower:]')" in
+        off|0|false|no) say "skipped: SWITCHBOARD_COS_AUTOSTART=off"; exit 0 ;;
     esac
 fi
 # shellcheck source=/dev/null
 source "$CODE_ROOT/system/cmux-helpers.sh" >/dev/null || { say "failed: cmux-helpers.sh did not load"; exit 1; }
 REPO_ROOT="$CODE_ROOT"
-PY="${PM_OS_PYTHON:-python3}"
+PY="${SWITCHBOARD_PYTHON:-python3}"
 CMUX="${CMUX_BIN:-cmux}"
 
 cos_line() {
     local mode
-    mode="$(resolve_agent_mode megadesk 2>/dev/null)" || mode="ultra"
+    mode="$(resolve_agent_mode switchboard 2>/dev/null)" || mode="ultra"
     [[ -n "$mode" ]] || mode="ultra"
     # The settings file path is the main checkout's, like the rest of the line.
     local cmd
-    cmd="$(REPO_ROOT="$COS_ROOT" agent_interactive_command "$mode" megadesk)"
+    cmd="$(REPO_ROOT="$COS_ROOT" agent_interactive_command "$mode" switchboard)"
     printf 'cd %q && %s CoS' "$COS_ROOT" "$cmd"
 }
 
 if (( dry_run )); then
-    if [[ "$(pm_os_agent)" != "claude" ]]; then say "dry run: agent is $(pm_os_agent); would run ensure-routine-workspaces.sh megadesk"; exit 0; fi
+    if [[ "$(switchboard_agent)" != "claude" ]]; then say "dry run: agent is $(switchboard_agent); would run ensure-routine-workspaces.sh switchboard"; exit 0; fi
     printf '%s\n' "$(cos_line)"
     exit 0
 fi
@@ -165,9 +165,9 @@ if (( at_logon )); then
     fi
 fi
 
-if [[ "$(pm_os_agent)" != "claude" ]]; then
-    say "agent is $(pm_os_agent) (no Remote Control); opening CoS through ensure-routine-workspaces.sh megadesk"
-    exec bash "$CODE_ROOT/system/scripts/ensure-routine-workspaces.sh" megadesk
+if [[ "$(switchboard_agent)" != "claude" ]]; then
+    say "agent is $(switchboard_agent) (no Remote Control); opening CoS through ensure-routine-workspaces.sh switchboard"
+    exec bash "$CODE_ROOT/system/scripts/ensure-routine-workspaces.sh" switchboard
 fi
 
 mux_up || { say "failed: the multiplexer is not running"; exit 1; }

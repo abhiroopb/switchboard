@@ -111,8 +111,8 @@ Use the intake planner output to identify:
 
 Load the matching skill or tool path first:
 
-- Slack permalink -> `pmos slack`, or a `slack` skill if one is installed
-- Google Docs/Drive URL -> `pmos drive`, or a `gdrive` skill if one is installed
+- Slack permalink -> `switchboard slack`, or a `slack` skill if one is installed
+- Google Docs/Drive URL -> `switchboard drive`, or a `gdrive` skill if one is installed
 - Linear URL -> the Linear MCP, or a `linear` skill if one is installed
 - Roadmap tracker URL (optional adapter) -> use your roadmap tracker's API or skill if one is installed, then treat the record like a ticket. Set its host in `normalize_url` in `scripts/link_intake.py`.
 - Generic web or app page -> use its supported API first; use Chrome DevTools with the sanctioned headless profile when the API fails or lacks the capability; use `read_web_page` for read-only extraction

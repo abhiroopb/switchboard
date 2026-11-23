@@ -77,13 +77,13 @@
 //     lost marker can never permanently suppress review pins.
 //
 // Caveat: cmux auto-clears a lane override when the *inferred* lane changes
-// (anti-rot). In practice pm-os workspaces infer "working" almost always
+// (anti-rot). In practice switchboard workspaces infer "working" almost always
 // (dirty tree), so the pin holds until the user responds.
 //
 // Test seams (used by system/scripts/test-review-lane-hydration.sh):
 //   REVIEW_LANE_STATE_DIR  — marker/state dir override
 //   REVIEW_LANE_CMUX_BIN   — cmux binary override (stub)
-//   PM_OS_REPO_ROOT        — repo root override for workspace-updates.json
+//   SWITCHBOARD_REPO_ROOT        — repo root override for workspace-updates.json
 //
 // Kill switch: `review-lane.disabled = true`
 // Installed by system/scripts/install-amp-plugins.sh (symlink from this repo).
@@ -93,7 +93,7 @@ import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from '
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { PluginAPI, AgentStartEvent, AgentEndEvent } from '@ampcode/plugin'
-import { workstreamSlugFromContext } from './pm-os/lib'
+import { workstreamSlugFromContext } from './switchboard/lib'
 
 const PLUGIN = 'review-lane'
 // Runtime version marker. Bump when behavior changes. Written to
@@ -105,9 +105,9 @@ const PLUGIN = 'review-lane'
 const PLUGIN_VERSION = '2026-09-08.1'
 const HOME = homedir()
 const STATE_DIR = process.env.REVIEW_LANE_STATE_DIR || join(HOME, '.config', 'amp', 'plugin-state', PLUGIN)
-const REPO_ROOT = process.env.PM_OS_REPO_ROOT || join(HOME, 'Development', 'pm-os')
+const REPO_ROOT = process.env.SWITCHBOARD_REPO_ROOT || join(HOME, 'Development', 'switchboard')
 const CMUX_FALLBACK = '/Applications/cmux.app/Contents/Resources/bin/cmux'
-// Must match the "To review" color in system/cmux-sidebars/pm-os.swift and
+// Must match the "To review" color in system/cmux-sidebars/switchboard.swift and
 // COLOR{purple} in system/scripts/publish-workspace-status.sh.
 const REVIEW_COLOR = '#bb9af7'
 // A hydration marker is written seconds before its turn starts; anything this
@@ -169,13 +169,13 @@ function isRouterTitle(title: string): boolean {
 // Worker tabs (dispatch.py launch) never carry
 // review state: they live in the sidebar's Workers section whatever their
 // agent state, and a finished turn shows no unread count. The worker's Amp
-// process runs with PM_OS_WORKER_ID in its environment; the tab description
-// "PM OS worker <task-id>" is the secondary check for a plugin loaded some
+// process runs with SWITCHBOARD_WORKER_ID in its environment; the tab description
+// "switchboard worker <task-id>" is the secondary check for a plugin loaded some
 // other way into that tab.
-const WORKER_DESCRIPTION_PREFIX = 'PM OS worker '
+const WORKER_DESCRIPTION_PREFIX = 'switchboard worker '
 
 function isWorkerSession(description: string): boolean {
-  return Boolean(process.env.PM_OS_WORKER_ID) || description.startsWith(WORKER_DESCRIPTION_PREFIX)
+  return Boolean(process.env.SWITCHBOARD_WORKER_ID) || description.startsWith(WORKER_DESCRIPTION_PREFIX)
 }
 
 function run(bin: string, args: string[], opts: { cwd?: string; timeoutMs?: number } = {}): Promise<{ code: number; stdout: string; stderr: string }> {
@@ -506,7 +506,7 @@ export default function (amp: PluginAPI) {
   // sidebar shows ⚡ for the running turn without moving the row. Only a
   // deferred pin from the previous turn is cancelled (the user replied
   // before it landed). The native lane override is released so cmux's own
-  // sidebar inference resumes — the pm-os sidebar does not read it.
+  // sidebar inference resumes — the switchboard sidebar does not read it.
   // Machine-seeded hydration turns are NOT a user response either.
   amp.on('agent.start', async (_event: AgentStartEvent, ctx) => {
     if (!isEnabled(config) || isHeadless()) return

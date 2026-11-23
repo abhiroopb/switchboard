@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate navigation INDEX.md files for the pm-os Obsidian vault.
+"""Generate navigation INDEX.md files for the switchboard Obsidian vault.
 
 The vault is the repository opened in place. Hand-written README.md files stay
 the narrative entry points; this script fills the gaps where a folder has many

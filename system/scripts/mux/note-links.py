@@ -9,7 +9,7 @@ in CoS reports did nothing there. review_surface.note_link_mode() picks
     http://127.0.0.1:7472/open?file=<vault-relative path>.md
 
 This small server answers that link: it opens the note in Obsidian
-(obsidian://open?vault=pm-os&file=...) and shows the note's text in the panel,
+(obsidian://open?vault=switchboard&file=...) and shows the note's text in the panel,
 so the note is readable even when Obsidian is closed.
 
 Safety: binds 127.0.0.1 only, GET only, serves only .md files inside the vault
@@ -32,8 +32,8 @@ Usage:
     python3 system/scripts/mux/note-links.py ensure [--port P]   start detached unless the port answers
     python3 system/scripts/mux/note-links.py status [--port P]   exit 0 when the server answers
 
-Environment: PM_OS_NOTE_LINK_PORT (default 7472), PM_OS_VAULT_ROOT, PM_OS_VAULT_NAME.
-Windows starts it at sign-in as the \\PM OS\\com.pm-os.note-links scheduled task.
+Environment: SWITCHBOARD_NOTE_LINK_PORT (default 7472), SWITCHBOARD_VAULT_ROOT, SWITCHBOARD_VAULT_NAME.
+Windows starts it at sign-in as the \\switchboard\\com.switchboard.note-links scheduled task.
 """
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ DEFAULT_PORT = 7472
 
 def port() -> int:
     try:
-        return int(os.environ.get("PM_OS_NOTE_LINK_PORT") or DEFAULT_PORT)
+        return int(os.environ.get("SWITCHBOARD_NOTE_LINK_PORT") or DEFAULT_PORT)
     except ValueError:
         return DEFAULT_PORT
 
@@ -158,7 +158,7 @@ def page(title: str, body: str, status_line: str = "") -> bytes:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "pm-os-note-links/1"
+    server_version = "switchboard-note-links/1"
 
     def log_message(self, fmt: str, *args) -> None:  # quiet: no request log
         return
@@ -214,7 +214,7 @@ class Handler(BaseHTTPRequestHandler):
         if parts.path == "/health":
             return self.send(200, b"ok", "text/plain; charset=utf-8")
         if parts.path not in ("/open", "/view"):
-            return self.send(404, page("Not found", "", "PM OS note links serve /open?file=<note>.md"))
+            return self.send(404, page("Not found", "", "switchboard note links serve /open?file=<note>.md"))
         rel = (parse_qs(parts.query).get("file") or [""])[0]
         note = resolve_note(rel)
         if note is None:
@@ -259,7 +259,7 @@ def ensure(p: int) -> int:
     else:
         kwargs["start_new_session"] = True
     # The parent resolves the vault (git) so the detached child never has to.
-    kwargs["env"] = {**os.environ, "PM_OS_VAULT_ROOT": str(vault_root())}
+    kwargs["env"] = {**os.environ, "SWITCHBOARD_VAULT_ROOT": str(vault_root())}
     subprocess.Popen(cmd, **kwargs)
     import time
 

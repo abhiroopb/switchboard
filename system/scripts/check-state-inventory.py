@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shrink check for the unversioned PM OS state.
+"""Shrink check for the unversioned switchboard state.
 
 A bad change that replaces `people/` with a symlink to itself, or wipes state
 some other way, can go unnoticed for a day. This script runs once per
@@ -36,7 +36,7 @@ comparison stays pinned to the pre-drop values and the line repeats at most once
 an hour. Nothing is held or blocked: sweeps, finish and workers run as before.
 
 Files: system/state/inventory-latest.json (previous tick = the reference), mirrored
-to ~/Library/Application Support/pm-os/ so a repo-wide wipe still leaves a
+to ~/Library/Application Support/switchboard/ so a repo-wide wipe still leaves a
 comparison point.
 
 Accepting a legitimate drop (profiles deliberately deleted): remove
@@ -70,7 +70,7 @@ _spec.loader.exec_module(ledger)  # type: ignore[union-attr]
 
 REPO_ROOT = main_checkout(Path(os.environ.get("INVENTORY_REPO_ROOT") or SCRIPTS.parents[1]))
 LATEST = Path(os.environ.get("INVENTORY_LATEST_FILE") or REPO_ROOT / "system" / "state" / "inventory-latest.json")
-MIRROR_DIR = Path(os.environ.get("INVENTORY_MIRROR_DIR") or Path.home() / "Library" / "Application Support" / "pm-os")
+MIRROR_DIR = Path(os.environ.get("INVENTORY_MIRROR_DIR") or Path.home() / "Library" / "Application Support" / "switchboard")
 REPORT_SCRIPT = Path(os.environ.get("INVENTORY_REPORT_SCRIPT") or SCRIPTS / "report-to-cos.sh")
 STATE_PRUNED_FILE = SCRIPTS.parent / "config" / "state-pruned.txt"
 
@@ -298,8 +298,8 @@ def alert_line(tripped: list[dict[str, Any]], since: str) -> str:
 def send_alert(text: str) -> bool:
     stamp = now().strftime("%Y%m%d-%H%M")
     cmd = ["bash", str(REPORT_SCRIPT), "--task-id", f"inventory-shrink-{stamp}", "--origin", "cos",
-           "--workstream", "pm-os-maintenance", "--status", "blocked", "--urgent", "--create-if-missing", text]
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
+           "--workstream", "switchboard-maintenance", "--status", "blocked", "--urgent", "--create-if-missing", text]
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
     env["REPORT_TO_COS_NO_HOOKS"] = "1"
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=180)

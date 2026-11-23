@@ -29,16 +29,16 @@ fi
 # when the lock is still held after the bounded wait.
 # shellcheck source=lib/dir-lock.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/dir-lock.sh"
-if pm_os_is_windows_shell; then
-    if ! pm_os_dir_lock_acquire "$LOCK_DIR.flock.win" "${PUBLISH_WORKSPACE_STATUS_LOCK_WAIT_SECONDS:-15}"; then
+if switchboard_is_windows_shell; then
+    if ! switchboard_dir_lock_acquire "$LOCK_DIR.flock.win" "${PUBLISH_WORKSPACE_STATUS_LOCK_WAIT_SECONDS:-15}"; then
         echo "publish-workspace-status: another publisher held the lock" >&2
         exit 75
     fi
-    trap 'rm -f "$STAGED_CACHE_FILE" "$SUCCESS_KEYS_FILE"; pm_os_dir_lock_release' EXIT
+    trap 'rm -f "$STAGED_CACHE_FILE" "$SUCCESS_KEYS_FILE"; switchboard_dir_lock_release' EXIT
 else
 exec 9>>"$LOCK_DIR.flock"
 if ! python3 - "${PUBLISH_WORKSPACE_STATUS_LOCK_WAIT_SECONDS:-15}" <<'PY'
-# pm-os: posix-only (the pm_os_is_windows_shell branch above takes lib/dir-lock.sh)
+# switchboard: posix-only (the switchboard_is_windows_shell branch above takes lib/dir-lock.sh)
 import fcntl
 import sys
 import time
@@ -86,7 +86,7 @@ LIVE_COLOR_LISTING=""
 refresh_live_workspace_colors() {
     # "ref<TAB>color" per line, from the live workspace list (custom_color).
     LIVE_COLOR_LISTING=$(CMUX_QUIET=1 cmux_cmd rpc workspace.list 2>/dev/null \
-        | "${PM_OS_PYTHON:-python3}" "$(dirname "${BASH_SOURCE[0]}")/lib/json_get.py" --tsv "workspaces|." ref custom_color 2>/dev/null || true)
+        | "${SWITCHBOARD_PYTHON:-python3}" "$(dirname "${BASH_SOURCE[0]}")/lib/json_get.py" --tsv "workspaces|." ref custom_color 2>/dev/null || true)
 }
 
 live_workspace_color() {
@@ -180,10 +180,10 @@ COLOR = {
     "yellow": "#FFF0A8",
     "blue": "#C2EAFF",
     "green": "#BDF5C2",
-    # "To review" accent — matches the pm-os.swift To review lane color so
+    # "To review" accent — matches the switchboard.swift To review lane color so
     # calm review-and-approve items land there instead of Needs attention.
     "purple": "#BB9AF7",
-    # Paused gets its own accent so the custom sidebar (pm-os.swift) can
+    # Paused gets its own accent so the custom sidebar (switchboard.swift) can
     # bucket paused separately from waiting — the workspace color is the
     # only signal channel custom sidebars can read.
     "gray": "#D7DEE7",
@@ -525,7 +525,7 @@ while IFS=$'\t' read -r SLUG SOURCE_TYPE SIGNAL SIGNAL_COLOR OWNER OWNER_COLOR E
     else
         echo "workspace status publish failed: $SOURCE_TYPE:$SLUG (will retry)" >&2
     fi
-done < <("${PM_OS_PYTHON:-python3}" -c '
+done < <("${SWITCHBOARD_PYTHON:-python3}" -c '
 import json, sys
 for r in json.loads(sys.stdin.read() or "[]"):
     eta = r.get("eta")

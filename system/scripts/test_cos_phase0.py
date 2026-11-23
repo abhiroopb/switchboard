@@ -4,7 +4,7 @@
 The chief-of-staff skill renamed the CoS tab only through /Applications/cmux.app,
 so on Windows the tab stayed "Workspace 3" and the Gmail send guard
 refused the owner's "send it". cos-phase0.sh renames through whichever backend
-lib/mux.sh picks. These tests never reach a live tab: PM_OS_TEST_SANDBOX=1 and a
+lib/mux.sh picks. These tests never reach a live tab: SWITCHBOARD_TEST_SANDBOX=1 and a
 stub CMUX_BIN that records every call.
 """
 from __future__ import annotations
@@ -58,10 +58,10 @@ class CosPhase0Tests(unittest.TestCase):
     def run_phase0(self, sub: str, caller: str = "workspace:3", tabs: list[dict] | None = None,
                    **extra) -> subprocess.CompletedProcess:
         tabs = tabs if tabs is not None else [{"ref": "workspace:3", "title": "Workspace 3", "description": ""}]
-        env = {k: v for k, v in os.environ.items() if not k.startswith(("PM_OS_WORKER", "PM_OS_WORKTREE"))}
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("SWITCHBOARD_WORKER", "SWITCHBOARD_WORKTREE"))}
         env.update({
-            "PM_OS_TEST_SANDBOX": "1", "PM_OS_MUX": "wmux", "CMUX_BIN": str(self.stub).replace("\\", "/"),
-            "STUB_LOG": str(self.log).replace("\\", "/"), "PM_OS_OWNER_TABS": str(self.owner_tabs),
+            "SWITCHBOARD_TEST_SANDBOX": "1", "SWITCHBOARD_MUX": "wmux", "CMUX_BIN": str(self.stub).replace("\\", "/"),
+            "STUB_LOG": str(self.log).replace("\\", "/"), "SWITCHBOARD_OWNER_TABS": str(self.owner_tabs),
             "STUB_IDENTIFY": json.dumps({"caller": {"workspace_ref": caller}} if caller else {"caller": {}}),
             "STUB_LIST": json.dumps({"workspaces": tabs}),
         })
@@ -120,13 +120,13 @@ class CosPhase0Tests(unittest.TestCase):
         self.assertIn("claim-cos did not register", result.stderr)
 
     def test_worker_tab_is_never_renamed(self) -> None:
-        tabs = [{"ref": "workspace:9", "title": "📊 PM OS Maintenance 2", "description": "PM OS worker rt-abc"}]
+        tabs = [{"ref": "workspace:9", "title": "📊 Switchboard Maintenance 2", "description": "switchboard worker rt-abc"}]
         result = self.run_phase0("chrome", caller="workspace:9", tabs=tabs)
         self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
         self.assertFalse([c for c in self.calls() if "claim-cos" in c or c.startswith("workspace-action")])
 
     def test_worker_env_is_refused_before_any_call(self) -> None:
-        for var in ("PM_OS_WORKER", "PM_OS_WORKER_TASK_ID", "PM_OS_WORKTREE"):
+        for var in ("SWITCHBOARD_WORKER", "SWITCHBOARD_WORKER_TASK_ID", "SWITCHBOARD_WORKTREE"):
             self.log.unlink(missing_ok=True)
             result = self.run_phase0("chrome", **{var: "1"})
             self.assertEqual(result.returncode, 3, var)

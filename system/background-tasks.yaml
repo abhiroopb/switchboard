@@ -1,5 +1,5 @@
 # Background Tasks
-# These run via launchd (com.pm-os.background-tasks) every 30 min.
+# These run via launchd (com.switchboard.background-tasks) every 30 min.
 # The executor (system/scripts/run-background-tasks.sh) runs direct commands
 # or headless Amp synthesis according to the top-level execution map.
 #
@@ -15,7 +15,7 @@
 #   description: one-line human summary
 #
 # Keep background prompts safe for headless execution. Avoid tools that can
-# trigger interactive auth or browser flows. Commands run from PM_OS_ROOT.
+# trigger interactive auth or browser flows. Commands run from SWITCHBOARD_ROOT.
 #
 # This is the kit's starter set. Add your own collectors (Slack, Gmail, Drive,
 # Linear, Jira, GitHub) as `type: command` tasks once you have written them;
@@ -34,7 +34,7 @@ tasks:
     enabled: true
     interval_minutes: 60
     timeout_seconds: 600
-    description: "Hourly context snapshot (.state/context-snapshots), workstreams README, megadesk rebuild"
+    description: "Hourly context snapshot (.state/context-snapshots), workstreams README, switchboard rebuild"
 
   - name: build-workspace-signals-all
     enabled: true
@@ -82,7 +82,7 @@ tasks:
   - name: build-daily-knowledge
     # Canonical daily knowledge layer (system/state/knowledge/snapshot.json) that
     # query-knowledge.py and the recall pack read: todos, workstream status,
-    # dated PM OS outputs, and this week's calendar through pmos. See
+    # dated switchboard outputs, and this week's calendar through switchboard. See
     # system/config/temporal-contract.md.
     enabled: true
     interval_minutes: 30
@@ -109,7 +109,7 @@ tasks:
     description: "Rebuild the structural knowledge graph (graphify-out/graph.json) every 6 hours; skipped when graphify is not installed"
 
   - name: local-backup-health
-    # The backup itself runs from its own nightly task (com.pm-os.local-backup).
+    # The backup itself runs from its own nightly task (com.switchboard.local-backup).
     # This check sends CoS one urgent line when the last run failed or the newest
     # copy is over 48 hours old, repeated at most daily. One python process, no fork.
     enabled: true

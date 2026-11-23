@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Register the PM OS checkout as its own Obsidian vault named after its folder (pm-os).
+"""Register the switchboard checkout as its own Obsidian vault named after its folder (switchboard).
 
-Every review pointer PM OS writes is obsidian://open?vault=pm-os&file=<path>, so
+Every review pointer switchboard writes is obsidian://open?vault=switchboard&file=<path>, so
 the vault must exist under that name. Obsidian keeps its vault list in
 obsidian.json and rewrites that file while it runs, so an edit made while it is
 open is lost. This script:
@@ -15,7 +15,7 @@ open is lost. This script:
      backup sits next to the file), and starts Obsidian again on HOME.md when it
      was running before (or with --open).
 
-The vault name is the folder name, so the checkout folder must be called pm-os.
+The vault name is the folder name, so the checkout folder must be called switchboard.
 Shared vault settings (.obsidian/app.json and friends) are tracked in git.
 
 Usage:
@@ -50,8 +50,8 @@ def repo_root() -> Path:
 
 
 def config_path() -> Path:
-    if os.environ.get("PM_OS_OBSIDIAN_CONFIG"):
-        return Path(os.environ["PM_OS_OBSIDIAN_CONFIG"])
+    if os.environ.get("SWITCHBOARD_OBSIDIAN_CONFIG"):
+        return Path(os.environ["SWITCHBOARD_OBSIDIAN_CONFIG"])
     if os.name == "nt":
         return Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")) / "obsidian" / "obsidian.json"
     if sys.platform == "darwin":
@@ -73,7 +73,7 @@ def find_vault(data: dict, root: Path) -> tuple[str, dict] | None:
 
 
 def obsidian_running() -> bool:
-    if os.environ.get("PM_OS_OBSIDIAN_ASSUME_CLOSED") == "1":
+    if os.environ.get("SWITCHBOARD_OBSIDIAN_ASSUME_CLOSED") == "1":
         return False
     try:
         if os.name == "nt":
@@ -128,8 +128,8 @@ def main() -> int:
     cfg = config_path()
     name = root.name
     result: dict = {"vault": name, "path": str(root), "config": str(cfg)}
-    if name != "pm-os":
-        result["warning"] = f"checkout folder is {name!r}; review links use vault=pm-os, so rename the folder to pm-os"
+    if name != "switchboard":
+        result["warning"] = f"checkout folder is {name!r}; review links use vault=switchboard, so rename the folder to switchboard"
 
     data: dict = {"vaults": {}}
     if cfg.exists():

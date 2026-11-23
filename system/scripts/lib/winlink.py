@@ -259,7 +259,7 @@ def developer_mode_hint() -> str:
     """One line for install-all: empty unless this is Windows with Developer Mode off."""
     if developer_mode() is not False:
         return ""
-    return ("Windows Developer Mode is off (optional): shared-state files are hard links that PM OS "
+    return ("Windows Developer Mode is off (optional): shared-state files are hard links that switchboard "
             "relinks after main rewrites them. For symlinks instead, run once in an admin PowerShell: "
             + DEVELOPER_MODE_ON)
 

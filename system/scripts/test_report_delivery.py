@@ -23,7 +23,7 @@ from pathlib import Path
 # Never open a browser from a test (report-to-cos.sh opens linked compare pages).
 os.environ.setdefault("IMAGE_COMPARE_OPEN_DISABLED", "1")
 # Never reach a live cmux or wmux tab: lib/mux, the inject guard and the shim fail closed.
-os.environ["PM_OS_TEST_SANDBOX"] = "1"
+os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = REPO_ROOT / "system" / "scripts"
@@ -39,7 +39,7 @@ DRAFT_SCREEN = "scrollback\n╭──────────╮\n│ a draft  �
 # every send is logged (that is the "paste" we must never do twice).
 STUB_CMUX = r"""#!/usr/bin/env bash
 printf '%s\n' "$*" >> "$STUB_CMUX_CALLS"
-[[ -n "${STUB_SANDBOX_LOG:-}" ]] && printf '%s\n' "${PM_OS_TEST_SANDBOX:-unset}" >> "$STUB_SANDBOX_LOG"
+[[ -n "${STUB_SANDBOX_LOG:-}" ]] && printf '%s\n' "${SWITCHBOARD_TEST_SANDBOX:-unset}" >> "$STUB_SANDBOX_LOG"
 case "$1" in
   list-workspaces)
     if [[ -n "${STUB_LIST_FILE:-}" && -f "$STUB_LIST_FILE" ]]; then cat "$STUB_LIST_FILE"
@@ -74,14 +74,14 @@ class Harness(unittest.TestCase):
         self.idle()
         # The worker pane's WMUX/CMUX ids would point the scripts at the live tabs.
         self.env = {k: v for k, v in os.environ.items()
-                    if not k.startswith(("PM_OS_WORKER", "WMUX", "CMUX_WORKSPACE", "CMUX_SURFACE"))}
-        self.env["PM_OS_TEST_SANDBOX"] = "1"
+                    if not k.startswith(("SWITCHBOARD_WORKER", "WMUX", "CMUX_WORKSPACE", "CMUX_SURFACE"))}
+        self.env["SWITCHBOARD_TEST_SANDBOX"] = "1"
         self.env.update({
             "REPO_ROOT": str(REPO_ROOT), "CMUX_BIN": str(self.cmux), "CMUX": str(self.cmux),
             "STUB_CMUX_CALLS": str(self.tmp / "cmux-calls.log"), "STUB_SCREEN_FILE": str(self.screen),
             "STUB_SENDS": str(self.sends), "STUB_SEND_FAIL": str(self.tmp / "send-fail"),
             "STUB_LIST_FILE": str(self.tmp / "list-workspaces.txt"),
-            "PM_OS_STATE_DIR": str(self.state), "RUNNING_TASKS_FILE": str(self.ledger),
+            "SWITCHBOARD_STATE_DIR": str(self.state), "RUNNING_TASKS_FILE": str(self.ledger),
             "THREAD_STATUS_FEED_FILE": str(self.state / "thread-status-feed.jsonl"),
             "REPORT_TO_COS_LOCK_DIR": str(self.state / "next-up-post.json.lockdir"),
             "CIG_SEND_LOG": str(self.tmp / "cmux-sends.log"),
@@ -89,7 +89,7 @@ class Harness(unittest.TestCase):
             # digest at any hour; tests of the direct paste path pass
             # --delivery direct (blocked/failed/urgent go direct on their own).
             "REPORT_TO_COS_NOW": "2026-10-04T21:30:00-07:00",
-            "REPORT_TO_COS_WAIT_SECONDS": "0", "REPORT_TO_COS_NO_HOOKS": "1", "PM_OS_WORKSTREAM_SLUG": "",
+            "REPORT_TO_COS_WAIT_SECONDS": "0", "REPORT_TO_COS_NO_HOOKS": "1", "SWITCHBOARD_WORKSTREAM_SLUG": "",
             "REPORT_TO_COS_NO_WAITER": "1",   # waiter tests enable it explicitly
             "REPORT_TO_COS_WAITER_POLL": "1",
             # Windows runs each poll through bash and Python much more slowly.
@@ -134,19 +134,19 @@ class Harness(unittest.TestCase):
         return self.ledger_cmd("show", "--task-id", task_id)
 
     def seed(self, task_id: str, origin: str = "cos") -> None:
-        self.ledger_cmd("start", "--task-id", task_id, "--origin", origin, "--workstream", "pm-os-maintenance",
+        self.ledger_cmd("start", "--task-id", task_id, "--origin", origin, "--workstream", "switchboard-maintenance",
                         "--prompt", "test task")
 
 
 class SandboxedTestLedger(Harness):
     """A test fixture must never reach the real CoS. A run whose
     ledger is not main's sandboxes itself even when the caller forgot to, so
-    every mux call it makes carries PM_OS_TEST_SANDBOX=1 and fails closed
+    every mux call it makes carries SWITCHBOARD_TEST_SANDBOX=1 and fails closed
     unless it hits an explicit stub. Wrong impls: trust the caller to set the
     flag; sandbox a default (main) run."""
 
     def test_a_non_main_ledger_sandboxes_the_run(self) -> None:
-        self.env.pop("PM_OS_TEST_SANDBOX", None)
+        self.env.pop("SWITCHBOARD_TEST_SANDBOX", None)
         self.env["STUB_SANDBOX_LOG"] = str(self.tmp / "sandbox.log")
         self.seed("rt-sbox00000001")
         self.report("--task-id", "rt-sbox00000001", "--origin", "cos", "--status", "done", "--delivery", "direct",
@@ -156,11 +156,11 @@ class SandboxedTestLedger(Harness):
         self.assertEqual(set(seen), {"1"})
 
     def test_the_real_shim_refuses_inside_the_sandbox(self) -> None:
-        env = {k: v for k, v in self.env.items() if k != "PM_OS_TEST_WMUX_BIN"}
+        env = {k: v for k, v in self.env.items() if k != "SWITCHBOARD_TEST_WMUX_BIN"}
         out = subprocess.run([sys.executable, str(SCRIPTS / "mux" / "cmux-shim.py"), "list-workspaces"],
                              env=env, capture_output=True, text=True)
         self.assertNotEqual(out.returncode, 0)
-        self.assertIn("pm-os-test-sandbox", out.stderr)
+        self.assertIn("switchboard-test-sandbox", out.stderr)
 
 
 class OpensSharedComparePage(Harness):
@@ -178,7 +178,7 @@ class OpensSharedComparePage(Harness):
         rec.write_text(f'#!/bin/sh\necho "$1" >> "{self.opened}"\n', newline="\n")
         rec.chmod(0o755)
         self.env.pop("IMAGE_COMPARE_OPEN_DISABLED", None)
-        self.env.update({"PM_OS_OPEN_CMD": str(rec), "PM_OS_VAULT_ROOT": str(self.vault)})
+        self.env.update({"SWITCHBOARD_OPEN_CMD": str(rec), "SWITCHBOARD_VAULT_ROOT": str(self.vault)})
 
     @unittest.skipIf(os.name == "nt", "expects POSIX paths and URLs, and an extensionless fake opener Windows cannot run")
     def test_parked_ask_opens_the_live_worktree_page_once(self) -> None:
@@ -261,7 +261,7 @@ class DeliveryOncePerTask(Harness):
         self.seed("rt-000000000056")
         (self.tmp / "send-fail").write_text("")
         # The lead names the workstream, the task id follows it (Rule 13).
-        self.screen.write_text("scrollback\n│ [🛠️ PM OS Maintenance · rt-000000000056] done: finished: x\n" + IDLE_SCREEN)
+        self.screen.write_text("scrollback\n│ [🛠️ Switchboard Maintenance · rt-000000000056] done: finished: x\n" + IDLE_SCREEN)
         first = self.report("--task-id", "rt-000000000056", "--origin", "cos", "--status", "done", "--delivery", "direct")
         self.assertTrue(first["delivered"])
         self.assertEqual(first["delivery_outcome"], "delivered")
@@ -465,7 +465,7 @@ class BoundedDelivery(Harness):
         except AssertionError:
             self.fail("no queued line; waiter log:\n" + (log.read_text() if log.exists() else "(none)"))
         calls = self.tmp / "cmux-calls.log"
-        self.wait_for(lambda: calls.exists() and "2 PM OS reports waiting for CoS" in calls.read_text(), 30)
+        self.wait_for(lambda: calls.exists() and "2 switchboard reports waiting for CoS" in calls.read_text(), 30)
         self.assertEqual(self.sent(), [], "busy CoS: nothing is typed, the notification is not a send")
         self.idle()
         self.wait_for(lambda: len(self.sent()) >= 2)
@@ -736,14 +736,14 @@ class StaleDigestAlarm(Harness):
         self.calls = self.tmp / "stale-report-calls.log"
         stub = self.tmp / "stub-report-to-cos.sh"
         stub.write_text('#!/usr/bin/env bash\nprintf \'%s\\n\' "$*" >> "$STALE_CALLS"\n'
-                        'env | grep -E "^(PM_OS_WORKER|REPORT_TO_COS_NO_HOOKS)" >> "$STALE_CALLS.env"\n'
+                        'env | grep -E "^(SWITCHBOARD_WORKER|REPORT_TO_COS_NO_HOOKS)" >> "$STALE_CALLS.env"\n'
                         'echo \'{"delivered": true}\'\n', newline="\n")
         stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
         self.env.update({
             "STALE_CALLS": str(self.calls), "DIGEST_STALE_REPORT_SCRIPT": str(stub),
             "NEXT_UP_STATE_FILE": str(self.digest_state), "DIGEST_STALE_ALARM_FILE": str(self.alarm),
             "NEXT_UP_CONFIG_FILE": str(REPO_ROOT / "system" / "config" / "router.yaml"),
-            "PM_OS_WORKER_ID": "worker-test", "PM_OS_WORKER_TASK_ID": "rt-test",
+            "SWITCHBOARD_WORKER_ID": "worker-test", "SWITCHBOARD_WORKER_TASK_ID": "rt-test",
         })
         self.digest_state.write_text(json.dumps({
             "version": 1, "last_posted_at": "2026-10-02T22:00:00Z",   # Friday 15:00 PT
@@ -780,7 +780,7 @@ class StaleDigestAlarm(Harness):
         self.assertIn("last posted 2026-10-02 15:00 PDT", calls[0])
         env_seen = (self.tmp / "stale-report-calls.log.env").read_text()
         self.assertIn("REPORT_TO_COS_NO_HOOKS=1", env_seen)
-        self.assertNotIn("PM_OS_WORKER", env_seen, "worker env is stripped so the line is not fenced to a worker attempt")
+        self.assertNotIn("SWITCHBOARD_WORKER", env_seen, "worker env is stripped so the line is not fenced to a worker attempt")
 
     def test_one_line_per_local_day(self) -> None:
         # Wrong impl: every 10-minute tick re-sends while the digest stays stale.
@@ -873,7 +873,7 @@ class QuietWorkstreams(Harness):
     def test_other_workstreams_are_unaffected(self) -> None:
         # Wrong impl: the list is ignored and everything goes quiet, or the
         # workstream flag on the command line is not honoured.
-        self.seed("rt-quiet0000005")   # pm-os-maintenance
+        self.seed("rt-quiet0000005")   # switchboard-maintenance
         self.idle()
         out = self.report("--task-id", "rt-quiet0000005", "--origin", "cos", "--status", "done", "--delivery", "direct")
         self.assertFalse(out["quiet"])
@@ -929,8 +929,8 @@ class LocalityAcks(Harness):
         variants = [
             "• 🪧 Recipe Search — Acknowledged. Staying local on this machine, no remote box, SSH, cloud execution, or remote subagents. Waiting for the workstream instructions.",
             "• 🏪 Launch Notes — Ready. Staying local on this machine; waiting for the workstream instructions.",
-            "• 🎓 Garden Revamp — Acknowledged. Running locally on this machine in C:/Users/tester/Development/pm-os. Waiting for the workstream instructions.",
-            "• 🛠️ PM OS Maintenance — Read the live pm-os registry entry and shared contract. I’ll stay on this machine, follow its approval and write-back rules, and wait for your workstream instructions.",
+            "• 🎓 Garden Revamp — Acknowledged. Running locally on this machine in C:/Users/tester/Development/switchboard. Waiting for the workstream instructions.",
+            "• 🛠️ Switchboard Maintenance — Read the live switchboard registry entry and shared contract. I’ll stay on this machine, follow its approval and write-back rules, and wait for your workstream instructions.",
             "• 📜 recipe-search — Standing by on this machine. Waiting for the workstream instructions.",
         ]
         self.idle()

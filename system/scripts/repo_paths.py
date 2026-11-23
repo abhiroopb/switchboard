@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Where shared PM OS state lives when a script runs from a task worktree.
+"""Where shared switchboard state lives when a script runs from a task worktree.
 
 Every task gets its own checkout under `.amp/worktrees/<task-id>` (dispatch.py).
 The scripts in that checkout are copies of main's, so anything

@@ -48,7 +48,7 @@ jobs:
         run: pwsh -ExecutionPolicy Bypass -File system/windows/install.ps1 -DryRun -SkipTasks -SkipSeed
       - name: register-scheduled-tasks.ps1 -DryRun
         shell: pwsh
-        run: pwsh -ExecutionPolicy Bypass -File system/windows/register-scheduled-tasks.ps1 -DryRun -PmOsRoot ~/Development/pm-os
+        run: pwsh -ExecutionPolicy Bypass -File system/windows/register-scheduled-tasks.ps1 -DryRun -SwitchboardRoot ~/Development/switchboard
       - name: seed-session.ps1 -DryRun against a fixture session.json
         shell: pwsh
         run: |
@@ -59,7 +59,7 @@ jobs:
             {"id":"b","title":"🧭 CoS"},
             {"id":"c","title":"🚀 Launchpad"},
             {"id":"d","title":"✅ Todo"},
-            {"id":"e","title":"🧰 PM OS Maintenance"}]}]}
+            {"id":"e","title":"🧰 Switchboard Maintenance"}]}]}
           '@ | Set-Content -Encoding UTF8 $fixture
           pwsh -ExecutionPolicy Bypass -File system/windows/seed-session.ps1 -DryRun -Force -SessionPath $fixture
 

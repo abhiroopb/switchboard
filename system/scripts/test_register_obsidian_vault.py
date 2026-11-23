@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""register-obsidian-vault.py adds one pm-os vault and keeps every other vault."""
+"""register-obsidian-vault.py adds one switchboard vault and keeps every other vault."""
 from __future__ import annotations
 
 import json
@@ -26,7 +26,7 @@ class RegisterVaultTest(unittest.TestCase):
         self.cfg.parent.mkdir(parents=True)
         self.other = {"abc123": {"path": str(Path(self.tmp.name) / "Other"), "ts": 1, "open": True}}
         self.cfg.write_text(json.dumps({"vaults": dict(self.other), "updateDisabled": True}), encoding="utf-8")
-        self.env = dict(os.environ, PM_OS_OBSIDIAN_CONFIG=str(self.cfg), PM_OS_OBSIDIAN_ASSUME_CLOSED="1")
+        self.env = dict(os.environ, SWITCHBOARD_OBSIDIAN_CONFIG=str(self.cfg), SWITCHBOARD_OBSIDIAN_ASSUME_CLOSED="1")
 
     def tearDown(self):
         self.tmp.cleanup()

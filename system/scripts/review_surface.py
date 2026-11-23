@@ -2,7 +2,7 @@
 """Deterministic review-surface gate.
 
 Local Markdown is the default review surface. The gate accepts a Markdown
-note inside the pm-os Obsidian vault as the review pointer and normalises it
+note inside the switchboard Obsidian vault as the review pointer and normalises it
 to an ``obsidian://`` URI so the rendered link opens in Obsidian and never
 exposes a filesystem path. Google Docs / hosted page URLs stay accepted for
 the cases where the owner explicitly asks for that surface.
@@ -33,18 +33,18 @@ This module is the single enforcement point shared by the completion contract
 boundary (`report-to-cos.sh`). Both call `evaluate()` and fail closed (exit 2,
 no state write) on rejection.
 
-Vault root: ``$PM_OS_VAULT_ROOT`` when set, else the main checkout of the repo
+Vault root: ``$SWITCHBOARD_VAULT_ROOT`` when set, else the main checkout of the repo
 that contains this file (``system/scripts/review_surface.py`` -> two parents
 up, then ``git rev-parse --git-common-dir`` so a copy running inside a task
-worktree still names main). Vault name: ``$PM_OS_VAULT_NAME`` (default
-``pm-os``).
+worktree still names main). Vault name: ``$SWITCHBOARD_VAULT_NAME`` (default
+``switchboard``).
 
 Task worktrees: a worker writes its review note
 in its own worktree ``<vault>/.amp/worktrees/<task-id>`` and reports before
 ``dispatch.py finish`` lands the branch, so right then the note exists only in
 the worktree. The gate therefore looks for the note in the vault root first and
 then in the calling task's worktree, found from (in order) the ``--task-id``
-passed by the boundary, ``$PM_OS_WORKER_TASK_ID`` / ``$PM_OS_WORKTREE`` set by
+passed by the boundary, ``$SWITCHBOARD_WORKER_TASK_ID`` / ``$SWITCHBOARD_WORKTREE`` set by
 ``dispatch.py launch``, this file's own checkout when it is a worktree, and
 ``git rev-parse --show-toplevel`` of the cwd when that is a worktree of the
 vault. The returned path is relative to whichever root matched, so the
@@ -75,12 +75,12 @@ from urllib.parse import parse_qs, quote, unquote, urlsplit
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cos_review_asks  # noqa: E402
 import named_refs  # noqa: E402
-import pm_os_agent  # noqa: E402
+import switchboard_agent  # noqa: E402
 import repo_paths  # noqa: E402
 
 REVIEW_STATUSES = {"to review", "needs review"}
 
-DEFAULT_VAULT_NAME = "pm-os"
+DEFAULT_VAULT_NAME = "switchboard"
 
 # Approved live review surfaces (explicit-request path). Order is cosmetic.
 APPROVED_URL_PATTERNS = [
@@ -89,15 +89,15 @@ APPROVED_URL_PATTERNS = [
     re.compile(r"https://pages\.example\.com/[A-Za-z0-9_.-]+[^\s)>\]\"']*"),
 ]
 
-_ANY_URL = re.compile(r"(?:https?|(?:pmos-)?obsidian)://[^\s)>\]\"']+")
+_ANY_URL = re.compile(r"(?:https?|(?:switchboard-)?obsidian)://[^\s)>\]\"']+")
 _OBSIDIAN_URI = re.compile(r"obsidian://open\?[^\s)>\]\"']+")
 
 # Local review-pointer shapes: Markdown files anywhere, or paths rooted in the
-# home dir / PM OS content directories. Code, logs, state and other extensions
+# home dir / switchboard content directories. Code, logs, state and other extensions
 # are deliberately not matched.
 _LOCAL_MD = re.compile(r"(?<![A-Za-z0-9_./-])(?:~/|/Users/[^\s]*?/|\./)?[A-Za-z0-9_./-]*[A-Za-z0-9_-]\.(?:md|markdown)\b")
 _LOCAL_DIR = re.compile(
-    r"(?<![A-Za-z0-9_./-])(?:~/|/Users/[A-Za-z0-9_.-]+/(?:Development/pm-os/)?)?"
+    r"(?<![A-Za-z0-9_./-])(?:~/|/Users/[A-Za-z0-9_.-]+/(?:Development/switchboard/)?)?"
     r"(?:workstreams|outputs|notes|projects|knowledge|docs|triage-briefs)/[A-Za-z0-9_./-]+"
 )
 
@@ -148,10 +148,10 @@ class Verdict:
 # --- file before you promise -------------------
 #
 # A report (prose or the fenced draft it
-# carries) that says PM OS is filing, tracking, or logging a record must carry
+# carries) that says switchboard is filing, tracking, or logging a record must carry
 # that record's URL. This is the deterministic backstop: it names the promise
 # phrases found when no record URL is present. Bare "Linear" or "ticket" is not
-# a promise (pm-os-maintenance reports mention Linear tooling all the time);
+# a promise (switchboard-maintenance reports mention Linear tooling all the time);
 # the phrases below are the shapes that commit to a filing.
 
 _DET = r"(?:a|an|the|one|two|three|four|five|\d+|some|these|those|both|another|new|each|all|this|it|them|two more)"
@@ -224,7 +224,7 @@ _TRACKER_CONTEXT = re.compile(r"\b(?:linear|jira|tracker|tracker|github|airtable
 
 # Logging an item in a local Markdown note is not filing a record:
 # "Both are logged as issues 21 and 22 in the Windows issue log" and "The issue log gains issue 14"
-# name numbered entries in a PM OS note. A sentence that names such a note and no tracker by name
+# name numbered entries in a switchboard note. A sentence that names such a note and no tracker by name
 # promises nothing. A named tracker wins, so "logged a Linear issue and noted it in the issue log"
 # stays flagged.
 # Only the matched verb's own object counts: right after the match, optional entry numbers,
@@ -253,7 +253,7 @@ _NOUN_BEFORE = re.compile(
     re.I,
 )
 # The check's own warning, appended to a stored report, is not a promise ("create the record via
-# pmos"): a report read a second time (result cards, reconcile) re-flagged itself.
+# switchboard"): a report read a second time (result cards, reconcile) re-flagged itself.
 _OWN_WARNING = re.compile(re.escape("⚠️ Filing promised, no record URL") + r".*?\(external-replies Rule 9\)\.?", re.S)
 
 
@@ -314,7 +314,7 @@ def _is_document_filing(text: str, match: re.Match[str]) -> bool:
 
 
 def filing_promises(text: str) -> list[str]:
-    """The phrases in ``text`` that commit PM OS to filing a record, deduped, in order."""
+    """The phrases in ``text`` that commit switchboard to filing a record, deduped, in order."""
     text = _OWN_WARNING.sub(" ", _LINE_MARK.sub("\n", text or ""))
     found: list[str] = []
     for pat in FILING_PROMISE_PATTERNS:
@@ -343,7 +343,7 @@ def filing_warning_text(phrases: list[str]) -> str:
     quoted = ", ".join(f"\"{p}\"" for p in phrases[:3])
     more = f" (+{len(phrases) - 3} more)" if len(phrases) > 3 else ""
     return (
-        f"{FILING_WARNING} ({quoted}{more}): create the record via pmos (linear, jira, airtable) "
+        f"{FILING_WARNING} ({quoted}{more}): create the record via switchboard (linear, jira, airtable) "
         f"or gh issue create and resend with its id and URL verbatim; CoS does not send this draft (external-replies Rule 9)."
     )
 
@@ -822,7 +822,7 @@ _HERE = Path(__file__).resolve().parents[2]
 
 
 def vault_root() -> Path:
-    override = os.environ.get("PM_OS_VAULT_ROOT", "").strip()
+    override = os.environ.get("SWITCHBOARD_VAULT_ROOT", "").strip()
     if override:
         return Path(override).expanduser().resolve()
     # A copy of this file inside a task worktree still names the main checkout.
@@ -830,11 +830,11 @@ def vault_root() -> Path:
 
 
 def vault_name() -> str:
-    return os.environ.get("PM_OS_VAULT_NAME", "").strip() or DEFAULT_VAULT_NAME
+    return os.environ.get("SWITCHBOARD_VAULT_NAME", "").strip() or DEFAULT_VAULT_NAME
 
 
 def worktrees_dir(root: Path | None = None) -> Path:
-    override = os.environ.get("PM_OS_WORKTREES_DIR", "").strip()
+    override = os.environ.get("SWITCHBOARD_WORKTREES_DIR", "").strip()
     if override:
         return Path(override).expanduser().resolve()
     return (root or vault_root()) / ".amp" / "worktrees"
@@ -850,18 +850,18 @@ def _git_toplevel(path: Path) -> Path | None:
 
 def worktree_roots(task_id: str | None = None) -> list[Path]:
     """Existing task worktrees of the vault that this call may read a review
-    note from: the named task's, the calling worker's (``$PM_OS_WORKER_TASK_ID``,
-    ``$PM_OS_WORKTREE``), this file's own checkout when it is a worktree, and
+    note from: the named task's, the calling worker's (``$SWITCHBOARD_WORKER_TASK_ID``,
+    ``$SWITCHBOARD_WORKTREE``), this file's own checkout when it is a worktree, and
     the cwd's checkout when it is a worktree. Another task's worktree is never
     a candidate."""
     root = vault_root()
     wt_dir = worktrees_dir(root)
     candidates: list[Path] = []
-    for tid in (task_id, os.environ.get("PM_OS_WORKER_TASK_ID")):
+    for tid in (task_id, os.environ.get("SWITCHBOARD_WORKER_TASK_ID")):
         tid = (tid or "").strip()
         if tid and "/" not in tid:
             candidates.append(wt_dir / tid)
-    env_wt = os.environ.get("PM_OS_WORKTREE", "").strip()
+    env_wt = os.environ.get("SWITCHBOARD_WORKTREE", "").strip()
     if env_wt:
         candidates.append(Path(env_wt).expanduser())
     candidates.append(_HERE)
@@ -989,7 +989,7 @@ def note_file_url(rel_note: str) -> str:
 # The click target for a vault note in Claude Code inside cmux: the "Open in
 # Obsidian" link opens the note in Obsidian without stealing focus. cmux sends a Cmd-clicked file://….md
 # link to its own Markdown viewer and an obsidian:// link to NSWorkspace.open,
-# which brings Obsidian to the front. A pmos-obsidian:// link goes to "PM OS
+# which brings Obsidian to the front. A switchboard-obsidian:// link goes to "switchboard
 # Obsidian Link.app" (system/native/obsidian-link, installed by
 # install-obsidian-link-handler.sh), a background-only handler that runs
 # `open -g obsidian://open?...` when Obsidian's window is at least half visible,
@@ -998,8 +998,8 @@ def note_file_url(rel_note: str) -> str:
 # background open there showed nothing.
 # The Amp TUI opens only http(s) and file:// links, so an Amp surface keeps the
 # file:// link (amp-obsidian-editor.sh routes it).
-HANDLER_SCHEME = "pmos-obsidian"
-HANDLER_APP = Path.home() / "Applications" / "PM OS Obsidian Link.app"
+HANDLER_SCHEME = "switchboard-obsidian"
+HANDLER_APP = Path.home() / "Applications" / "switchboard Obsidian Link.app"
 NOTE_LINK_MODES = ("handler", "file", "http")
 # wmux makes only http(s) links clickable and opens them in its browser panel, so
 # a file:// or obsidian:// link in a wmux pane is plain text. The ``http`` mode points at system/scripts/mux/note-links.py, a
@@ -1009,14 +1009,14 @@ NOTE_LINK_DEFAULT_PORT = 7472
 
 
 def note_link_mode() -> str:
-    """``handler`` (pmos-obsidian://), ``http`` (note-links server) or ``file`` (file://).
+    """``handler`` (switchboard-obsidian://), ``http`` (note-links server) or ``file`` (file://).
 
-    PM_OS_NOTE_LINK=handler|file|http decides when set. Otherwise wmux gets
+    SWITCHBOARD_NOTE_LINK=handler|file|http decides when set. Otherwise wmux gets
     ``http`` while mux/note-links.py answers on 127.0.0.1, because wmux opens
-    only http(s) links; a Claude surface (pm_os_agent.py) whose handler app is
+    only http(s) links; a Claude surface (switchboard_agent.py) whose handler app is
     installed gets ``handler``; Amp, or a Mac without the handler, keeps
     ``file``, so a link is never dead."""
-    forced = os.environ.get("PM_OS_NOTE_LINK", "").strip().lower()
+    forced = os.environ.get("SWITCHBOARD_NOTE_LINK", "").strip().lower()
     if forced in NOTE_LINK_MODES:
         return forced
     try:
@@ -1026,16 +1026,16 @@ def note_link_mode() -> str:
     except Exception:
         pass
     try:
-        import pm_os_agent
-        agent = pm_os_agent.agent()
+        import switchboard_agent
+        agent = switchboard_agent.agent()
     except Exception:
         agent = "claude"
-    app = Path(os.environ.get("PM_OS_OBSIDIAN_LINK_APP") or HANDLER_APP)
+    app = Path(os.environ.get("SWITCHBOARD_OBSIDIAN_LINK_APP") or HANDLER_APP)
     return "handler" if agent == "claude" and (app / "Contents" / "Info.plist").is_file() else "file"
 
 
 def handler_url(rel_note: str) -> str:
-    """``pmos-obsidian://open?...`` for a vault note: the obsidian:// URI with
+    """``switchboard-obsidian://open?...`` for a vault note: the obsidian:// URI with
     the handler scheme, so the handler only swaps the scheme back."""
     return HANDLER_SCHEME + obsidian_uri(rel_note)[len("obsidian"):]
 
@@ -1059,7 +1059,7 @@ def note_link_server_up() -> bool:
 
 def note_link_port() -> int:
     try:
-        return int(os.environ.get("PM_OS_NOTE_LINK_PORT") or NOTE_LINK_DEFAULT_PORT)
+        return int(os.environ.get("SWITCHBOARD_NOTE_LINK_PORT") or NOTE_LINK_DEFAULT_PORT)
     except ValueError:
         return NOTE_LINK_DEFAULT_PORT
 
@@ -1090,7 +1090,7 @@ def note_click_url(rel_note: str) -> str:
 
 def click_url_note(url: str) -> str | None:
     """Vault-relative note path of a clicked-link URL (``file://`` on main or
-    ``pmos-obsidian://``), else None."""
+    ``switchboard-obsidian://``), else None."""
     if url.startswith(HANDLER_SCHEME + "://"):
         return obsidian_note_path("obsidian" + url[len(HANDLER_SCHEME):])
     if url.startswith("http://"):
@@ -1116,7 +1116,7 @@ def review_link(url: str) -> str:
     """Render a stored pointer, without revalidating it against the filesystem.
 
     An Obsidian pointer renders as the note path, then one line with the
-    clickable link (``note_click_url``: pmos-obsidian:// in Claude, which opens
+    clickable link (``note_click_url``: switchboard-obsidian:// in Claude, which opens
     the note in Obsidian, in the background when its window is visible and in
     front when it is covered; file:// in the Amp TUI, which the
     AMP_EDITOR shim routes) and the ``obsidian://`` URI itself, which the CoS
@@ -1144,7 +1144,7 @@ _SUFFIX_LABELS = frozenset({"Open link", "Open in Obsidian", "obsidian:// link",
 # `[Open link](https://sessions.example.com/session/<id)` leaves `>)`
 # in the prose). The optional trailing `<...>` is consumed with the URL so the
 # whole template is rendered as plain text and never hoisted.
-_URL_BODY = r"(?:https?|obsidian|pmos-obsidian|file)://[^\s<>)\]\"']+"
+_URL_BODY = r"(?:https?|obsidian|switchboard-obsidian|file)://[^\s<>)\]\"']+"
 _PLACEHOLDER = r"<[^<>\s]*>"
 _MD_LINK = re.compile(r"\[(?P<label>[^\]\n]+)\]\((?P<url>" + _URL_BODY + r"(?:" + _PLACEHOLDER + r")?[^\s)]*)\)")
 _BARE_URL = re.compile(r"(?P<url>" + _URL_BODY + r"(?P<placeholder>(?:" + _PLACEHOLDER + r")?))")
@@ -1206,7 +1206,7 @@ def report_text(text: str, limit: int | None = None, review_url: str = "", *,
     """
     text = _LINE_MARK.sub("\n", text)
     blocks = [m.group(0) for m in _FENCED_BLOCK.finditer(text)]
-    text = pm_os_agent.fix_thread_links(_FENCED_BLOCK.sub(" ", text))
+    text = switchboard_agent.fix_thread_links(_FENCED_BLOCK.sub(" ", text))
     # Images are links, never descriptions (external-replies Rule 14): every image path becomes a clickable file:// link first.
     text = link_compare_paths(link_image_paths(text, link_mode, task_id), link_mode, task_id)
     text = localize_file_urls(text, link_mode, task_id)
@@ -1229,7 +1229,7 @@ def report_text(text: str, limit: int | None = None, review_url: str = "", *,
             return label or raw
         note = click_url_note(url)
         if note:
-            # A file:// or pmos-obsidian:// link to a vault note is the same pointer
+            # A file:// or switchboard-obsidian:// link to a vault note is the same pointer
             # as its obsidian:// URI (review_link renders both from the URI); store one.
             url = obsidian_uri(note)
         urls.setdefault(url, label or (link_title(url) if url.startswith("file://") else "Open link"))
@@ -1253,7 +1253,7 @@ def report_text(text: str, limit: int | None = None, review_url: str = "", *,
         # or the older `path⏎[Open in Obsidian](url)`) is the suffix form: drop its
         # path line and file link here and let the obsidian link below move back to the suffix
         # in its original order, so rendering twice is stable and leaves nothing extra inline.
-        # The click link may be either form (file:// from an Amp render, pmos-obsidian://
+        # The click link may be either form (file:// from an Amp render, switchboard-obsidian://
         # from a Claude render), whatever this surface would render now.
         path = review_link(url).splitlines()[0]
         click = "|".join(re.escape(f"[Open in Obsidian]({u})") for u in (note_file_url(path), handler_url(path), http_note_url(path)))
@@ -1332,7 +1332,7 @@ def has_review_intent(text: str) -> bool:
 def guidance_text(offending: list[str]) -> str:
     paths = ", ".join(f"`{p}`" for p in offending[:3]) or "the pointer"
     return (
-        f"Review deliverables for the owner default to a Markdown note inside the pm-os Obsidian vault "
+        f"Review deliverables for the owner default to a Markdown note inside the switchboard Obsidian vault "
         f"({vault_root()}), not {paths} — that pointer is not an existing note in the vault "
         "or in this task's worktree. "
         "Write the note under outputs/reviews/<date>-<slug>.md or the owning workstream folder "

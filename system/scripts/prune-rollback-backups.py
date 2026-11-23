@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remove expired local rollback copies from explicit PM OS locations."""
+"""Remove expired local rollback copies from explicit switchboard locations."""
 
 from __future__ import annotations
 
@@ -15,13 +15,13 @@ HOME = Path(os.environ.get("HOME", "{{HOME}}"))
 
 
 def _default_root() -> Path:
-    """PM_OS_ROOT, else the git checkout around cwd, else ~/Development/pm-os.
+    """SWITCHBOARD_ROOT, else the git checkout around cwd, else ~/Development/switchboard.
 
     Scheduled runs start in the repo root without --root, and the install
     folder is the owner's choice (a synced folder on Windows), so the home
     default alone would prune the wrong tree or nothing.
     """
-    env = os.environ.get("PM_OS_ROOT")
+    env = os.environ.get("SWITCHBOARD_ROOT")
     if env:
         return Path(env).expanduser()
     try:
@@ -30,7 +30,7 @@ def _default_root() -> Path:
             return Path(top.stdout.strip())
     except (OSError, subprocess.SubprocessError):
         pass
-    return HOME / "Development/pm-os"
+    return HOME / "Development/switchboard"
 
 
 DEFAULT_ROOT = _default_root()

@@ -14,7 +14,7 @@ import type {
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { basename } from 'node:path'
-import { HOME, isHeadless, isMachinePrompt, isPrivateTurn, run } from './pm-os/lib'
+import { HOME, isHeadless, isMachinePrompt, isPrivateTurn, run } from './switchboard/lib'
 
 const execFileAsync = promisify(execFile)
 
@@ -25,7 +25,7 @@ const execFileAsync = promisify(execFile)
 //   1. Explicit amp_mem_save tool calls
 //   2. AI-gated observation extraction at agent.end
 //   3. Batched file edits (edit_file/create_file)
-//   4. Structured extraction of `pmos` connector write commands
+//   4. Structured extraction of `switchboard` connector write commands
 // Everything else in tool.result is ignored. The previous generic capture
 // path produced ~35k pure-noise rows (every shell_command saved verbatim).
 
@@ -92,7 +92,7 @@ export function isSkillCorrection(message: string): boolean {
 }
 
 /**
- * A user turn written by PM OS machinery rather than by the owner: automation
+ * A user turn written by switchboard machinery rather than by the owner: automation
  * envelopes, next-up autoposts, router/workspace reports, worker launch
  * prompts, CoS→worker steers and handoffs, subagent completions. These carry
  * instruction text ("never push", "always use …") that CORRECTION_PATTERNS
@@ -104,7 +104,7 @@ const ENVELOPE_PATTERNS = [
   /^\[NEXT-UP AUTOPOST\]/i,
   /^\[(?:ROUTER|WORKSPACE) REPORT\]/i,
   // Worker report leads: legacy `[rt-… slug]` and the named shape
-  // `[🛠️ PM OS Maintenance · rt-…]` (names-not-numbers rule).
+  // `[🛠️ Switchboard Maintenance · rt-…]` (names-not-numbers rule).
   /^\[[^\]]*\brt-[0-9a-f]{12}[^\]]*\]/i,
   /^Steer from the owner via (?:CoS|Launchpad)\b/i,
   /^CoS for rt-[0-9a-f]{12}\b/i,
@@ -118,13 +118,13 @@ const ENVELOPE_PATTERNS = [
   /^Input received on stdin:/i,
   /^FIRST: call shell_command directly\b/i,
   /^Load the kb-distill skill and execute its full distillation workflow\b/i,
-  /^PM_OS_WORKER_TASK_ID=/,
+  /^SWITCHBOARD_WORKER_TASK_ID=/,
   /^CoS native delivery for task\b/i,
   /^(?:CoS|Same-task) ruling\b/i,
   /^\[COMMS TRIAGE REVIEW\]/i,
   /^\d+ new (?:comms|Slack|GitHub)\b.*\bjust landed\b/i,
   /^Continuing work from thread T-/i,
-  /^You are (?:a local PM OS|the quiet Launchpad)\b/i,
+  /^You are (?:a local switchboard|the quiet Launchpad)\b/i,
   /\bThread message metadata: this message was sent by Amp thread\b/i,
 ]
 
@@ -144,7 +144,7 @@ export function isAutomationEnvelope(message: string): boolean {
  */
 export function inferProject(opts: { cwd?: string | null; workspaceRoot?: string | null; env?: Record<string, string | undefined> }): string | null {
   const env = opts.env ?? process.env
-  const envSlug = env.PM_OS_WORKSTREAM_SLUG?.trim()
+  const envSlug = env.SWITCHBOARD_WORKSTREAM_SLUG?.trim()
   if (envSlug && /^[a-z0-9-]+$/i.test(envSlug)) return envSlug
   const cwd = (opts.cwd ?? '').trim()
   const slug = cwd.match(/workstreams\/([a-z0-9][a-z0-9-]*)(?:\/|$)/i)?.[1]
@@ -275,9 +275,9 @@ function extractAssistantText(messages: ThreadMessage[]): string[] {
   return blocks
 }
 
-// ── Structured extraction for `pmos` connector write commands ───────────
+// ── Structured extraction for `switchboard` connector write commands ───────────
 // Connector tools (Slack, Gmail, Linear, Jira, gcal, gdrive, Airtable)
-// all route through `pmos <tool> <subcommand>` shell commands now
+// all route through `switchboard <tool> <subcommand>` shell commands now
 // (the old mcp__gmail__* / mcp__linear__* tools no longer exist). Detect
 // write subcommands and capture them as structured observations.
 
@@ -286,7 +286,7 @@ interface Extraction { type: string; topic: string; summary: string }
 // Write-verb subcommands worth capturing. Deliberately excludes:
 // draft (floods DB, AI gate catches important ones), search/list/get/read
 // (read-only), describe (introspection).
-const PMOS_WRITE_VERB = /^(send|post|edit|put|react|modify|comment-add|comment-reply|create|update|reply|add|remove|delete|archive|transition|assign|upload|move|set)\b/
+const SWITCHBOARD_WRITE_VERB = /^(send|post|edit|put|react|modify|comment-add|comment-reply|create|update|reply|add|remove|delete|archive|transition|assign|upload|move|set)\b/
 
 /** Pull a human-useful flag value out of a CLI command string. */
 function flagValue(command: string, names: string[]): string {
@@ -299,10 +299,10 @@ function flagValue(command: string, names: string[]): string {
 }
 
 function extractConnectorWrite(command: string): Extraction | null {
-  const m = command.match(/\bpmos\s+([a-z][\w-]*)\s+([a-z][\w-]*)/)
+  const m = command.match(/\bswitchboard\s+([a-z][\w-]*)\s+([a-z][\w-]*)/)
   if (!m) return null
   const [, tool, sub] = m
-  if (!PMOS_WRITE_VERB.test(sub)) return null
+  if (!SWITCHBOARD_WRITE_VERB.test(sub)) return null
 
   const detail = flagValue(command, ['title', 'subject', 'channel', 'summary', 'name', 'message', 'text'])
   const topic = `${tool}: ${sub}${detail ? ` — ${detail}` : ''}`
@@ -647,7 +647,7 @@ export default function (amp: PluginAPI) {
   // ALLOWLIST capture only:
   //   skill        → track active skill for correction detection
   //   edit/create  → batch file edits (saved at agent.end)
-  //   shell_command → structured extraction of `pmos` connector writes
+  //   shell_command → structured extraction of `switchboard` connector writes
   // Everything else is ignored — noteworthy turns are captured by the
   // AI-gated agent.end handler instead.
   amp.on('tool.result', async (event, ctx) => {
@@ -673,7 +673,7 @@ export default function (amp: PluginAPI) {
       return
     }
 
-    // ── pmos connector writes via shell_command ──
+    // ── switchboard connector writes via shell_command ──
     if (event.tool === 'shell_command') {
       const input = event.input as Record<string, string>
       const command = input.command || ''
@@ -684,7 +684,7 @@ export default function (amp: PluginAPI) {
         // searchable but below insight rows in context ranking.
         const privacyArgs = currentTurnPrivate ? ['--private'] : []
         await ampMem(ctx.$, ['save', structured.type, structured.topic, structured.summary,
-          '--confidence', LOW_CONFIDENCE, '--tags', 'pmos-connector', ...baseSaveArgs(), ...privacyArgs])
+          '--confidence', LOW_CONFIDENCE, '--tags', 'switchboard-connector', ...baseSaveArgs(), ...privacyArgs])
         sessionObservationCount++
         ctx.logger.log(`[amp-mem] Captured ${structured.type}: ${structured.topic}`)
       }

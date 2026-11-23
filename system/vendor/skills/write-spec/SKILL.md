@@ -6,7 +6,7 @@ argument-hint: "<feature or problem statement>"
 
 # Write Spec
 
-> Connected tools in PM OS: the `pmos` connectors (Slack, Gmail, Google Drive, Calendar). Read `~/Development/pm-os/knowledge/` before drafting.
+> Connected tools in switchboard: the `switchboard` connectors (Slack, Gmail, Google Drive, Calendar). Read `~/Development/switchboard/knowledge/` before drafting.
 
 Write a feature specification or product requirements document (PRD).
 

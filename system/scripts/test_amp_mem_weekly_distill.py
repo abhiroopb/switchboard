@@ -63,11 +63,11 @@ class DaemonGateTest(unittest.TestCase):
         self.stub.chmod(0o755)
 
     def run_daemon(self, *args: str, memory: str | None = None, machine_file: str | None = None) -> subprocess.CompletedProcess:
-        env = {k: v for k, v in os.environ.items() if k not in ("PM_OS_MEMORY", "PM_OS_LOCAL_DIR")}
+        env = {k: v for k, v in os.environ.items() if k not in ("SWITCHBOARD_MEMORY", "SWITCHBOARD_LOCAL_DIR")}
         env["AMP_MEM_BIN"] = posix(self.stub)
-        env["PM_OS_MACHINE"] = "TESTBOX"
+        env["SWITCHBOARD_MACHINE"] = "TESTBOX"
         if memory is not None:
-            env["PM_OS_MEMORY"] = memory
+            env["SWITCHBOARD_MEMORY"] = memory
         if machine_file is not None:
             (self.tmp / "local" / "machines" / "TESTBOX.env").write_text(machine_file, encoding="utf-8")
         return subprocess.run(
@@ -80,14 +80,14 @@ class DaemonGateTest(unittest.TestCase):
 
     def test_builtin_backend_in_machine_file_skips(self) -> None:
         self.stub_amp_mem('echo "should not run" >&2; exit 9')
-        proc = self.run_daemon("--dry-run", machine_file="PM_OS_COMMS_TRIAGE=off\nPM_OS_MEMORY=builtin\r\n")
+        proc = self.run_daemon("--dry-run", machine_file="SWITCHBOARD_COMMS_TRIAGE=off\nSWITCHBOARD_MEMORY=builtin\r\n")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("skipped, memory backend is builtin", proc.stdout)
         self.assertIn("Skipped: memory backend on this machine is 'builtin'", self.log_text())
 
     def test_environment_wins_over_machine_file(self) -> None:
         self.stub_amp_mem('echo "  Pending observations: 3"')
-        proc = self.run_daemon(memory="amp-mem", machine_file="PM_OS_MEMORY=builtin\n")
+        proc = self.run_daemon(memory="amp-mem", machine_file="SWITCHBOARD_MEMORY=builtin\n")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("Pending observations: 3 (threshold: 30)", self.log_text())
 

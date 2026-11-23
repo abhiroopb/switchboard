@@ -100,7 +100,7 @@ def build_readme(repo_root: Path) -> str:
         "Existing collectors and comms-triage handle monitoring between turns. When a workstream enters a waiting state:",
         "1. Register the relevant source in `system/config/priority-channels.yaml` with the owning `default_workstream`.",
         "2. Record the awaited response in `CONTEXT.md`. Do not create a dedicated polling script, cron job, or launchd watcher.",
-        "3. Emit a structured update through `system/scripts/emit-workspace-update.py` so the Megadesk queue stays current.",
+        "3. Emit a structured update through `system/scripts/emit-workspace-update.py` so the switchboard queue stays current.",
         "",
     ]
 

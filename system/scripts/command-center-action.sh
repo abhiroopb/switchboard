@@ -59,10 +59,10 @@ ws_ref_for_num() {
 # the last render missed, such as a tab opened since the 15-minute tick, is safe
 # to take from the live list: refresh the map and look again. cmux reuses
 # numbers, so on cmux a missing handle still fails closed.
-# The wmux guarantee holds while ~/.pm-os/wmux-sidecar.json keeps its counter:
+# The wmux guarantee holds while ~/.switchboard/wmux-sidecar.json keeps its counter:
 # deleting that file restarts numbering at 1.
 refs_never_reused() {
-  [[ "${PM_OS_MUX:-}" == "wmux" ]]
+  [[ "${SWITCHBOARD_MUX:-}" == "wmux" ]]
 }
 
 refresh_actions_map() {
@@ -253,7 +253,7 @@ workspace_ref_exists() {
 close_workspace_verified() {
   local ref="$1" verify_status
   # --force: cmux 0.65 refuses to close a workspace with a running process
-  # (every PM OS tab runs the Amp CLI) without it; the guards above already
+  # (every switchboard tab runs the Amp CLI) without it; the guards above already
   # decided this tab may close.
   if ! "$CMUX" close-workspace --workspace "$ref" --force; then
     echo "ERROR: failed to close cmux tab $ref" >&2
@@ -274,7 +274,7 @@ close_workspace_verified() {
 snooze_p0_for_workspace() {
   local title="$1" suffix todo_id until
   suffix="${title#*P0 · }"
-  todo_id="$(python3 - "${PM_OS_ROOT:-$REPO_ROOT}/system/state/todo.json" "$suffix" <<'PY'
+  todo_id="$(python3 - "${SWITCHBOARD_ROOT:-$REPO_ROOT}/system/state/todo.json" "$suffix" <<'PY'
 import json, sys
 
 data = json.load(open(sys.argv[1]))

@@ -34,7 +34,7 @@ jobs:
 
   - name: kb-distill-followup
     command: |
-      Distillation itself is owned by launchd (com.pm-os.amp-mem-weekly-distill,
+      Distillation itself is owned by launchd (com.switchboard.amp-mem-weekly-distill,
       Sun 09:00, headless). Do NOT re-run it. This job handles the interactive
       follow-up only:
       1. Check `.state/amp-mem-weekly-distill.log` for today's run. If it failed or

@@ -147,7 +147,7 @@ def cos_threads_for_dates(dates: list[str]) -> list[tuple[str, str]]:
             # Fall back to the live CoS binding; the per-day filter keeps it honest.
             try:
                 out = subprocess.run(
-                    ["bash", "-c", f'source "{root}/system/cmux-helpers.sh"; ref=$(find_workspace_ref_for_key megadesk) && amp_thread_for_workspace "$ref"'],
+                    ["bash", "-c", f'source "{root}/system/cmux-helpers.sh"; ref=$(find_workspace_ref_for_key switchboard) && amp_thread_for_workspace "$ref"'],
                     capture_output=True, text=True, timeout=30,
                 )
                 tid = out.stdout.strip().splitlines()[-1] if out.stdout.strip() else ""

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Is the `pmos` on PATH the PM OS connector shim, or an existing CLI with the same name?
+"""Is the `switchboard` on PATH the switchboard connector shim, or an existing CLI with the same name?
 
 One rule for every caller (install.py, install.ps1, verify-kit-install.sh,
-install-amp-skills.sh, pm-os-env.sh): the first `pmos` on PATH counts as "real"
+install-amp-skills.sh, switchboard-env.sh): the first `switchboard` on PATH counts as "real"
 (another program that already owns the name) only when it exists and
-`pmos --version` does not identify as `pmos-shim`. The shim lives in
-system/connectors and answers `--version` with `pmos-shim <version>`; it serves
+`switchboard --version` does not identify as `switchboard-shim`. The shim lives in
+system/connectors and answers `--version` with `switchboard-shim <version>`; it serves
 its tools, login, status, doctor and logout only, so verbs that only the other program has fail
 through it. One shared rule keeps the installers from disagreeing about which
 one is on PATH.
@@ -20,16 +20,16 @@ import subprocess
 import sys
 from pathlib import Path
 
-SHIM_MARK = "pmos-shim"
+SHIM_MARK = "switchboard-shim"
 
 
-def pmos_kind(timeout: float = 10.0, which=shutil.which) -> tuple[str, str]:
+def switchboard_kind(timeout: float = 10.0, which=shutil.which) -> tuple[str, str]:
     """("real" | "shim" | "absent", path)."""
-    found = which("pmos")
+    found = which("switchboard")
     if not found:
         return "absent", ""
     path = Path(found)
-    if path.parent.name == "connectors" and (path.parent / "pmos-shim.py").is_file():
+    if path.parent.name == "connectors" and (path.parent / "switchboard-shim.py").is_file():
         return "shim", found
     try:
         result = subprocess.run([found, "--version"], capture_output=True, text=True, timeout=timeout,
@@ -45,11 +45,11 @@ def pmos_kind(timeout: float = 10.0, which=shutil.which) -> tuple[str, str]:
 
 
 def has_company_cli() -> bool:
-    return pmos_kind()[0] == "real"
+    return switchboard_kind()[0] == "real"
 
 
 def main(argv: list[str]) -> int:
-    kind, path = pmos_kind()
+    kind, path = switchboard_kind()
     if "--quiet" not in argv:
         print(f"{kind} {path}".strip())
     return 0 if kind == "real" else 1

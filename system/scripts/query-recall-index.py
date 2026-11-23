@@ -104,7 +104,7 @@ def query_index(conn: sqlite3.Connection, value: str, limit: int) -> list[dict]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Query the PM OS recall FTS index.")
+    parser = argparse.ArgumentParser(description="Query the switchboard recall FTS index.")
     parser.add_argument("query")
     parser.add_argument("--db", default=str(DEFAULT_DB))
     parser.add_argument("--limit", type=int, default=5)

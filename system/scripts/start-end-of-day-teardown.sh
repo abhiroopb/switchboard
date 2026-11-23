@@ -9,7 +9,7 @@ LOG_DIR="${EOD_LOG_DIR:-$REPO_ROOT/system/state/logs}"
 # The child inherits the kernel lock across exec. Acquisition and spawn are
 # one critical section, including concurrent CoS and legacy Router callers.
 LOCK_FILE="${EOD_LOCK_FILE:-$REPO_ROOT/system/state/eod-teardown.lock.json}"
-INVOKING_WORKSPACE="${PM_OS_INVOKING_WORKSPACE_REF:-}"
+INVOKING_WORKSPACE="${SWITCHBOARD_INVOKING_WORKSPACE_REF:-}"
 TASK_ID=""
 ORIGIN="cos"
 SUMMARY="End-of-day state is saved."
@@ -43,7 +43,7 @@ USAGE
 done
 
 if [[ -z "$INVOKING_WORKSPACE" ]]; then
-    INVOKING_WORKSPACE="$($CMUX_BIN identify 2>/dev/null | "${PM_OS_PYTHON:-python3}" "$(dirname "${BASH_SOURCE[0]}")/lib/json_get.py" caller.workspace_ref)"
+    INVOKING_WORKSPACE="$($CMUX_BIN identify 2>/dev/null | "${SWITCHBOARD_PYTHON:-python3}" "$(dirname "${BASH_SOURCE[0]}")/lib/json_get.py" caller.workspace_ref)"
 fi
 ORIGIN="$(python3 "$REPO_ROOT/system/scripts/surface-registry.py" normalize "$ORIGIN")"
 [[ "$INVOKING_WORKSPACE" =~ ^workspace:[0-9]+$ ]] || {
@@ -65,7 +65,7 @@ if [[ "$DRY_RUN" != "true" && -z "$TASK_ID" ]]; then
 fi
 
 if [[ "$DRY_RUN" == "true" ]]; then
-    exec env PM_OS_INVOKING_WORKSPACE_REF="$INVOKING_WORKSPACE" \
+    exec env SWITCHBOARD_INVOKING_WORKSPACE_REF="$INVOKING_WORKSPACE" \
         bash "$TEARDOWN_SCRIPT" --dry-run --invoking-workspace "$INVOKING_WORKSPACE"
 fi
 
@@ -74,7 +74,7 @@ mkdir -p "$LOG_DIR" "$(dirname "$LOCK_FILE")"
 timestamp="$(date '+%Y%m%dT%H%M%S%z')"
 log_file="$LOG_DIR/end-of-day-teardown-$timestamp-$$.log"
 
-teardown_args=(env "PM_OS_INVOKING_WORKSPACE_REF=$INVOKING_WORKSPACE" \
+teardown_args=(env "SWITCHBOARD_INVOKING_WORKSPACE_REF=$INVOKING_WORKSPACE" \
     bash "$TEARDOWN_SCRIPT" --invoking-workspace "$INVOKING_WORKSPACE")
 [[ "$KEEP_APP" == "true" ]] && teardown_args+=(--keep-app)
 
@@ -87,7 +87,7 @@ try:
     import fcntl
 except ImportError:  # Windows: flock() over msvcrt, system/scripts/flock_compat.py
     import os as _os, sys as _sys
-    _sys.path.insert(0, _os.environ.get("PM_OS_SCRIPTS_DIR") or _os.path.join(_os.environ.get("PM_OS_ROOT") or _os.path.expanduser("~/Development/pm-os"), "system", "scripts"))
+    _sys.path.insert(0, _os.environ.get("SWITCHBOARD_SCRIPTS_DIR") or _os.path.join(_os.environ.get("SWITCHBOARD_ROOT") or _os.path.expanduser("~/Development/switchboard"), "system", "scripts"))
     import flock_compat as fcntl
 path, log, ws, task_id, origin = sys.argv[1:6]
 with open(path + '.guard', 'a') as guard:

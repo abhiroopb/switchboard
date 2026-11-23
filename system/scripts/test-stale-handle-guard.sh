@@ -87,10 +87,10 @@ PY
 }
 
 # cmux semantics: numbers are reused, so a handle the render missed fails closed.
-# A worker pane on Windows inherits PM_OS_MUX=wmux, where a miss refreshes the
+# A worker pane on Windows inherits SWITCHBOARD_MUX=wmux, where a miss refreshes the
 # map instead (test_command_center_action_wmux.py), so pin the backend here.
 run_action() {
-  PM_OS_MUX=cmux PM_OS_TEST_SANDBOX=1 CMUX_BIN="$FIXTURE/bin/cmux" \
+  SWITCHBOARD_MUX=cmux SWITCHBOARD_TEST_SANDBOX=1 CMUX_BIN="$FIXTURE/bin/cmux" \
     CMUX="$FIXTURE/bin/cmux" CC_STATE_DIR="$FIXTURE/state" \
     bash "$ACTION" "$@" 2>&1
 }

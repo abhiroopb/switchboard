@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the pm-os structural knowledge graph with graphify, no LLM.
+"""Build the switchboard structural knowledge graph with graphify, no LLM.
 
 Produces graphify-out/graph.json (gitignored) at the repo root from:
   * Markdown notes in the vault (root-level *.md, workstreams/, projects/,
@@ -44,11 +44,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 def _graphify_python() -> Path:
-    """The graphifyy uv tool venv interpreter. PM_OS_GRAPHIFY_PYTHON wins; then
+    """The graphifyy uv tool venv interpreter. SWITCHBOARD_GRAPHIFY_PYTHON wins; then
     UV_TOOL_DIR and `uv tool dir`; then the default tool dirs (macOS/Linux
     ~/.local/share/uv/tools, Windows %APPDATA%/uv/tools). Windows venvs keep
     the interpreter in Scripts/python.exe, POSIX venvs in bin/python."""
-    override = os.environ.get("PM_OS_GRAPHIFY_PYTHON")
+    override = os.environ.get("SWITCHBOARD_GRAPHIFY_PYTHON")
     if override:
         return Path(override)
     tool_dirs: list[Path] = []
@@ -280,14 +280,14 @@ def main() -> int:
     out_dir = out_parent / "graphify-out"
 
     # Re-exec under the graphify tool venv so `import graphify` resolves.
-    if os.environ.get("PM_OS_GRAPHIFY_REEXEC") != "1":
+    if os.environ.get("SWITCHBOARD_GRAPHIFY_REEXEC") != "1":
         graphify_python = _graphify_python()
         if not graphify_python.exists():
             print(json.dumps({"error" if not args.if_installed else "skipped":
                               f"graphify venv python missing: {graphify_python}; "
                               f"install with: uv tool install graphifyy=={TESTED_GRAPHIFY_VERSION} --python 3.12"}))
             return 0 if args.if_installed else 2
-        env = dict(os.environ, PM_OS_GRAPHIFY_REEXEC="1", **ENV)
+        env = dict(os.environ, SWITCHBOARD_GRAPHIFY_REEXEC="1", **ENV)
         return subprocess.call([str(graphify_python), __file__, *sys.argv[1:]], env=env, cwd=root)
 
     try:

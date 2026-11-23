@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for the pm-os Claude plugin hook hooks/worker-closed.py.
+"""Tests for the switchboard Claude plugin hook hooks/worker-closed.py.
 
 The hook stops a worker tab whose task is already reported from acting on a
 late message. Wrong impls these tests catch: a report-to-cos.sh name anywhere
@@ -24,10 +24,10 @@ import time
 import unittest
 from pathlib import Path
 
-os.environ["PM_OS_TEST_SANDBOX"] = "1"
+os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"
 
 HERE = Path(__file__).resolve().parent
-HOOK = HERE.parent / "claude-marketplace" / "plugins" / "pm-os" / "hooks" / "worker-closed.py"
+HOOK = HERE.parent / "claude-marketplace" / "plugins" / "switchboard" / "hooks" / "worker-closed.py"
 HOOKS_JSON = HOOK.parent / "hooks.json"
 
 spec = importlib.util.spec_from_file_location("worker_closed", HOOK)
@@ -40,8 +40,8 @@ class AllowedBash(unittest.TestCase):
     def test_report_retry_passes(self):
         for cmd in (
             "bash system/scripts/report-to-cos.sh --task-id rt-aaaa --status done 'x'",
-            "bash /home/example/pm-os/system/scripts/report-to-cos.sh --status done 'x'",
-            "cd /home/example/pm-os && bash system/scripts/report-to-cos.sh --status done 'x' 2>&1 | tail -5",
+            "bash /home/example/switchboard/system/scripts/report-to-cos.sh --status done 'x'",
+            "cd /home/example/switchboard && bash system/scripts/report-to-cos.sh --status done 'x' 2>&1 | tail -5",
             "REPORT_TO_COS_NO_HOOKS=1 bash system/scripts/report-to-cos.sh 'x'",
             "python3 system/scripts/running-task-state.py show --task-id rt-aaaa | jq .status",
         ):
@@ -119,9 +119,9 @@ class HookRun(unittest.TestCase):
         self.ledger.write_text(json.dumps({"tasks": rows}), encoding="utf-8")
 
     def run_hook(self, kind, payload, task_id="rt-aaaa"):
-        env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
-        env.update({"RUNNING_TASKS_FILE": str(self.ledger), "PM_OS_PLUGIN_CONFIG": str(self.config),
-                    "PM_OS_WORKER_CLOSED_DIR": str(self.typed), "PM_OS_WORKER_TASK_ID": task_id})
+        env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
+        env.update({"RUNNING_TASKS_FILE": str(self.ledger), "SWITCHBOARD_PLUGIN_CONFIG": str(self.config),
+                    "SWITCHBOARD_WORKER_CLOSED_DIR": str(self.typed), "SWITCHBOARD_WORKER_TASK_ID": task_id})
         proc = subprocess.run([sys.executable, str(HOOK), kind], input=json.dumps(payload),
                               capture_output=True, text=True, env=env, timeout=30)
         self.assertEqual(proc.returncode, 0, proc.stderr)

@@ -13,7 +13,7 @@ latency and windows_memory readings before and after each round. Results go to
 Run it on a fresh boot or right after `windows_memory.py --check` says healthy;
 on a machine at its commit limit it measures the leak, not the workers
 (near the limit even a bare `cmd /c exit` takes most of a second).
-CLAUDE_CODE_DISABLE_CLAUDE_MDS=1 keeps the large PM OS instructions out,
+CLAUDE_CODE_DISABLE_CLAUDE_MDS=1 keeps the large switchboard instructions out,
 as a private session launcher does. Costs a few cents of API use per worker.
 """
 from __future__ import annotations

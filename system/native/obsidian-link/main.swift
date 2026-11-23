@@ -1,10 +1,10 @@
-// PM OS Obsidian Link: opens a pm-os vault note in Obsidian without stealing focus.
+// switchboard Obsidian Link: opens a switchboard vault note in Obsidian without stealing focus.
 //
 // Why: in Claude Code inside
 // cmux, a Cmd-clicked file:// link to a .md note opens cmux's own Markdown viewer
 // (app.openMarkdownInCmuxViewer, on by default), and an obsidian:// link goes to
 // NSWorkspace.open, which brings Obsidian to the front. Reports now link
-// `pmos-obsidian://open?vault=<vault>&file=<note>`; cmux hands that scheme to
+// `switchboard-obsidian://open?vault=<vault>&file=<note>`; cmux hands that scheme to
 // LaunchServices, which starts this background-only app (LSBackgroundOnly, so it
 // never takes focus). It rewrites the URL to obsidian://open with the same
 // vault and file, opens it with `open -g -b md.obsidian` (Obsidian loads the
@@ -18,19 +18,19 @@
 // half or more it stays in the background with the focus guard. Below half
 // (covered, minimized, another Space, not running) it opens Obsidian in front,
 // because the click asked to see the note. Override with
-// `defaults write com.pm-os.obsidian-link mode -string background|front|auto`.
-// `pm-os-obsidian-link --decide` prints the measurement and choice, opens nothing.
+// `defaults write com.switchboard.obsidian-link mode -string background|front|auto`.
+// `switchboard-obsidian-link --decide` prints the measurement and choice, opens nothing.
 // Test: system/scripts/test_obsidian_link_handler.py.
 //
 // Build and register: system/scripts/install-obsidian-link-handler.sh.
-// Log: ~/Library/Logs/pm-os-obsidian-link.log.
+// Log: ~/Library/Logs/switchboard-obsidian-link.log.
 import AppKit
 import Foundation
 
 let obsidianBundle = "md.obsidian"
 let focusGuardSeconds = 2.0
 let logURL = FileManager.default.homeDirectoryForCurrentUser
-    .appendingPathComponent("Library/Logs/pm-os-obsidian-link.log")
+    .appendingPathComponent("Library/Logs/switchboard-obsidian-link.log")
 
 func log(_ message: String) {
     let stamp = ISO8601DateFormatter().string(from: Date())
@@ -44,11 +44,11 @@ func log(_ message: String) {
     }
 }
 
-/// obsidian://open?vault=…&file=… for a pmos-obsidian://open URL, else nil.
+/// obsidian://open?vault=…&file=… for a switchboard-obsidian://open URL, else nil.
 /// Only `vault` and `file` pass through, so the link can open a note and
 /// nothing else (no obsidian://new, no plugin actions).
 func obsidianURL(for url: URL) -> URL? {
-    guard url.scheme?.lowercased() == "pmos-obsidian",
+    guard url.scheme?.lowercased() == "switchboard-obsidian",
           url.host?.lowercased() == "open",
           let parts = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
     let items = parts.queryItems ?? []
@@ -154,7 +154,7 @@ final class Handler: NSObject, NSApplicationDelegate {
             return
         }
         guard let target = obsidianURL(for: url) else {
-            log("refused: \(raw) is not pmos-obsidian://open?vault=…&file=…")
+            log("refused: \(raw) is not switchboard-obsidian://open?vault=…&file=…")
             NSApp.terminate(nil)
             return
         }
@@ -194,7 +194,7 @@ final class Handler: NSObject, NSApplicationDelegate {
     /// forward means the owner switched on purpose, so the guard stops.
     func guardFocus(before: String?) {
         guard let before, before.lowercased() != obsidianBundle,
-              ProcessInfo.processInfo.environment["PM_OS_FOCUS_GUARD_DISABLED"] != "1" else {
+              ProcessInfo.processInfo.environment["SWITCHBOARD_FOCUS_GUARD_DISABLED"] != "1" else {
             NSApp.terminate(nil)
             return
         }

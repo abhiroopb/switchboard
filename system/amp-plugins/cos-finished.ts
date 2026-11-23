@@ -18,13 +18,13 @@
 
 import type { PluginAPI } from '@ampcode/plugin'
 import {
-  PM_OS_REPO,
+  SWITCHBOARD_REPO,
   activeWorkspaceName,
   isHeadless,
   isPluginEnabled,
   logEvent,
   runDebouncedDetached,
-} from './pm-os/lib'
+} from './switchboard/lib'
 
 const PLUGIN = 'cos-finished'
 const DEBOUNCE_SECONDS = 90 * 60
@@ -46,7 +46,7 @@ export default function (amp: PluginAPI) {
 
     const spawned = await runDebouncedDetached(
       PLUGIN, 'global', DEBOUNCE_SECONDS,
-      'bash', [`${PM_OS_REPO}/daemon/schedule-meeting-jobs.sh`],
+      'bash', [`${SWITCHBOARD_REPO}/daemon/schedule-meeting-jobs.sh`],
       { label: PLUGIN },
     )
     if (!spawned) return

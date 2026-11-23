@@ -6,33 +6,33 @@ set -euo pipefail
 export LANG="en_US.UTF-8"
 export LC_ALL="en_US.UTF-8"
 
-# Work hours guard, local time: PM_OS_SNAPSHOT_START_HOUR (default 6) to
-# PM_OS_SNAPSHOT_END_HOUR (default 20).
+# Work hours guard, local time: SWITCHBOARD_SNAPSHOT_START_HOUR (default 6) to
+# SWITCHBOARD_SNAPSHOT_END_HOUR (default 20).
 CURRENT_HOUR=$((10#$(date +%H)))
-START_HOUR="${PM_OS_SNAPSHOT_START_HOUR:-6}"
-END_HOUR="${PM_OS_SNAPSHOT_END_HOUR:-20}"
+START_HOUR="${SWITCHBOARD_SNAPSHOT_START_HOUR:-6}"
+END_HOUR="${SWITCHBOARD_SNAPSHOT_END_HOUR:-20}"
 if [ "$CURRENT_HOUR" -lt "$START_HOUR" ] || [ "$CURRENT_HOUR" -ge "$END_HOUR" ]; then
   exit 0
 fi
 
 DAEMON_DIR="$(cd "$(dirname "$0")" && pwd)"
-PM_OS_DIR="$(dirname "$DAEMON_DIR")"
-STATE_DIR="$PM_OS_DIR/.state"
+SWITCHBOARD_DIR="$(dirname "$DAEMON_DIR")"
+STATE_DIR="$SWITCHBOARD_DIR/.state"
 LOG_FILE="$STATE_DIR/context-snapshot.log"
 # The snapshot dir this script prunes is declared in system/config/state-pruned.txt
 # with every other scheduled deleter under .state (check-state-inventory.py skips
 # those paths). No row, no snapshot: better a missing snapshot than an undeclared
 # delete.
-STATE_PRUNED_FILE="$PM_OS_DIR/system/config/state-pruned.txt"
+STATE_PRUNED_FILE="$SWITCHBOARD_DIR/system/config/state-pruned.txt"
 snapshot_rel=$(awk -v me="context-snapshot.sh" '$1 == me && $2 ~ /\/$/ {print $2}' "$STATE_PRUNED_FILE" 2>/dev/null || true)
 if [ "$(printf '%s' "$snapshot_rel" | grep -c .)" -ne 1 ]; then
   echo "context-snapshot: $STATE_PRUNED_FILE must list exactly one dir row for context-snapshot.sh; no snapshot written" >&2
   exit 1
 fi
 SNAPSHOT_DIR="$STATE_DIR/${snapshot_rel%/}"
-TODO_FILE="${PM_OS_ROOT:-$HOME/Development/pm-os}/system/state/todo.json"
+TODO_FILE="${SWITCHBOARD_ROOT:-$HOME/Development/switchboard}/system/state/todo.json"
 TODO_CLI="$HOME/.agents/skills/todo/scripts/todo_cli.py"
-WORKSTREAMS_DIR="$PM_OS_DIR/workstreams"
+WORKSTREAMS_DIR="$SWITCHBOARD_DIR/workstreams"
 
 mkdir -p "$SNAPSHOT_DIR"
 touch "$LOG_FILE"
@@ -136,18 +136,18 @@ ls -1t "$SNAPSHOT_DIR"/snapshot-2*.md 2>/dev/null | tail -n +49 | xargs rm -f 2>
 
 log "Snapshot written to $SNAPSHOT_FILE ($(wc -l < "$SNAPSHOT_FILE") lines)"
 
-if python3 "$PM_OS_DIR/system/scripts/render-workstreams-readme.py" --write >> "$LOG_FILE" 2>&1; then
+if python3 "$SWITCHBOARD_DIR/system/scripts/render-workstreams-readme.py" --write >> "$LOG_FILE" 2>&1; then
   log "Refreshed generated workstreams README"
 else
   log "WARN: Failed to refresh generated workstreams README"
 fi
 
-if python3 "$PM_OS_DIR/system/scripts/rebuild-megadesk-state.py" --write --event-source collector:context-snapshot >> "$LOG_FILE" 2>&1; then
-  log "Refreshed Megadesk queue from context snapshot"
+if python3 "$SWITCHBOARD_DIR/system/scripts/rebuild-switchboard-state.py" --write --event-source collector:context-snapshot >> "$LOG_FILE" 2>&1; then
+  log "Refreshed switchboard queue from context snapshot"
 else
-  log "WARN: Failed to refresh Megadesk queue"
+  log "WARN: Failed to refresh switchboard queue"
 fi
 
-bash "$PM_OS_DIR/system/scripts/publish-megadesk-status.sh" >> "$LOG_FILE" 2>&1 || true
+bash "$SWITCHBOARD_DIR/system/scripts/publish-switchboard-status.sh" >> "$LOG_FILE" 2>&1 || true
 
 log "=== Context snapshot complete ==="

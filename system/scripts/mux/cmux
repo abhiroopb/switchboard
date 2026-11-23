@@ -5,4 +5,4 @@ set -euo pipefail
 # Parameter expansion, not $(dirname): a fork is a leaked process on Windows.
 here="${BASH_SOURCE[0]//\\//}"
 if [[ "$here" == */* ]]; then here="${here%/*}"; else here="."; fi
-exec "${PM_OS_PYTHON:-python3}" "$here/cmux-shim.py" "$@"
+exec "${SWITCHBOARD_PYTHON:-python3}" "$here/cmux-shim.py" "$@"

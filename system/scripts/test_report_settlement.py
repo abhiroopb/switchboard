@@ -24,7 +24,7 @@ class ReportSettlement(Harness):
         self.ledger.write_text(json.dumps({"tasks": list(rows)}))
 
     def blocked(self, task_id: str, **extra: object) -> dict:
-        return {"id": task_id, "status": "blocked", "origin": "cos", "workstream": "pm-os-maintenance",
+        return {"id": task_id, "status": "blocked", "origin": "cos", "workstream": "switchboard-maintenance",
                 "summary": f"blocked: worker of {task_id} is gone", "report_delivered": False,
                 "attempt_id": f"{task_id}.a1.abc", "created_at": "2026-11-08T22:00:00Z",
                 "finished_at": "2026-11-08T23:00:00Z", **extra}

@@ -45,7 +45,7 @@ class TodoShortIdTests(unittest.TestCase):
         return {i["id"]: i for i in json.loads(self.todo_path.read_text(encoding="utf-8"))["items"]}
 
     def run_cli(self, *args):
-        env = {**os.environ, "PM_OS_TEST_SANDBOX": "1"}
+        env = {**os.environ, "SWITCHBOARD_TEST_SANDBOX": "1"}
         return subprocess.run([sys.executable, str(TODO_CLI), "--path", str(self.todo_path), *args],
                               text=True, capture_output=True, env=env)
 
@@ -114,7 +114,7 @@ class CosAckCloseTests(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def run_ack(self, *args):
-        env = {**os.environ, "PM_OS_TEST_SANDBOX": "1", "TODO_CLI": str(self.wrapper), "PYTHON": sys.executable,
+        env = {**os.environ, "SWITCHBOARD_TEST_SANDBOX": "1", "TODO_CLI": str(self.wrapper), "PYTHON": sys.executable,
                "REPO_ROOT": str(REPO_ROOT)}
         return subprocess.run(["bash", str(COS_ACK), *args], text=True, capture_output=True, env=env)
 

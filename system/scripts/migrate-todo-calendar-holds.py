@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Move the todo system's "[Todo] …" calendar holds off the primary calendar
-onto the dedicated, unshared "To-dos (PM OS)" calendar.
+onto the dedicated, unshared "To-dos (switchboard)" calendar.
 
 One-time migration: holds on primary are visible to anyone who shares that
 calendar. Uses the Calendar API `events.move`, which keeps the event id, so

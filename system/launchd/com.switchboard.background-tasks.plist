@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.switchboard.background-tasks</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>{{SWITCHBOARD_ROOT}}/system/scripts/run-background-tasks.sh</string>
+    </array>
+
+    <!-- Calendar-based schedule. Unlike StartInterval, launchd will queue ONE
+         catch-up run when the system wakes after a missed scheduled time, so
+         tasks like comms-triage-hourly fire reliably even after sleep. -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Minute</key><integer>30</integer></dict>
+    </array>
+
+    <!-- Run once immediately when launchd loads this plist (login, after a
+         reload, or after a system boot) so the job is current right away. -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>{{SWITCHBOARD_ROOT}}/system/logs/background-tasks-stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{SWITCHBOARD_ROOT}}/system/logs/background-tasks-stderr.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Applications/cmux.app/Contents/Resources/bin:/opt/homebrew/bin:{{HOME}}/.local/bin:{{HOME}}/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>{{HOME}}</string>
+        <key>LANG</key>
+        <string>en_US.UTF-8</string>
+        <key>LC_ALL</key>
+        <string>en_US.UTF-8</string>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>{{SWITCHBOARD_ROOT}}</string>
+
+    <key>KeepAlive</key>
+    <false/>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

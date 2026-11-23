@@ -14,7 +14,7 @@ elif (( $# > 0 )); then
 fi
 
 if [[ -z "$workspace_ref" ]]; then
-    workspace_ref="$($CMUX_BIN identify 2>/dev/null | "${PM_OS_PYTHON:-python3}" "$(dirname "${BASH_SOURCE[0]}")/lib/json_get.py" caller.workspace_ref)"
+    workspace_ref="$($CMUX_BIN identify 2>/dev/null | "${SWITCHBOARD_PYTHON:-python3}" "$(dirname "${BASH_SOURCE[0]}")/lib/json_get.py" caller.workspace_ref)"
 fi
 [[ "$workspace_ref" =~ ^workspace:[0-9]+$ ]] || {
     echo "error: could not resolve Router workspace" >&2
@@ -32,7 +32,7 @@ try:
     import fcntl
 except ImportError:  # Windows: flock() over msvcrt, system/scripts/flock_compat.py
     import os as _os, sys as _sys
-    _sys.path.insert(0, _os.environ.get("PM_OS_SCRIPTS_DIR") or _os.path.join(_os.environ.get("PM_OS_ROOT") or _os.path.expanduser("~/Development/pm-os"), "system", "scripts"))
+    _sys.path.insert(0, _os.environ.get("SWITCHBOARD_SCRIPTS_DIR") or _os.path.join(_os.environ.get("SWITCHBOARD_ROOT") or _os.path.expanduser("~/Development/switchboard"), "system", "scripts"))
     import flock_compat as fcntl
 import os
 import sys

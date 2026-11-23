@@ -11,7 +11,7 @@ private bytes. The rest can be hundreds of thousands of
 zombie processes: every process that exited kept its kernel process object
 (pool tags Proc, MiP2, PsIn, Toke), about 80 KB of commit each, because a
 kernel driver keeps a reference. No user process holds them, so killing
-processes frees nothing; only a reboot does. PM OS
+processes frees nothing; only a reboot does. switchboard
 creates processes fast on Windows (Git Bash forks, python per call), so the
 leak can grow by hundreds per minute and starve RAM until a 1-line `cmd /c exit`
 takes most of a second.

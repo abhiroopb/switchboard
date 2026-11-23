@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests for local_backup.py and the kit installer's backup step.
 
-Everything runs under a scratch home with a scratch repo. PM_OS_TEST_SANDBOX=1
+Everything runs under a scratch home with a scratch repo. SWITCHBOARD_TEST_SANDBOX=1
 keeps every alert away from a live tab, and the only git calls are in GitBundle.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
-os.environ["PM_OS_TEST_SANDBOX"] = "1"
+os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"
 import local_backup as lb  # noqa: E402
 
 INSTALL_PY = ROOT / "install.py"  # the kit ships the installer at its root
@@ -50,7 +50,7 @@ def write(path: Path, text: str, mtime: float | None = None) -> Path:
 
 def make_home(home: Path) -> None:
     old = time.time() - 3600
-    claude, pmos = home / ".claude", home / ".pm-os"
+    claude, switchboard = home / ".claude", home / ".switchboard"
     write(claude / "settings.json", '{"theme": "dark"}\n', old)
     write(claude / "CLAUDE.md", "# global\n", old)
     write(claude / "skills/todo/SKILL.md", "# todo\n", old)
@@ -65,21 +65,21 @@ def make_home(home: Path) -> None:
     write(claude / "plugins/cache/a/file.txt", "cached\n")
     write(claude / "plugins/installed_plugins.json", "{}\n", old)
     write(claude / "notes/leaky.txt", f"key {FAKE_GOOGLE_TOKEN}\n", old)
-    write(pmos / "agents-local.md", "# local\n", old)
-    write(pmos / "env", f"# header\nPM_OS_ROOT=/tmp/x\nMY_API_TOKEN={FAKE_ENV_SECRET}\nPM_OS_COMMS_TRIAGE=off\n", old)
-    write(pmos / "connectors/google-token.json", json.dumps({"refresh": FAKE_GOOGLE_TOKEN}))
-    write(pmos / "connectors/google-oauth-client.json", "{}")
-    write(pmos / "messages/one.md", "hello\n", old)
-    write(pmos / "wmux-sidecar.json", "{}")
-    write(pmos / "backups/old/.claude.json", '{"oauthAccount": {}}')
-    write(pmos / "backups/old/claude.before-trust.json", '{"oauthAccount": {}}')
-    write(pmos / "backups/old/settings.json", "{}", old)
-    write(pmos / ".session-x.tmp", "tmp")
+    write(switchboard / "agents-local.md", "# local\n", old)
+    write(switchboard / "env", f"# header\nSWITCHBOARD_ROOT=/tmp/x\nMY_API_TOKEN={FAKE_ENV_SECRET}\nSWITCHBOARD_COMMS_TRIAGE=off\n", old)
+    write(switchboard / "connectors/google-token.json", json.dumps({"refresh": FAKE_GOOGLE_TOKEN}))
+    write(switchboard / "connectors/google-oauth-client.json", "{}")
+    write(switchboard / "messages/one.md", "hello\n", old)
+    write(switchboard / "wmux-sidecar.json", "{}")
+    write(switchboard / "backups/old/.claude.json", '{"oauthAccount": {}}')
+    write(switchboard / "backups/old/claude.before-trust.json", '{"oauthAccount": {}}')
+    write(switchboard / "backups/old/settings.json", "{}", old)
+    write(switchboard / ".session-x.tmp", "tmp")
 
 
 class Scratch(unittest.TestCase):
     def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory(prefix="pmos-backup-test-")
+        self._tmp = tempfile.TemporaryDirectory(prefix="switchboard-backup-test-")
         self.addCleanup(self._tmp.cleanup)
         self.base = Path(self._tmp.name)
         self.home = self.base / "home"
@@ -196,7 +196,7 @@ class BackupContents(Scratch):
         backup = self.backup()
         self.assertEqual(backup, self.repo / "local/backups/testhost/2026-11-08")
         manifest = lb.read_manifest(backup)
-        for name in ("claude", "pm-os"):
+        for name in ("claude", "switchboard"):
             info = manifest["roots"][name]
             members = self.members(backup, f"{name}.zip")
             self.assertEqual(info["files"], len(members))
@@ -221,13 +221,13 @@ class BackupContents(Scratch):
     def test_credentials_left_out_and_each_has_a_recovery_line(self) -> None:
         backup = self.backup()
         claude = self.members(backup, "claude.zip")
-        pmos = self.members(backup, "pm-os.zip")
+        switchboard = self.members(backup, "switchboard.zip")
         for gone in (".credentials.json", "shell-snapshots/snap.sh", "security/venv/big.bin", "plugins/cache/a/file.txt"):
             self.assertNotIn(gone, claude)
         for gone in ("connectors/google-token.json", "connectors/google-oauth-client.json", "wmux-sidecar.json", ".session-x.tmp",
                      "backups/old/.claude.json", "backups/old/claude.before-trust.json"):
-            self.assertNotIn(gone, pmos)
-        self.assertIn("backups/old/settings.json", pmos)
+            self.assertNotIn(gone, switchboard)
+        self.assertIn("backups/old/settings.json", switchboard)
         rows = lb.read_manifest(backup)["left_out"]
         paths = {r["path"] for r in rows}
         for expected in (".credentials.json", "connectors/google-token.json", "connectors/google-oauth-client.json",
@@ -236,23 +236,23 @@ class BackupContents(Scratch):
         for row in rows:
             self.assertIn(row["recovery"], lb.RECOVERY)
         text = (backup / "LEFT-OUT.txt").read_text(encoding="utf-8")
-        self.assertIn("pmos login google", text)
+        self.assertIn("switchboard login google", text)
         self.assertIn("/login", text)
         self.assertIn("What a restore cannot bring back", text)
 
     def test_secure_folder_never_enters_a_backup(self) -> None:
         invented = "invented-secure-bytes-not-a-real-value"
-        write(self.home / ".pm-os/secure/vault.dpapi", invented, time.time() - 3600)
-        write(self.home / ".pm-os/secure/nested/other.bin", invented, time.time() - 3600)
-        write(self.home / ".pm-os/secure-notes/kept.md", "a similar name stays in\n", time.time() - 3600)
+        write(self.home / ".switchboard/secure/vault.dpapi", invented, time.time() - 3600)
+        write(self.home / ".switchboard/secure/nested/other.bin", invented, time.time() - 3600)
+        write(self.home / ".switchboard/secure-notes/kept.md", "a similar name stays in\n", time.time() - 3600)
         backup = self.backup()
-        pmos = self.members(backup, "pm-os.zip")
-        self.assertFalse([name for name in pmos if name.startswith("secure/")])
-        self.assertIn("secure-notes/kept.md", pmos)
-        for blob in pmos.values():
+        switchboard = self.members(backup, "switchboard.zip")
+        self.assertFalse([name for name in switchboard if name.startswith("secure/")])
+        self.assertIn("secure-notes/kept.md", switchboard)
+        for blob in switchboard.values():
             self.assertNotIn(invented.encode(), blob)
         manifest = lb.read_manifest(backup)
-        self.assertFalse([row for row in manifest["files"]["pm-os"] if row["p"].startswith("secure/")])
+        self.assertFalse([row for row in manifest["files"]["switchboard"] if row["p"].startswith("secure/")])
         recovery = {row["path"]: row["recovery"] for row in manifest["left_out"]}
         self.assertEqual(recovery["secure/vault.dpapi"], "secure-store")
         self.assertEqual(recovery["secure/nested/other.bin"], "secure-store")
@@ -261,7 +261,7 @@ class BackupContents(Scratch):
                 self.assertNotIn(invented.encode(), path.read_bytes())
 
     def test_a_restore_leaves_the_secure_folder_alone(self) -> None:
-        kept = write(self.home / ".pm-os/secure/vault.dpapi", "invented-local-bytes", time.time() - 3600)
+        kept = write(self.home / ".switchboard/secure/vault.dpapi", "invented-local-bytes", time.time() - 3600)
         backup = self.backup()
         lb.apply_restore(lb.restore_plan(backup, lb.home_roots(self.home)), lb.home_roots(self.home))
         self.assertEqual(kept.read_text(encoding="utf-8"), "invented-local-bytes")
@@ -272,7 +272,7 @@ class BackupContents(Scratch):
         for kept in ("settings.json", "CLAUDE.md", "skills/todo/SKILL.md", "skills/todo/design-tokens.json",
                      "projects/repo/memory/fact.md", "plugins/installed_plugins.json"):
             self.assertIn(kept, claude)
-        self.assertIn("messages/one.md", self.members(backup, "pm-os.zip"))
+        self.assertIn("messages/one.md", self.members(backup, "switchboard.zip"))
 
     def test_transcript_redacted_in_place_and_stays_valid_json(self) -> None:
         backup = self.backup()
@@ -281,13 +281,13 @@ class BackupContents(Scratch):
         self.assertEqual(json.loads(lines[1])["text"], "clean line")
 
     def test_env_keeps_settings_and_drops_secret_lines(self) -> None:
-        env = self.members(self.backup(), "pm-os.zip")["env"].decode()
-        self.assertIn("PM_OS_COMMS_TRIAGE=off", env)
-        self.assertIn("PM_OS_ROOT=/tmp/x", env)
+        env = self.members(self.backup(), "switchboard.zip")["env"].decode()
+        self.assertIn("SWITCHBOARD_COMMS_TRIAGE=off", env)
+        self.assertIn("SWITCHBOARD_ROOT=/tmp/x", env)
         self.assertNotIn("MY_API_TOKEN", env)
 
     def test_transcripts_off_setting(self) -> None:
-        with mock.patch.dict(os.environ, {"PM_OS_BACKUP_TRANSCRIPTS": "off"}):
+        with mock.patch.dict(os.environ, {"SWITCHBOARD_BACKUP_TRANSCRIPTS": "off"}):
             backup = self.backup()
         claude = self.members(backup, "claude.zip")
         self.assertNotIn("projects/repo/abc.jsonl", claude)
@@ -317,12 +317,12 @@ class BackupContents(Scratch):
         write(self.home / ".claude/notes/wide.txt", "")
         (self.home / ".claude/notes/wide.txt").write_bytes(f"key {token}\n".encode("utf-16"))
         (self.home / ".claude/notes/wide-nobom.txt").write_bytes(f"key {token}\n".encode("utf-16-le"))
-        (self.home / ".pm-os/env").write_bytes(f"KEEP=yes\nMY_TOKEN={token}\n".encode("utf-16"))
+        (self.home / ".switchboard/env").write_bytes(f"KEEP=yes\nMY_TOKEN={token}\n".encode("utf-16"))
         backup = self.backup()
-        claude, pmos = self.members(backup, "claude.zip"), self.members(backup, "pm-os.zip")
+        claude, switchboard = self.members(backup, "claude.zip"), self.members(backup, "switchboard.zip")
         self.assertNotIn("notes/wide.txt", claude)
         self.assertNotIn("notes/wide-nobom.txt", claude)
-        self.assertEqual(pmos["env"].decode("utf-8").strip(), "KEEP=yes")
+        self.assertEqual(switchboard["env"].decode("utf-8").strip(), "KEEP=yes")
 
     def test_skill_token_json_with_a_credential_stays_out(self) -> None:
         write(self.home / ".claude/skills/foo/token.json", json.dumps({"refresh_token": "opaque" + "0" * 30}))
@@ -431,7 +431,7 @@ class CollapseGuard(Scratch):
         good = self.backup()
         before = lb.read_manifest(good)["totals"]["files"]
         shutil.rmtree(self.home / ".claude")
-        shutil.rmtree(self.home / ".pm-os")
+        shutil.rmtree(self.home / ".switchboard")
         with self.assertRaisesRegex(lb.BackupError, "no files found"):
             self.backup()
         self.assertEqual(lb.read_manifest(good)["totals"]["files"], before)
@@ -454,7 +454,7 @@ class CollapseGuard(Scratch):
         self.assertEqual(self.backup("2026-11-08", allow_shrink=True).name, "2026-11-08")
 
     def test_first_run_with_only_one_root_is_fine(self) -> None:
-        shutil.rmtree(self.home / ".pm-os")
+        shutil.rmtree(self.home / ".switchboard")
         self.assertEqual(lb.verify_dir(self.backup()), [])
 
 
@@ -588,13 +588,13 @@ class Restore(Scratch):
         self.assertEqual(list(outside.iterdir()), [])
 
     def test_older_env_merges_and_keeps_local_only_lines(self) -> None:
-        local = write(self.roots["pm-os"] / "env", "LOCAL_ONLY=1\nMY_TOKEN=keepme\nPM_OS_COMMS_TRIAGE=on\n", time.time() - 90000)
+        local = write(self.roots["switchboard"] / "env", "LOCAL_ONLY=1\nMY_TOKEN=keepme\nSWITCHBOARD_COMMS_TRIAGE=on\n", time.time() - 90000)
         done = lb.apply_restore(lb.restore_plan(self.saved, self.roots), self.roots)
         text = local.read_text()
         self.assertIn("LOCAL_ONLY=1", text)
         self.assertIn("MY_TOKEN=keepme", text)
-        self.assertIn("PM_OS_COMMS_TRIAGE=off", text, "the backup's value wins for a shared key")
-        self.assertNotIn("PM_OS_COMMS_TRIAGE=on", text)
+        self.assertIn("SWITCHBOARD_COMMS_TRIAGE=off", text, "the backup's value wins for a shared key")
+        self.assertNotIn("SWITCHBOARD_COMMS_TRIAGE=on", text)
         self.assertEqual(done["problems"], [])
 
     def test_other_os_backup_skips_machine_path_files(self) -> None:
@@ -658,7 +658,7 @@ class GitBundle(Scratch):
         self.assertNotIn(FAKE_GITHUB_TOKEN, result["error"])
         self.assertFalse((Path(result["path"]) / "repo.bundle").exists())
         self.assertEqual(lb.verify_dir(Path(result["path"])), [], "the home folders are still published")
-        with mock.patch.dict(os.environ, {"PM_OS_BACKUP_ALLOW_HISTORY": "on"}):
+        with mock.patch.dict(os.environ, {"SWITCHBOARD_BACKUP_ALLOW_HISTORY": "on"}):
             allowed = lb.run_backup(self.repo, home=self.home, day="2026-11-09", host="testhost")
         self.assertEqual(allowed["status"], "ok")
         self.assertTrue((Path(allowed["path"]) / "repo.bundle").exists())
@@ -868,7 +868,7 @@ class Health(Scratch):
         self.assertEqual(len(self.sent), 1)
 
     def test_missing_archive_is_broken(self) -> None:
-        (self.backup() / "pm-os.zip").unlink()
+        (self.backup() / "switchboard.zip").unlink()
         self.assertEqual(self.check()["status"], "broken")
         self.assertEqual(len(self.sent), 1)
 
@@ -899,7 +899,7 @@ class LocalIsProtected(unittest.TestCase):
             record = {"values": {}, "files": {
                 "local/backups/h/2026-11-08/manifest.json": hashlib.sha256(keep.read_bytes()).hexdigest(),
                 "system/old.py": hashlib.sha256(stale.read_bytes()).hexdigest()}}
-            write(dest / ".pm-os-kit/install.json", json.dumps(record))
+            write(dest / ".switchboard-kit/install.json", json.dumps(record))
             p = install.plan({}, {"OWNER_NAME": "x"}, dest, update=True, force=True)
         self.assertEqual(p["remove"], ["system/old.py"])
 
@@ -952,14 +952,14 @@ class LocalIsProtected(unittest.TestCase):
 
     def test_no_install_or_cleanup_script_deletes_local(self) -> None:
         # Every line counts, comments and docstrings too: an example such as
-        # "rm -rf" beside a local/ path in prose fails here (pm-os-trash.py,
+        # "rm -rf" beside a local/ path in prose fails here (switchboard-trash.py,
         # 2026-11-09 to 2026-11-12). Name the folder kind in prose instead.
         delete = re.compile(r"\brm\s+-[a-z]*r|rmtree|Remove-Item|\brmdir\b|\bunlink\b|git\s+clean")
         names_local = re.compile(r"(?<![.\w/\\-])local[/\\\"' ]", re.I)
         scripts = [INSTALL_PY, ROOT / "system/windows/install.ps1",
                    ROOT / "system/windows/register-scheduled-tasks.ps1"]
         for name in ("install-all.sh", "install-claude-code.sh", "install-claude-skills.py", "install-launchd.sh",
-                     "verify-kit-install.sh", "prune-local-retention.py", "rotate-logs.sh", "pm-os-trash.py", "dispatch.py"):
+                     "verify-kit-install.sh", "prune-local-retention.py", "rotate-logs.sh", "switchboard-trash.py", "dispatch.py"):
             scripts.append(HERE / name)
         for script in scripts:
             for number, line in enumerate(script.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
@@ -969,13 +969,13 @@ class LocalIsProtected(unittest.TestCase):
 
 
 class ReinstallSimulation(unittest.TestCase):
-    """A lost machine: scratch home, a moved PM OS folder, the backup only on Dropbox.
+    """A lost machine: scratch home, a moved switchboard folder, the backup only on Dropbox.
 
     Runs the real installer against a tiny kit built around it."""
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls._tmp = tempfile.TemporaryDirectory(prefix="pmos-reinstall-")
+        cls._tmp = tempfile.TemporaryDirectory(prefix="switchboard-reinstall-")
         cls.base = Path(cls._tmp.name)
         cls.kit = cls.base / "kit"
         shutil.copy2(INSTALL_PY, write(cls.kit / "install.py", ""))
@@ -986,7 +986,7 @@ class ReinstallSimulation(unittest.TestCase):
         shutil.copy2(HERE / "local_backup.py", script)
         files = {rel: {"sha256": hashlib.sha256((cls.kit / rel).read_bytes()).hexdigest(), "source": "repo"}
                  for rel in ("AGENTS.md", ".gitignore", "system/scripts/local_backup.py")}
-        write(cls.kit / ".pm-os-kit/source-manifest.json", json.dumps({"files": files}))
+        write(cls.kit / ".switchboard-kit/source-manifest.json", json.dumps({"files": files}))
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -997,22 +997,22 @@ class ReinstallSimulation(unittest.TestCase):
         self.addCleanup(self.case.cleanup)
         self.home = Path(self.case.name) / "home"
         self.home.mkdir()
-        self.dropbox_repo = self.home / "Dropbox" / "Development" / "pm-os"
-        self.dest = self.home / "Development" / "pm-os-new"
+        self.dropbox_repo = self.home / "Dropbox" / "Development" / "switchboard"
+        self.dest = self.home / "Development" / "switchboard-new"
 
     def take_backup(self) -> Path:
         make_home(self.home)
         result = lb.run_backup(self.dropbox_repo, home=self.home, day="2026-11-08", host="old-laptop")
         self.assertEqual(result["status"], "ok")
         shutil.rmtree(self.home / ".claude")
-        shutil.rmtree(self.home / ".pm-os")
+        shutil.rmtree(self.home / ".switchboard")
         return Path(result["path"])
 
     def install(self, *extra: str, dest: Path | None = None) -> subprocess.CompletedProcess:
         env = {k: v for k, v in os.environ.items()
-               if not k.startswith(("PM_OS_", "CLAUDE_", "AMP_", "WMUX", "CMUX"))}
+               if not k.startswith(("SWITCHBOARD_", "CLAUDE_", "AMP_", "WMUX", "CMUX"))}
         env.update(HOME=str(self.home), USERPROFILE=str(self.home), APPDATA=str(self.home / "AppData/Roaming"),
-                   LOCALAPPDATA=str(self.home / "AppData/Local"), PM_OS_TEST_SANDBOX="1", PYTHONIOENCODING="utf-8")
+                   LOCALAPPDATA=str(self.home / "AppData/Local"), SWITCHBOARD_TEST_SANDBOX="1", PYTHONIOENCODING="utf-8")
         return subprocess.run(
             [sys.executable, str(self.kit / "install.py"), "--owner-name", "Sam Sample", "--owner-email", "sam@example.com",
              "--destination", str(dest or self.dest), "--no-git", *extra],
@@ -1030,8 +1030,8 @@ class ReinstallSimulation(unittest.TestCase):
         self.assertEqual((self.home / ".claude/skills/todo/SKILL.md").read_text(), "# todo\n")
         self.assertEqual(newer.read_text(), '{"theme": "set after the backup"}\n')
         self.assertFalse((self.home / ".claude/.credentials.json").exists())
-        env = (self.home / ".pm-os/env").read_text()
-        self.assertIn("PM_OS_COMMS_TRIAGE=off", env, "a restored setting survives the install's own env write")
+        env = (self.home / ".switchboard/env").read_text()
+        self.assertIn("SWITCHBOARD_COMMS_TRIAGE=off", env, "a restored setting survives the install's own env write")
         self.assertIn(str(self.dest), env, "the env file points at the new folder")
         self.assertTrue((self.dest / "AGENTS.md").exists())
         self.assertIn("left out and how to get each one back", done.stderr)
@@ -1039,15 +1039,15 @@ class ReinstallSimulation(unittest.TestCase):
 
     def test_restored_env_points_at_the_new_folder_while_the_old_one_exists(self) -> None:
         make_home(self.home)
-        write(self.home / ".pm-os/env", f"PM_OS_ROOT={self.dropbox_repo}\nPM_OS_COMMS_TRIAGE=off\n", time.time() - 3600)
+        write(self.home / ".switchboard/env", f"SWITCHBOARD_ROOT={self.dropbox_repo}\nSWITCHBOARD_COMMS_TRIAGE=off\n", time.time() - 3600)
         write(self.dropbox_repo / "AGENTS.md", "old checkout\n")
         lb.run_backup(self.dropbox_repo, home=self.home, day="2026-11-08", host="old-laptop")
-        shutil.rmtree(self.home / ".pm-os")
+        shutil.rmtree(self.home / ".switchboard")
         done = self.install("--apply", "--restore-backup", "yes")
         self.assertEqual(done.returncode, 0, done.stderr)
-        env = (self.home / ".pm-os/env").read_text()
-        self.assertIn(f"PM_OS_ROOT={self.dest}", env)
-        self.assertIn("PM_OS_COMMS_TRIAGE=off", env)
+        env = (self.home / ".switchboard/env").read_text()
+        self.assertIn(f"SWITCHBOARD_ROOT={self.dest}", env)
+        self.assertIn("SWITCHBOARD_COMMS_TRIAGE=off", env)
 
     def test_update_reports_and_restores_only_when_told(self) -> None:
         first = self.install("--apply", "--restore-backup", "no")
@@ -1063,15 +1063,15 @@ class ReinstallSimulation(unittest.TestCase):
     def test_bad_kit_aborts_before_any_restore(self) -> None:
         self.take_backup()
         bad = self.kit / "broken.py"
-        original = (self.kit / ".pm-os-kit/source-manifest.json").read_text()
+        original = (self.kit / ".switchboard-kit/source-manifest.json").read_text()
         write(bad, "def broken(:\n")
         files = json.loads(original)
         files["files"]["broken.py"] = {"sha256": hashlib.sha256(bad.read_bytes()).hexdigest(), "source": "repo"}
-        (self.kit / ".pm-os-kit/source-manifest.json").write_text(json.dumps(files))
+        (self.kit / ".switchboard-kit/source-manifest.json").write_text(json.dumps(files))
         try:
             done = self.install("--apply", "--restore-backup", "yes")
         finally:
-            (self.kit / ".pm-os-kit/source-manifest.json").write_text(original)
+            (self.kit / ".switchboard-kit/source-manifest.json").write_text(original)
             bad.unlink()
         self.assertNotEqual(done.returncode, 0)
         self.assertFalse((self.home / ".claude").exists())
@@ -1096,7 +1096,7 @@ class ReinstallSimulation(unittest.TestCase):
         done = self.install("--apply", "--restore-backup", "yes")
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertIn("backup: none found. Looked in:", done.stderr)
-        self.assertIn(str(self.home / "Dropbox" / "Development" / "pm-os" / "local" / "backups"), done.stderr)
+        self.assertIn(str(self.home / "Dropbox" / "Development" / "switchboard" / "local" / "backups"), done.stderr)
 
     def test_reinstall_over_the_folder_never_deletes_local(self) -> None:
         make_home(self.home)
@@ -1114,7 +1114,7 @@ class ReinstallSimulation(unittest.TestCase):
     def test_answering_yes_on_a_terminal_restores(self) -> None:
         self.take_backup()
         log: list[str] = []
-        env = {"PM_OS_ROOT": ""}
+        env = {"SWITCHBOARD_ROOT": ""}
         out = lb.installer_offer(self.dest, answer="ask", log=log.append, stdin=io.StringIO("y\n"), home=self.home, env=env)
         self.assertGreater(out["restored"], 0)
         self.assertTrue(any("restore it now" in line for line in log))
@@ -1155,10 +1155,10 @@ class Paths(unittest.TestCase):
                 self.assertEqual(lb.main_checkout(main).resolve(), main.resolve())
 
     def test_explicit_home_ignores_every_override(self) -> None:
-        with mock.patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": "/real", "PM_OS_STATE_HOME": "/real2"}):
+        with mock.patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": "/real", "SWITCHBOARD_STATE_HOME": "/real2"}):
             roots = lb.home_roots(Path("/scratch"), repo=Path("/real-repo"))
-        self.assertEqual(roots, {"claude": Path("/scratch/.claude"), "pm-os": Path("/scratch/.pm-os"),
-                                 "owner": Path("/scratch/pm-os-local")})
+        self.assertEqual(roots, {"claude": Path("/scratch/.claude"), "switchboard": Path("/scratch/.switchboard"),
+                                 "owner": Path("/scratch/switchboard-local")})
 
     def test_dropbox_info_json_is_read(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1183,7 +1183,7 @@ class HistoryFalseAlarms(unittest.TestCase):
                 self.assertEqual([k for k, p in strong if p.search(line)], [], f"{name}:{number}")
 
     def test_the_pin_covers_one_commit_path_and_kind(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="pmos-history-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="switchboard-history-") as tmp:
             repo = Path(tmp)
             def git(*args: str) -> str:
                 return subprocess.run(["git", "-C", tmp, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "core.hooksPath=/dev/null",
@@ -1216,7 +1216,7 @@ class OwnerFiles(Scratch):
         self.owner = self.home / lb.OWNER_SCRATCH_DIR
         write(self.owner / "agents-local.md", "# Owner context\nrole line\n", self.old)
         write(self.owner / "user-lens.yaml", "voice: direct\n", self.old)
-        write(self.owner / "machines/EXAMPLE-PC.env", "PM_OS_COMMS_TRIAGE=off\n", self.old)
+        write(self.owner / "machines/EXAMPLE-PC.env", "SWITCHBOARD_COMMS_TRIAGE=off\n", self.old)
         write(self.owner / "backups/h/2026-11-01/claude.zip", "old backup, never read\n", self.old)
         write(self.owner / "other-notes.md", "not named, so not copied\n", self.old)
 
@@ -1228,7 +1228,7 @@ class OwnerFiles(Scratch):
         self.assertEqual(self.owner_members(backup), {
             "agents-local.md": b"# Owner context\nrole line\n",
             "user-lens.yaml": b"voice: direct\n",
-            "machines/EXAMPLE-PC.env": b"PM_OS_COMMS_TRIAGE=off\n",
+            "machines/EXAMPLE-PC.env": b"SWITCHBOARD_COMMS_TRIAGE=off\n",
         })
         self.assertEqual(lb.verify_dir(backup), [])
         self.assertEqual(lb.read_manifest(backup)["roots"]["owner"]["files"], 3)
@@ -1320,7 +1320,7 @@ class OwnerFiles(Scratch):
         self.assertIn("owner: agents-local.md", (backup / "LEFT-OUT.txt").read_text(encoding="utf-8"))
 
     def test_a_secret_looking_env_key_leaves_the_machine_file_out_whole(self) -> None:
-        write(self.owner / "machines/KEYED.env", "PM_OS_COMMS_TRIAGE=off\nMY_API_TOKEN=short\n", self.old)
+        write(self.owner / "machines/KEYED.env", "SWITCHBOARD_COMMS_TRIAGE=off\nMY_API_TOKEN=short\n", self.old)
         backup = self.backup()
         self.assertNotIn("machines/KEYED.env", self.owner_members(backup))
         row = next(r for r in lb.read_manifest(backup)["left_out"] if r["path"] == "machines/KEYED.env")
@@ -1338,7 +1338,7 @@ class OwnerFiles(Scratch):
 
     def test_a_token_in_the_key_position_is_never_written_down(self) -> None:
         write(self.owner / "machines/ODD.env", f"{FAKE_GITHUB_TOKEN}=\n", self.old)
-        write(self.home / ".pm-os/env", f"PM_OS_ROOT=/tmp/x\n{FAKE_GITHUB_TOKEN}=\n", self.old)
+        write(self.home / ".switchboard/env", f"SWITCHBOARD_ROOT=/tmp/x\n{FAKE_GITHUB_TOKEN}=\n", self.old)
         backup = self.backup()
         self.assertNotIn("machines/ODD.env", self.owner_members(backup))
         for name in ("manifest.json", "LEFT-OUT.txt"):
@@ -1376,7 +1376,7 @@ class OwnerFiles(Scratch):
         self.assertEqual(row["recovery"], "secret-file")
 
     def test_owner_files_alone_do_not_pass_the_empty_check(self) -> None:
-        for folder in (".claude", ".pm-os"):
+        for folder in (".claude", ".switchboard"):
             shutil.rmtree(self.home / folder)
             (self.home / folder).mkdir()
         with self.assertRaisesRegex(lb.BackupError, "no files found"):
@@ -1414,15 +1414,15 @@ class OwnerFiles(Scratch):
         roots = lb.home_roots(target)
         lb.apply_restore(lb.restore_plan(backup, roots), roots)
         newer = write(roots["owner"] / "agents-local.md", "edited after the backup\n", time.time() + 60)
-        older = write(roots["owner"] / "machines/EXAMPLE-PC.env", "PM_OS_COMMS_TRIAGE=on\n", self.old - 3600)
+        older = write(roots["owner"] / "machines/EXAMPLE-PC.env", "SWITCHBOARD_COMMS_TRIAGE=on\n", self.old - 3600)
         plan = lb.restore_plan(backup, roots)
         self.assertEqual([i["path"] for i in plan["keep_newer"] if i["root"] == "owner"], ["agents-local.md"])
         self.assertEqual([i["path"] for i in plan["replace_older"] if i["root"] == "owner"], ["machines/EXAMPLE-PC.env"])
         done = lb.apply_restore(plan, roots)
         self.assertEqual(newer.read_text(encoding="utf-8"), "edited after the backup\n")
-        self.assertEqual(older.read_text(encoding="utf-8"), "PM_OS_COMMS_TRIAGE=off\n")
+        self.assertEqual(older.read_text(encoding="utf-8"), "SWITCHBOARD_COMMS_TRIAGE=off\n")
         saved = roots["owner"] / done["safety_folder"] / "machines/EXAMPLE-PC.env"
-        self.assertEqual(saved.read_text(encoding="utf-8"), "PM_OS_COMMS_TRIAGE=on\n")
+        self.assertEqual(saved.read_text(encoding="utf-8"), "SWITCHBOARD_COMMS_TRIAGE=on\n")
 
     def test_a_scratch_home_never_reaches_the_repo_local_folder(self) -> None:
         real = write(self.repo / "local/agents-local.md", "real role line\n", self.old - 3600)
@@ -1442,9 +1442,9 @@ class OwnerFiles(Scratch):
         self.assertEqual(lb.home_roots(env={}, repo=Path("/r"))["owner"], Path("/r/local"))
         self.assertNotIn("owner", lb.home_roots(env={}))
         write(self.repo / "local/agents-local.md", "from the repo\n", self.old)
-        write(self.repo / "local/machines/EXAMPLE-PC.env", "PM_OS_COMMS_TRIAGE=off\n", self.old)
+        write(self.repo / "local/machines/EXAMPLE-PC.env", "SWITCHBOARD_COMMS_TRIAGE=off\n", self.old)
         write(self.repo / "local/backups/testhost/note.txt", "beside the real backups\n", self.old)
-        env = {"CLAUDE_CONFIG_DIR": str(self.home / ".claude"), "PM_OS_STATE_HOME": str(self.home / ".pm-os")}
+        env = {"CLAUDE_CONFIG_DIR": str(self.home / ".claude"), "SWITCHBOARD_STATE_HOME": str(self.home / ".switchboard")}
         with mock.patch.dict(os.environ, env):
             backup = Path(lb.run_backup(self.repo, day="2026-11-08", host="testhost")["path"])
             self.assertEqual(sorted(self.owner_members(backup)), ["agents-local.md", "machines/EXAMPLE-PC.env"])
@@ -1457,7 +1457,7 @@ class OwnerFiles(Scratch):
         backup = self.backup()
         dest = self.base / "dest"
         rows = lb.list_backups(lb.backups_root(self.repo))
-        env = {"CLAUDE_CONFIG_DIR": str(self.base / "c"), "PM_OS_STATE_HOME": str(self.base / "p")}
+        env = {"CLAUDE_CONFIG_DIR": str(self.base / "c"), "SWITCHBOARD_STATE_HOME": str(self.base / "p")}
         with mock.patch.object(lb, "find_for_install", return_value=(rows, [])):
             lb.installer_offer(dest, answer="yes", log=lambda _: None, env=env)
         self.assertEqual((dest / "local/agents-local.md").read_text(encoding="utf-8"), "# Owner context\nrole line\n")
@@ -1465,7 +1465,7 @@ class OwnerFiles(Scratch):
 
     def test_with_no_folder_named_the_plan_says_so(self) -> None:
         plan = lb.restore_plan(self.backup(), {k: v for k, v in lb.home_roots(self.base / "r").items() if k != "owner"})
-        self.assertIn("owner files not restored: no PM OS folder was named", lb.plan_skips(plan))
+        self.assertIn("owner files not restored: no switchboard folder was named", lb.plan_skips(plan))
 
     def test_an_older_backup_with_no_owner_archive_still_works(self) -> None:
         backup = self.backup()

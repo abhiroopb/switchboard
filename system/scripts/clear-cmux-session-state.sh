@@ -2,7 +2,7 @@
 # Clear cmux's automatic app-relaunch state after cmux has fully exited.
 #
 # This removes only the stable app's current/previous session snapshots and
-# one-shot surface resume scripts. It deliberately leaves PM OS's manual
+# one-shot surface resume scripts. It deliberately leaves switchboard's manual
 # "reopen last closed" stack intact.
 
 set -euo pipefail

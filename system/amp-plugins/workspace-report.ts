@@ -7,7 +7,7 @@ import type { AgentEndEvent, AgentStartEvent, PluginAPI, ThreadMessage } from '@
 import { createHash } from 'node:crypto'
 import { appendFileSync, mkdirSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { isHeadless, isMachinePrompt, isPluginEnabled, PM_OS_REPO, run, runDetached } from './pm-os/lib'
+import { isHeadless, isMachinePrompt, isPluginEnabled, SWITCHBOARD_REPO, run, runDetached } from './switchboard/lib'
 
 const PLUGIN = 'workspace-report'
 const GUARDED_SEND_TTL_MS = 5 * 60 * 1000
@@ -49,7 +49,7 @@ function cleanTitle(title: string): string {
 
 function excludedSurfaceTitles(): Set<string> {
   try {
-    const path = process.env.SURFACES_CONFIG_FILE ?? join(PM_OS_REPO, 'system/config/surfaces.json')
+    const path = process.env.SURFACES_CONFIG_FILE ?? join(SWITCHBOARD_REPO, 'system/config/surfaces.json')
     const payload = JSON.parse(readFileSync(path, 'utf8')) as {
       surfaces?: Record<string, { title?: string; workspace_reports?: boolean }>
     }
@@ -81,7 +81,7 @@ function comparableTitle(title: string): string {
 
 function workstreamTitleMap(): Map<string, string> {
   const aliases = new Map<string, string>()
-  const workstreamsRoot = join(PM_OS_REPO, 'workstreams')
+  const workstreamsRoot = join(SWITCHBOARD_REPO, 'workstreams')
   const roots = [join(workstreamsRoot, '_archive'), workstreamsRoot]
   for (const root of roots) {
     let entries: Array<{ name: string; isDirectory(): boolean }> = []
@@ -120,10 +120,10 @@ export function compactOutcome(text: string, maxChars = 220): string {
   // Extract targets from the whole final, BEFORE choosing or clipping prose.
   // report-to-cos normalizes these protected links and adds the vault path.
   const links = new Map<string, string>()
-  text = text.replace(/\[([^\]\n]+)\]\(((?:https?|(?:pmos-)?obsidian):\/\/[^\s)]+)\)/g, (_, label, url) => {
+  text = text.replace(/\[([^\]\n]+)\]\(((?:https?|(?:switchboard-)?obsidian):\/\/[^\s)]+)\)/g, (_, label, url) => {
     links.set(url, label)
     return ''
-  }).replace(/(?:https?|(?:pmos-)?obsidian):\/\/[^\s)>\]"']+/g, raw => {
+  }).replace(/(?:https?|(?:switchboard-)?obsidian):\/\/[^\s)>\]"']+/g, raw => {
     const url = raw.replace(/[.,;:]+$/, '')
     if (!links.has(url)) links.set(url, 'Open link')
     return ''
@@ -131,7 +131,7 @@ export function compactOutcome(text: string, maxChars = 220): string {
   const finish = (outcome: string): string => {
     const prose = outcome.length > maxChars ? `${outcome.slice(0, maxChars - 1).trimEnd()}…` : outcome
     return [prose, ...Array.from(links, ([url, label]) =>
-      `[${/^(?:pmos-)?obsidian:\/\//.test(url) ? 'Open in Obsidian' : label}](${url})`,
+      `[${/^(?:switchboard-)?obsidian:\/\//.test(url) ? 'Open in Obsidian' : label}](${url})`,
     )].join(' ⏎ ')
   }
   const lines = text.split('\n').map(line => line.trim())
@@ -208,19 +208,19 @@ export default function (amp: PluginAPI) {
   // callbacks (report-to-cos + task-liveness) only. Registering here would let
   // the timer drain the owner's pendingHandoffThreadIDs and mirror this
   // worker's turn to the default CoS surface, breaking callback origin.
-  if (process.env.PM_OS_WORKER_ID) return
+  if (process.env.SWITCHBOARD_WORKER_ID) return
 
   let config: Record<string, unknown> = {}
   amp.configuration.subscribe(value => { config = value })
 
   const workspaceId = process.env.CMUX_WORKSPACE_ID?.trim() ?? ''
-  const configuredWorkstream = process.env.PM_OS_WORKSTREAM_SLUG?.trim() ?? ''
+  const configuredWorkstream = process.env.SWITCHBOARD_WORKSTREAM_SLUG?.trim() ?? ''
   const titleToWorkstream = workstreamTitleMap()
-  const reportScript = process.env.WORKSPACE_REPORT_SCRIPT ?? `${PM_OS_REPO}/system/scripts/report-to-cos.sh`
-  const pendingStateScript = process.env.PENDING_HANDOFF_STATE_SCRIPT ?? `${PM_OS_REPO}/system/scripts/pending-handoff-state.py`
-  const pendingDir = process.env.PENDING_HANDOFFS_DIR ?? `${PM_OS_REPO}/system/state/pending-handoffs`
-  const sendLog = process.env.WORKSPACE_REPORT_SEND_LOG ?? `${PM_OS_REPO}/system/logs/cmux-sends.log`
-  const logFile = process.env.WORKSPACE_REPORT_LOG_FILE ?? `${PM_OS_REPO}/system/state/logs/workspace-report.log`
+  const reportScript = process.env.WORKSPACE_REPORT_SCRIPT ?? `${SWITCHBOARD_REPO}/system/scripts/report-to-cos.sh`
+  const pendingStateScript = process.env.PENDING_HANDOFF_STATE_SCRIPT ?? `${SWITCHBOARD_REPO}/system/scripts/pending-handoff-state.py`
+  const pendingDir = process.env.PENDING_HANDOFFS_DIR ?? `${SWITCHBOARD_REPO}/system/state/pending-handoffs`
+  const sendLog = process.env.WORKSPACE_REPORT_SEND_LOG ?? `${SWITCHBOARD_REPO}/system/logs/cmux-sends.log`
+  const logFile = process.env.WORKSPACE_REPORT_LOG_FILE ?? `${SWITCHBOARD_REPO}/system/state/logs/workspace-report.log`
   const mirrorableTurns = new Map<string, PendingMirror>()
   const reportedTurns = new Set<string>()
   const mirroringTurns = new Set<string>()
@@ -326,7 +326,7 @@ export default function (amp: PluginAPI) {
       '--handoff-id', handoffID,
       '--status', 'delivered',
       '--detail', detail,
-    ], { cwd: PM_OS_REPO, timeoutMs: 10_000 })
+    ], { cwd: SWITCHBOARD_REPO, timeoutMs: 10_000 })
     return result.code === 0
   }
 
@@ -443,9 +443,9 @@ export default function (amp: PluginAPI) {
     }
   }
 
-  const turnWaitScript = process.env.TURN_WAIT_SCRIPT ?? `${PM_OS_REPO}/system/scripts/turn_wait.py`
+  const turnWaitScript = process.env.TURN_WAIT_SCRIPT ?? `${SWITCHBOARD_REPO}/system/scripts/turn_wait.py`
   const turnWaitsOnOwner = (text: string, threadID: string) =>
-    waitsOnOwner(text, threadID, (args) => run('python3', [turnWaitScript, ...args], { cwd: PM_OS_REPO, timeoutMs: 10_000 }))
+    waitsOnOwner(text, threadID, (args) => run('python3', [turnWaitScript, ...args], { cwd: SWITCHBOARD_REPO, timeoutMs: 10_000 }))
 
   const mirrorTurn = async (
     turnKey: string,
@@ -481,7 +481,7 @@ export default function (amp: PluginAPI) {
     try {
       let started = false
       if (process.env.WORKSPACE_REPORT_RUN_SYNC === '1') {
-        const result = await run('bash', args, { cwd: PM_OS_REPO, timeoutMs: 30_000 })
+        const result = await run('bash', args, { cwd: SWITCHBOARD_REPO, timeoutMs: 30_000 })
         started = result.code === 0
         if (!started) {
           logDecision('report-command-failed', {
@@ -494,7 +494,7 @@ export default function (amp: PluginAPI) {
         }
       } else {
         started = await runDetached('bash', args, {
-          cwd: PM_OS_REPO,
+          cwd: SWITCHBOARD_REPO,
           logFile,
           label: `${PLUGIN} ${taskId}`,
         })

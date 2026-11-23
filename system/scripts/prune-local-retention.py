@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Enforce local retention for scratch state in pm-os and the home directory.
+"""Enforce local retention for scratch state in switchboard and the home directory.
 
 Rules:
 
-pm-os
+switchboard
   workstreams/*/.skill-data/pre-*.sqlite*         > 14 days  delete
   workstreams/*/.skill-data/reload-bridge/<id>/   > 14 days  delete
   system/state/logs/emit-*.out                    > 30 days  delete
@@ -55,13 +55,13 @@ HOME = Path(os.environ.get("HOME", "{{HOME}}"))
 
 
 def _default_root() -> Path:
-    """PM_OS_ROOT, else the git checkout around cwd, else ~/Development/pm-os.
+    """SWITCHBOARD_ROOT, else the git checkout around cwd, else ~/Development/switchboard.
 
     Scheduled runs start in the repo root without --root, and the install
     folder is the owner's choice (a synced folder on Windows), so the home
     default alone would prune the wrong tree or nothing.
     """
-    env = os.environ.get("PM_OS_ROOT")
+    env = os.environ.get("SWITCHBOARD_ROOT")
     if env:
         return Path(env).expanduser()
     try:
@@ -70,7 +70,7 @@ def _default_root() -> Path:
             return Path(top.stdout.strip())
     except (OSError, subprocess.SubprocessError):
         pass
-    return HOME / "Development/pm-os"
+    return HOME / "Development/switchboard"
 
 
 DEFAULT_ROOT = _default_root()
@@ -153,7 +153,7 @@ def declared_state_dirs(declaration: Path = STATE_PRUNED_FILE) -> list[str]:
     return dirs
 
 
-def pm_os_candidates(root: Path, now: float) -> dict[str, list[Path]]:
+def switchboard_candidates(root: Path, now: float) -> dict[str, list[Path]]:
     skill_data = root.glob("workstreams/*/.skill-data")
     snapshots: list[Path] = []
     for directory in skill_data:
@@ -238,7 +238,7 @@ def prune_package_caches(
                     # `bun pm cache rm` refuses to run outside a project
                     # ("No package.json was found"); every command gets an
                     # empty throwaway project as its cwd.
-                    (Path(scratch) / "package.json").write_text('{"name": "pm-os-cache-prune"}\n')
+                    (Path(scratch) / "package.json").write_text('{"name": "switchboard-cache-prune"}\n')
                     proc = subprocess.run(
                         command, capture_output=True, text=True, timeout=command_timeout, cwd=scratch
                     )
@@ -273,8 +273,8 @@ def send_cos_line(text: str, now: float) -> bool:
     """One line to CoS through report-to-cos.sh, the path check-state-inventory.py uses."""
     stamp = time.strftime("%Y%m%d-%H%M", time.localtime(now))
     cmd = ["bash", str(REPORT_TO_COS), "--task-id", f"uv-cache-size-{stamp}", "--origin", "cos",
-           "--workstream", "pm-os-maintenance", "--status", "blocked", "--create-if-missing", text]
-    env = {k: v for k, v in os.environ.items() if not k.startswith("PM_OS_WORKER")}
+           "--workstream", "switchboard-maintenance", "--status", "blocked", "--create-if-missing", text]
+    env = {k: v for k, v in os.environ.items() if not k.startswith("SWITCHBOARD_WORKER")}
     env["REPORT_TO_COS_NO_HOOKS"] = "1"
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=180)
@@ -331,7 +331,7 @@ def main() -> int:
     args = parse_args()
     root = args.root.resolve()
     home = args.home.resolve()
-    groups = pm_os_candidates(root, args.now)
+    groups = switchboard_candidates(root, args.now)
     groups.update(home_candidates(home, args.now))
 
     removed: dict[str, list[str]] = {}

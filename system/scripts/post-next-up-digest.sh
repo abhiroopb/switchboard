@@ -282,7 +282,7 @@ target_source_key="$(python3 "$REPO_ROOT/system/scripts/surface-registry.py" get
 # CoS gets the digest by cmux agent message below; the title lookup and the
 # guarded paste stay for an Amp CoS. NEXT_UP_NO_OWNER_TABS=1 skips it (tests).
 target_ref="${COS_WORKSPACE_REF:-}"; target_agent=""
-if [[ "$target_source_key" == "megadesk" && "${NEXT_UP_NO_OWNER_TABS:-0}" != "1" ]] \
+if [[ "$target_source_key" == "switchboard" && "${NEXT_UP_NO_OWNER_TABS:-0}" != "1" ]] \
     && cos_target_json="$(python3 "$REPO_ROOT/system/scripts/owner_tabs.py" cos-target 2>/dev/null)"; then
     cos_ref="$(printf '%s' "$cos_target_json" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ref") or "")')"
     if [[ -z "$target_ref" || "$target_ref" == "$cos_ref" ]]; then
@@ -361,14 +361,14 @@ probe_target_state() {
 waiter="false"
 spawn_waiter() {
     [[ "${NEXT_UP_NO_WAITER:-0}" == "1" || -z "$target_ref" ]] && return 0
-    local dir="${PM_OS_STATE_DIR:-$REPO_ROOT/system/state}/worker-dispatch" pidfile old
+    local dir="${SWITCHBOARD_STATE_DIR:-$REPO_ROOT/system/state}/worker-dispatch" pidfile old
     pidfile="$dir/next-up-waiter.pid"
     mkdir -p "$dir"
     old="$(cat "$pidfile" 2>/dev/null || true)"
     if [[ -n "$old" ]] && kill -0 "$old" 2>/dev/null; then waiter="true"; return 0; fi
     # Own session (start_new_session): a caller's shell tool kills its process
     # group when the call returns; macOS has no setsid binary, so Python does it.
-    env -u PM_OS_WORKER_ID -u PM_OS_WORKER_TASK_ID -u PM_OS_WORKER_ATTEMPT_ID -u PM_OS_WORKSTREAM_SLUG \
+    env -u SWITCHBOARD_WORKER_ID -u SWITCHBOARD_WORKER_TASK_ID -u SWITCHBOARD_WORKER_ATTEMPT_ID -u SWITCHBOARD_WORKSTREAM_SLUG \
         python3 - "$dir/next-up-waiter.log" bash "$REPO_ROOT/system/scripts/next-up-waiter.sh" "$target_ref" <<'PY' && waiter="true" || true
 import os, shutil, subprocess, sys
 log = open(sys.argv[1], "ab")
@@ -383,7 +383,7 @@ send_rc=0
 transport_retry="false"
 transport="paste"
 if [[ -n "$target_ref" && "$target_agent" == "claude" ]] \
-    && am_json="$(python3 "$REPO_ROOT/system/scripts/owner_tabs.py" message --ref "$target_ref" --from "PM OS next-up" \
+    && am_json="$(python3 "$REPO_ROOT/system/scripts/owner_tabs.py" message --ref "$target_ref" --from "switchboard next-up" \
         --text "$digest" 2>/dev/null)"; then
     # Claude CoS: cmux agent message goes through the session's hooks, never the
     # composer, so a draft in CoS or a running turn never defers the digest.

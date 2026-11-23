@@ -1,7 +1,7 @@
-# Which agent CLI every PM OS launch starts: claude (Claude Code) or amp.
-# Claude Code is the global default. To switch back to Amp, change this one line to `agent: amp`; PM_OS_AGENT=claude|amp in
+# Which agent CLI every switchboard launch starts: claude (Claude Code) or amp.
+# Claude Code is the global default. To switch back to Amp, change this one line to `agent: amp`; SWITCHBOARD_AGENT=claude|amp in
 # a process's environment overrides it for that process only. Resolver:
-# system/scripts/pm_os_agent.py (read by cmux-helpers.sh pm_os_agent,
+# system/scripts/switchboard_agent.py (read by cmux-helpers.sh switchboard_agent,
 # dispatch.py agent_kind, start-day.sh and the headless daemon jobs); a missing
 # or unrecognised value falls back to claude. Keep this key top-level.
 agent: claude
@@ -12,15 +12,15 @@ router:
   # cmux-helpers.sh resolve_agent_mode also floors `router` to ultra.
   mode: ultra
 
-# CoS mode trial: the CoS thread (routines/megadesk) alone launches at `mode` on PT calendar
+# CoS mode trial: the CoS thread (routines/switchboard) alone launches at `mode` on PT calendar
 # days `start` through `end` inclusive; LaunchPad, Comms Triage, Routers and
 # workers stay ultra. cmux-helpers.sh cos_mode_trial_mode reads this and
-# resolve_agent_mode applies it in place of the ultra floor for megadesk only.
+# resolve_agent_mode applies it in place of the ultra floor for switchboard only.
 # The mode is fixed at launch, so the trial starts with the first CoS launch
 # inside the window (start-day on the `start` day) and CoS floors back to ultra on
 # the next launch after `end`. Compare per-call latency in
 # ~/.agents/.amp-plugin-logs/ (plugin event logs) for the trial day against the
-# prior working day before extending. Kill switch: PM_OS_COS_MODE_TRIAL_DISABLED=1.
+# prior working day before extending. Kill switch: SWITCHBOARD_COS_MODE_TRIAL_DISABLED=1.
 cos_mode_trial:
   mode: high
   start: 2026-10-30
@@ -42,7 +42,7 @@ dispatch:
   # earlier. A free slot goes to the queued row first in line, and a fresh
   # dispatch launches at once only when no eligible queued row is ahead of it (rows held
   # on a prerequisite, a continuation, the usage limit, or a quiet window are not
-  # eligible). Owner asks rank before pm-os-maintenance rows, oldest first in each; a
+  # eligible). Owner asks rank before switchboard-maintenance rows, oldest first in each; a
   # maintenance row that has waited the aging minutes ranks with owner asks by its age.
   # queue_owner_first false = strict FIFO; aging 0 = maintenance never moves up.
   queue_owner_first: true
@@ -91,10 +91,10 @@ dispatch:
   # worktree and cmux tab (16 to 30 s) are built in the background. A launch
   # that fails marks the row failed and sends one failed line to the origin
   # through the usual callback path; success is silent (the worker's own
-  # report is the next thing CoS hears). `--sync` or PM_OS_DISPATCH_SYNC=1
+  # report is the next thing CoS hears). `--sync` or SWITCHBOARD_DISPATCH_SYNC=1
   # forces the old inline launch for one call; false here disables it.
   async_launch: true
-  default_workstream: pm-os-maintenance
+  default_workstream: switchboard-maintenance
   # Start of day, closing day and chief of staff asks (dispatch.py system_routine)
   # go here without ranking, so their tab reads "📅 Daily Routines <n>".
   # A missing folder falls back to default_workstream.
@@ -140,7 +140,7 @@ dispatch:
   steer_queue_timeout_minutes: 10
   # Reap protection is by identity, not by ref: dispatch.py reap
   # closes a tab only when worker_tab_reason accepts it — cmux description
-  # `PM OS worker <task-id>`, the title the row recorded, `<emoji> <Name> <n>`
+  # `switchboard worker <task-id>`, the title the row recorded, `<emoji> <Name> <n>`
   # for a known workstream, or the legacy `<workstream> · worker-<12 hex>` — so
   # CoS, Launchpad, the fixed surfaces and owner tabs are never closed. The old
   # protected_workspaces ref list went stale on every cmux restart (refs are

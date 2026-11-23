@@ -6,7 +6,7 @@ argument-hint: "<research topic or question>"
 
 # Synthesize Research
 
-> Connected tools in PM OS: the `pmos` connectors (Slack, Gmail, Google Drive, Calendar). Read `~/Development/pm-os/knowledge/` before drafting.
+> Connected tools in switchboard: the `switchboard` connectors (Slack, Gmail, Google Drive, Calendar). Read `~/Development/switchboard/knowledge/` before drafting.
 
 Synthesize user research from multiple sources into structured insights and recommendations.
 

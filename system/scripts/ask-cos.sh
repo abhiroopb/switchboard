@@ -7,4 +7,4 @@
 #        --option "Rename it" --default a "Rename the workstream to X?"
 set -uo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "${PM_OS_PYTHON:-python3}" "$here/ask_cos.py" ask "$@"
+exec "${SWITCHBOARD_PYTHON:-python3}" "$here/ask_cos.py" ask "$@"

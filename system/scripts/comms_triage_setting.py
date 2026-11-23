@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Per-machine switch for the Comms Triage surface.
 
-PM_OS_COMMS_TRIAGE=off in local/machines/<MACHINE>.env turns Comms Triage off on that
+SWITCHBOARD_COMMS_TRIAGE=off in local/machines/<MACHINE>.env turns Comms Triage off on that
 machine: no tab opened, seeded, or pinned, no collector run at start of day, no queue
 card, and nothing in the CoS digests. The feature stays in the kit. A machine with no
 such file behaves as before, so the default is on.
@@ -15,7 +15,7 @@ the machine so a checkout shared across machines switches off only the machine i
   comms_triage_setting.py --set on     remove the key
 
 A value in the process environment wins over the file, so one command can override it
-with PM_OS_COMMS_TRIAGE=on. system/scripts/lib/comms-triage.sh is the bash twin and
+with SWITCHBOARD_COMMS_TRIAGE=on. system/scripts/lib/comms-triage.sh is the bash twin and
 seed-session.ps1 reads the same file; keep the off values and the path in step.
 """
 from __future__ import annotations
@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 from typing import Mapping
 
-KEY = "PM_OS_COMMS_TRIAGE"
+KEY = "SWITCHBOARD_COMMS_TRIAGE"
 OFF_VALUES = {"off", "0", "false", "no", "disabled"}
 REPO = Path(__file__).resolve().parents[2]
 
@@ -35,17 +35,17 @@ REPO = Path(__file__).resolve().parents[2]
 def local_dir(env: Mapping[str, str] | None = None) -> Path:
     """Always main's folder: a write into a worktree's own local/ would vanish with the worktree."""
     env = os.environ if env is None else env
-    if env.get("PM_OS_LOCAL_DIR"):
-        return Path(env["PM_OS_LOCAL_DIR"])
-    if env.get("PM_OS_ROOT"):
-        return Path(env["PM_OS_ROOT"]) / "local"
+    if env.get("SWITCHBOARD_LOCAL_DIR"):
+        return Path(env["SWITCHBOARD_LOCAL_DIR"])
+    if env.get("SWITCHBOARD_ROOT"):
+        return Path(env["SWITCHBOARD_ROOT"]) / "local"
     from local_backup import main_checkout  # reads the .git file, so no git process
     return main_checkout(REPO) / "local"
 
 
 def machine_name(env: Mapping[str, str] | None = None) -> str:
     env = os.environ if env is None else env
-    return (env.get("PM_OS_MACHINE") or socket.gethostname()).split(".")[0].upper()
+    return (env.get("SWITCHBOARD_MACHINE") or socket.gethostname()).split(".")[0].upper()
 
 
 def env_file(env: Mapping[str, str] | None = None) -> Path:

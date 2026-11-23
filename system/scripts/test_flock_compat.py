@@ -150,7 +150,7 @@ class FlockCompatTest(unittest.TestCase):
         with open(self.lock, "a+") as f, self.assertRaises(ValueError):
             self.flock.flock(f, self.flock.LOCK_NB)
 
-    @unittest.skipUnless((SCRIPTS.parents[1] / ".pm-os-kit").is_dir(),
+    @unittest.skipUnless((SCRIPTS.parents[1] / ".switchboard-kit").is_dir(),
                          "kit installs only; the publisher gate covers the source repo")
     def test_runtime_scripts_never_import_fcntl_unguarded(self) -> None:
         """Every fcntl import sits in a try whose ImportError handler loads flock_compat (same rule as the publisher)."""

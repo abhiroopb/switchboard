@@ -6,8 +6,8 @@
 #   bash system/scripts/cos-show-draft.sh 2                       # Comms Triage "Draft 2"
 #   bash system/scripts/cos-show-draft.sh draft-2
 #
-# A Gmail draft id (r-<digits>, what `pmos mail draft` and worker
-# reports print) goes straight to `pmos mail show`, which prints To,
+# A Gmail draft id (r-<digits>, what `switchboard mail draft` and worker
+# reports print) goes straight to `switchboard mail show`, which prints To,
 # Cc, Bcc, Subject, the body and the Send check that `send --expect-hash` needs.
 # A ledger handle goes to triage_ledger.py show where that script exists. The
 # Windows kit install ships no Comms Triage ledger, so there a ledger handle exits 3
@@ -21,10 +21,10 @@ if [[ -z "$handle" || "$handle" == "-h" || "$handle" == "--help" ]]; then
   [[ -z "$handle" ]] && exit 2 || exit 0
 fi
 root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-PY="${PM_OS_PYTHON:-python3}"
+PY="${SWITCHBOARD_PYTHON:-python3}"
 
 if [[ "$handle" =~ ^r-?[0-9]+$ ]]; then
-  exec "${PM_OS_PMOS:-pmos}" mail show --draft-id "$handle"
+  exec "${SWITCHBOARD_CLI:-switchboard}" mail show --draft-id "$handle"
 fi
 
 if [[ "$handle" =~ ^(draft-)?([0-9]+)$ ]]; then

@@ -49,10 +49,10 @@ HASH_CHANNEL_RE = re.compile(r"(?<![\w&])#([a-z0-9][a-z0-9_-]{2,})")
 KEBAB_RE = re.compile(r"(?<![\w.-])([a-z][a-z0-9]*(?:[-_][a-z0-9]+)+)(?![\w-])")
 # Kebab tokens that name nothing a workstream owns.
 NOT_SYSTEMS = {
-    "pmos-example", "pm-os", "follow-up", "follow-ups", "in-progress", "re-run", "e-mail", "sign-in",
+    "switchboard-example", "switchboard", "follow-up", "follow-ups", "in-progress", "re-run", "e-mail", "sign-in",
     "built-in", "end-of-day", "start-of-day", "one-off", "real-time", "read-only", "co-authored-by",
     "non-zero", "set-up", "check-in", "opt-out", "opt-in", "up-to-date", "out-of-date", "x-ray",
-    "robot_face", "robot_face", "white_check_mark", "daily-refresh", "dry-run", "pm-os-maintenance",
+    "robot_face", "robot_face", "white_check_mark", "daily-refresh", "dry-run", "switchboard-maintenance",
 }
 
 

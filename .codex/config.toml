@@ -1,7 +1,7 @@
-# PM OS project config for OpenAI Codex CLI.
+# switchboard project config for OpenAI Codex CLI.
 #
 # Codex reads AGENTS.md at the project root natively, but truncates the combined
-# instruction text at project_doc_max_bytes (default 32 KiB). The PM OS AGENTS.md
+# instruction text at project_doc_max_bytes (default 32 KiB). The switchboard AGENTS.md
 # is larger than that, so raise the cap. Codex only loads a project
 # .codex/config.toml for trusted projects; `adapters/install-adapters.sh --apply`
 # also writes the same key into ~/.codex/config.toml so the cap applies

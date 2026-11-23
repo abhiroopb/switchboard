@@ -19,7 +19,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
-HOOK = ROOT / ".claude" / "hooks" / "pm-os-guardrails.py"
+HOOK = ROOT / ".claude" / "hooks" / "switchboard-guardrails.py"
 SETTINGS = ROOT / ".claude" / "settings.json"
 DL = "C:/Users/invented/Dropbox/Downloads"
 
@@ -95,7 +95,7 @@ class DownloadsReadsAllowed(unittest.TestCase):
             f'stat "{DL}/notes.txt"',
             f'mv "{DL}/notes.txt" "{DL}/old.txt"',
             f'rm "{DL}/notes.txt"',
-            f'python3 pm-os-trash.py "{DL}/notes.txt"',
+            f'python3 switchboard-trash.py "{DL}/notes.txt"',
             f'python3 organize.py --manifest-out {DL}/plan.json',
             f'pdftotext "{DL}/statement.pdf" -',
             f'cat "{DL}/2026-11-08-invented-preview.md"',
@@ -248,10 +248,10 @@ class DownloadsReadsAllowed(unittest.TestCase):
 
     def test_no_downloads_refusal_text_is_left(self) -> None:
         hook = HOOK.read_text(encoding="utf-8")
-        mirror = (ROOT / "system" / "amp-plugins" / "pm-os" / "sensitive-reads.ts").read_text(encoding="utf-8")
-        plugin = (ROOT / "system" / "amp-plugins" / "pm-os-guardrails.ts").read_text(encoding="utf-8")
+        mirror = (ROOT / "system" / "amp-plugins" / "switchboard" / "sensitive-reads.ts").read_text(encoding="utf-8")
+        plugin = (ROOT / "system" / "amp-plugins" / "switchboard-guardrails.ts").read_text(encoding="utf-8")
         for text in (hook, mirror, plugin):
-            self.assertNotIn("PM_OS_DOWNLOADS_TEXT_OK", text)
+            self.assertNotIn("SWITCHBOARD_DOWNLOADS_TEXT_OK", text)
             self.assertNotIn("DOWNLOADS_MESSAGE", text)
         self.assertNotIn("downloadsTextViolation", plugin)
         self.assertNotIn("downloadsToolViolation", plugin)

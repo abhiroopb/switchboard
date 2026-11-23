@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest import mock
 
-os.environ["PM_OS_TEST_SANDBOX"] = "1"
+os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import keep_awake as ka  # noqa: E402
 
@@ -100,7 +100,7 @@ class KeepAwakeSync(unittest.TestCase):
 
     def test_kill_switch_releases_even_with_work_live(self) -> None:
         run = FakeRunner()
-        with mock.patch.dict(os.environ, {"PM_OS_KEEP_AWAKE": "off"}):
+        with mock.patch.dict(os.environ, {"SWITCHBOARD_KEEP_AWAKE": "off"}):
             out = self.sync(["rt-a"], run)
         self.assertEqual(out["action"], "released")
         self.assertTrue(out["disabled"])

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Let agents drive a real Brave on a machine that opted in: their own profile by default, the owner's when needed.
 
-PM_OS_OWNER_BROWSER=brave in local/machines/<MACHINE>.env turns this on for that machine.
+SWITCHBOARD_OWNER_BROWSER=brave in local/machines/<MACHINE>.env turns this on for that machine.
 Every other machine keeps the headless sanctioned profile from AGENTS.md. The rule text is
 in local/agents-local.md; this file is the part that does not depend on an agent reading it.
 
 Two profiles, two MCP entries:
 
   chrome-devtools        `proxy --profile agent`: a separate Brave with its own user-data-dir
-                         under %LOCALAPPDATA%\\pm-os\\agent-brave, signed in to nothing. Agents
+                         under %LOCALAPPDATA%\\switchboard\\agent-brave, signed in to nothing. Agents
                          start it minimized with a debugging port on 127.0.0.1, so no Allow
                          dialog and no focus change. Brave, like Chrome 136 and later, honors
                          --remote-debugging-port only with a non-default --user-data-dir.
@@ -75,7 +75,7 @@ from typing import Mapping
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from comms_triage_setting import env_file, local_dir, machine_name  # noqa: E402
 
-KEY = "PM_OS_OWNER_BROWSER"
+KEY = "SWITCHBOARD_OWNER_BROWSER"
 PROFILES = {"brave": ("BraveSoftware", "Brave-Browser", "User Data")}
 LEASE_IDLE_SECONDS = 180
 LEASE_RENEW_SECONDS = 30
@@ -83,7 +83,7 @@ CALL_WAIT_SECONDS = 120
 SHUTDOWN_DRAIN_SECONDS = 3
 SHUTDOWN_CLOSE_SECONDS = 8
 BROKER_START_SECONDS = 30
-RECONNECTED_METHOD = "notifications/pm_os/reconnected"
+RECONNECTED_METHOD = "notifications/switchboard/reconnected"
 NO_WINDOW = 0x08000000  # CREATE_NO_WINDOW
 RELINKS = 3
 APPROVAL_ARG = "ownerApproved"
@@ -182,14 +182,14 @@ def profile_dir(name: str, env: Mapping[str, str] | None = None) -> Path:
     return Path(base).joinpath(*PROFILES[name])
 
 
-SANDBOX_REFUSAL = ("PM_OS_TEST_SANDBOX=1 is set, so the owner's real Brave profile is off limits and nothing attached "
+SANDBOX_REFUSAL = ("SWITCHBOARD_TEST_SANDBOX=1 is set, so the owner's real Brave profile is off limits and nothing attached "
                    "to it. Point LOCALAPPDATA at an empty folder or use a stub server.")
 
 
 def sandbox_blocks_owner(name: str, env: Mapping[str, str] | None = None) -> bool:
     """A test never reaches the owner's real Brave: a shared test folder would raise its Allow dialog."""
     env = os.environ if env is None else env
-    if env.get("PM_OS_TEST_SANDBOX") != "1":
+    if env.get("SWITCHBOARD_TEST_SANDBOX") != "1":
         return False
     target = profile_dir(name, env)
     bases = [Path.home() / "AppData" / "Local", real_local_appdata()]  # a test may redirect HOME but not the shell
@@ -206,16 +206,16 @@ def child_command(name: str, version: str, env: Mapping[str, str] | None = None)
 def agent_dir(env: Mapping[str, str] | None = None) -> Path:
     """AppData, not local/: a file-sync client would sync a live profile's lock files, databases, and cookies to every device."""
     env = os.environ if env is None else env
-    if env.get("PM_OS_AGENT_BROWSER_DIR"):
-        return Path(env["PM_OS_AGENT_BROWSER_DIR"])
+    if env.get("SWITCHBOARD_AGENT_BROWSER_DIR"):
+        return Path(env["SWITCHBOARD_AGENT_BROWSER_DIR"])
     base = env.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
-    return Path(base) / "pm-os" / "agent-brave"
+    return Path(base) / "switchboard" / "agent-brave"
 
 
 def agent_port(env: Mapping[str, str] | None = None) -> int:
     env = os.environ if env is None else env
     try:
-        return int(env.get("PM_OS_AGENT_BROWSER_PORT") or AGENT_PORT)
+        return int(env.get("SWITCHBOARD_AGENT_BROWSER_PORT") or AGENT_PORT)
     except ValueError:
         return AGENT_PORT
 
@@ -229,8 +229,8 @@ def agent_child_command(version: str, env: Mapping[str, str] | None = None) -> l
 
 def browser_exe(env: Mapping[str, str] | None = None) -> Path | None:
     env = os.environ if env is None else env
-    if env.get("PM_OS_AGENT_BROWSER_EXE"):
-        path = Path(env["PM_OS_AGENT_BROWSER_EXE"])
+    if env.get("SWITCHBOARD_AGENT_BROWSER_EXE"):
+        path = Path(env["SWITCHBOARD_AGENT_BROWSER_EXE"])
         return path if path.exists() else None
     tail = ("BraveSoftware", "Brave-Browser", "Application", "brave" + ".exe")
     for base in (env.get("ProgramFiles"), env.get("ProgramFiles(x86)"), env.get("LOCALAPPDATA")):
@@ -649,8 +649,8 @@ class NullLease:
 
 def state_dir(env: Mapping[str, str] | None = None) -> Path:
     env = os.environ if env is None else env
-    if env.get("PM_OS_OWNER_BROWSER_STATE"):
-        return Path(env["PM_OS_OWNER_BROWSER_STATE"])
+    if env.get("SWITCHBOARD_OWNER_BROWSER_STATE"):
+        return Path(env["SWITCHBOARD_OWNER_BROWSER_STATE"])
     return local_dir(env).parent / ".state"
 
 
@@ -670,18 +670,18 @@ def log_event(env: Mapping[str, str] | None, **fields) -> None:
 
 
 def holder_id(env: Mapping[str, str], pid: int) -> str:
-    return env.get("PM_OS_WORKER_SESSION_ID") or env.get("CLAUDE_CODE_SESSION_ID") or f"proxy-{pid}"
+    return env.get("SWITCHBOARD_WORKER_SESSION_ID") or env.get("CLAUDE_CODE_SESSION_ID") or f"proxy-{pid}"
 
 
 def holder_label(env: Mapping[str, str]) -> str:
-    slug = env.get("PM_OS_WORKSTREAM_SLUG")
+    slug = env.get("SWITCHBOARD_WORKSTREAM_SLUG")
     return f"the {slug.replace('-', ' ')} worker" if slug else "an owner tab"
 
 
 def is_scheduled(env: Mapping[str, str], cwd: str) -> bool:
-    if env.get("PM_OS_SCHEDULED_JOB") == "1" or env.get("CLAUDE_CODE_SESSION_ATTENDED") == "0":
+    if env.get("SWITCHBOARD_SCHEDULED_JOB") == "1" or env.get("CLAUDE_CODE_SESSION_ATTENDED") == "0":
         return True
-    if env.get("PM_OS_WORKSTREAM_SLUG") == "scheduled-jobs":
+    if env.get("SWITCHBOARD_WORKSTREAM_SLUG") == "scheduled-jobs":
         return True
     return "routines/scheduled-jobs" in cwd.replace("\\", "/")
 
@@ -1449,7 +1449,7 @@ def check_broker_profile(record: dict | None, env: Mapping[str, str]) -> None:
     """Join only a broker that serves this session's profile. The other one is left running, never stopped.
 
     Raises RuntimeError, so the proxy uses its own connection to its own profile instead. Under
-    PM_OS_TEST_SANDBOX a broker that names no profile is never joined either.
+    SWITCHBOARD_TEST_SANDBOX a broker that names no profile is never joined either.
     """
     if not record:
         return
@@ -1459,7 +1459,7 @@ def check_broker_profile(record: dict | None, env: Mapping[str, str]) -> None:
     served = record.get("profile")
     if served and not _same_path(served, profile_dir(name, env)):
         raise RuntimeError("the shared connection serves another browser profile")
-    if not served and env.get("PM_OS_TEST_SANDBOX") == "1":
+    if not served and env.get("SWITCHBOARD_TEST_SANDBOX") == "1":
         raise RuntimeError("a test never joins a shared connection that names no profile")
 
 
@@ -1868,7 +1868,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "broker":
         return Broker(child_command(name, args.mcp_version), os.environ, broker_path(),
                       version=args.mcp_version).serve()
-    call_wait = float(os.environ.get("PM_OS_OWNER_BROWSER_CALL_WAIT") or CALL_WAIT_SECONDS)
+    call_wait = float(os.environ.get("SWITCHBOARD_OWNER_BROWSER_CALL_WAIT") or CALL_WAIT_SECONDS)
     if args.profile == "agent":
         browser = AgentBrowser()
         return Proxy(agent_child_command(args.mcp_version), os.environ, os.getcwd(), sys.stdin.buffer,

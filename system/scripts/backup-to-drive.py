@@ -18,7 +18,7 @@ and one broken upload would redo everything. Per-entry archives are staged one
 at a time (tar | zstd), uploaded with the Drive v3 resumable protocol in 64 MiB
 chunks, verified against Drive's sha256Checksum, then deleted locally.
 
-Why the Drive API and not `pmos drive`: that CLI's `upsert`
+Why the Drive API and not `switchboard drive`: that CLI's `upsert`
 takes file content inline as base64 in the JSON payload, which cannot carry a
 multi-GiB archive. Folder creation, listing and trashing use the same API so
 the job has one auth path: the refresh token the installed gdrive skill keeps
@@ -28,7 +28,7 @@ Exclusions (recorded in manifest.json each run):
   * rebuildable: node_modules, .gradle, virtualenvs, __pycache__ and friends,
     .nx/.turbo/.next caches, Xcode DerivedData, SwiftPM .build, Gradle/Maven/
     Cargo output dirs (only next to their build file), CocoaPods Pods,
-    pm-os .amp/worktrees (task checkouts of main)
+    switchboard .amp/worktrees (task checkouts of main)
   * secret-bearing: people/ and notes/sensitive/ at the top of any repo, .ssh,
     .aws, .gnupg, .env files (templates kept), credential/token/key files
   * .git is INCLUDED (a real backup) unless one .git directory exceeds
@@ -99,7 +99,7 @@ ZSTD_LEVEL = "3"
 STATE_FILE = REPO / "system/state/drive-backup.json"
 LOCK_FILE = REPO / "system/state/drive-backup.lock"
 LOG_FILE = REPO / "system/logs/drive-backup.log"
-STAGING_ROOT = HOME / "Library/Caches/pm-os-drive-backup"
+STAGING_ROOT = HOME / "Library/Caches/switchboard-drive-backup"
 CREDENTIALS = HOME / ".config/gdrive-skill/credentials.json"
 
 DATE_FOLDER = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -520,7 +520,7 @@ class Drive:
                         body={"trashed": True})
 
     def upload_text(self, name: str, parent_id: str, text: str, mime: str = "text/plain") -> dict:
-        boundary = "pm-os-drive-backup-boundary"
+        boundary = "switchboard-drive-backup-boundary"
         meta = json.dumps({"name": name, "parents": [parent_id]})
         body = (f"--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{meta}\r\n"
                 f"--{boundary}\r\nContent-Type: {mime}\r\n\r\n{text}\r\n--{boundary}--").encode("utf-8")
@@ -711,7 +711,7 @@ def send_digest(line: str, date: str, status: str) -> dict:
     script = REPO / "system/scripts/report-to-cos.sh"
     env = dict(os.environ, REPORT_TO_COS_NO_HOOKS="1")
     cmd = ["bash", str(script), "--task-id", f"drive-backup-{date.replace('-', '')}", "--origin", "cos",
-           "--workstream", "pm-os-maintenance", "--status", "done" if status == "ok" else "failed",
+           "--workstream", "switchboard-maintenance", "--status", "done" if status == "ok" else "failed",
            "--delivery", "digest", "--create-if-missing", line]
     try:
         result = subprocess.run(cmd, cwd=str(REPO), env=env, capture_output=True, text=True, timeout=180)

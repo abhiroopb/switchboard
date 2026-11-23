@@ -273,7 +273,7 @@ def read_config_emoji(config_path: Path) -> str:
 
 
 def surfaced_p0_ids(todos: list[dict[str, Any]], plan_date: date, now_iso: str) -> set[str]:
-    module = load_script(SCRIPT_DIR / "lib" / "p0-todos.py", "pm_os_p0_todos")
+    module = load_script(SCRIPT_DIR / "lib" / "p0-todos.py", "switchboard_p0_todos")
     if module is None:
         return set()
     return {t["id"] for t in module.surfaced_p0s(todos, now_iso=now_iso, today=plan_date.isoformat())}
@@ -282,7 +282,7 @@ def surfaced_p0_ids(todos: list[dict[str, Any]], plan_date: date, now_iso: str) 
 def load_calendar(repo_root: Path, plan_date: date, calendar_json: Path | None, no_calendar: bool) -> tuple[list[dict[str, Any]], str]:
     if no_calendar:
         return [], "skipped"
-    module = load_script(repo_root / "system" / "scripts" / "pending-calendar-invites.py", "pm_os_pending_calendar")
+    module = load_script(repo_root / "system" / "scripts" / "pending-calendar-invites.py", "switchboard_pending_calendar")
     if module is None:
         return [], "unavailable"
     start = datetime.combine(plan_date, time.min, tzinfo=PT)
@@ -944,7 +944,7 @@ def main() -> int:
 
     repo_root = args.repo_root.resolve()
     plan_date = date.fromisoformat(args.date) if args.date else datetime.now(PT).date()
-    todo_path = args.todo_json or Path(os.environ.get("PM_OS_TODO_JSON") or repo_root / "system" / "state" / "todo.json")
+    todo_path = args.todo_json or Path(os.environ.get("SWITCHBOARD_TODO_JSON") or repo_root / "system" / "state" / "todo.json")
     comms_path = args.comms_json or repo_root / "system" / "state" / "sources" / "comms.json"
 
     todos = load_json(todo_path, {}).get("items") or []
