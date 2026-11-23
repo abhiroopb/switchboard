@@ -324,8 +324,9 @@ cig_claude_submit() {
 # before the CR. The envelope then sits in the Claude composer, and every later
 # send reads it as a human draft and defers.
 # cig_claude_submit now writes one ledger file per target before it types:
-# epoch, the whitespace-free head (40 chars) and tail (24 chars) of the text.
-# A clean submit, or a send cmux refused, removes it.
+# epoch, the whitespace-free head (40 chars) and tail (24 chars) of the text,
+# and its whitespace-free length and cksum. A clean submit, or a send cmux
+# refused, removes it.
 CIG_PASTE_DIR="${CIG_PASTE_DIR:-}"
 if [[ -z "$CIG_PASTE_DIR" ]]; then
   if [[ "${SWITCHBOARD_TEST_SANDBOX:-0}" == "1" ]]; then
@@ -339,6 +340,9 @@ CIG_OWN_PASTE_MAX_AGE="${CIG_OWN_PASTE_MAX_AGE:-86400}"
 
 _cig_paste_file() { printf '%s/%s.paste' "$CIG_PASTE_DIR" "${1//[^A-Za-z0-9_-]/_}"; }
 
+# Checksum of a whitespace-free text (POSIX cksum, present on macOS and Git Bash).
+_cig_sum() { printf '%s' "$1" | cksum 2>/dev/null | cut -d' ' -f1; }
+
 cig_note_paste() {
   local ref="$1" flat head tail
   flat="$(printf '%s' "$2" | tr -d '[:space:]')"
@@ -346,7 +350,8 @@ cig_note_paste() {
   tail="$flat"; (( ${#tail} > 24 )) && tail="${tail: -24}"
   {
     mkdir -p "$CIG_PASTE_DIR" &&
-      printf '%s\n%s\n%s\n' "$(date +%s)" "$head" "$tail" > "$(_cig_paste_file "$ref")"
+      printf '%s\n%s\n%s\n%s\n%s\n' "$(date +%s)" "$head" "$tail" "${#flat}" "$(_cig_sum "$flat")" \
+        > "$(_cig_paste_file "$ref")"
   } 2>/dev/null || true
 }
 
@@ -359,16 +364,24 @@ cig_clear_paste() { rm -f "$(_cig_paste_file "$1")" 2>/dev/null || true; }
 # the job id) and either ends with its tail or ends with the one
 # "[Pasted text #N …]" placeholder Claude folds a long paste into. Text typed
 # before our paste fails the head test, text typed after it fails the tail and
-# placeholder tests, and a second paste fails the one-placeholder test.
+# placeholder tests, and a second paste fails the one-placeholder test. When
+# the draft shows our whole text, it must be exactly our text: a short paste
+# followed by the owner's own long paste (folded into one placeholder) is not
+# ours.
 cig_own_paste() {
-  local ref="$1" draft="$2" file at head tail now marker='[Pastedtext#' rest
+  local ref="$1" draft="$2" file at head tail len sum now marker='[Pastedtext#' rest
   file="$(_cig_paste_file "$ref")"
   [[ -n "$draft" && -f "$file" ]] || return 1
-  { read -r at; read -r head; read -r tail; } < "$file" 2>/dev/null || return 1
+  { read -r at; read -r head; read -r tail; read -r len; read -r sum; } < "$file" 2>/dev/null
   [[ "$at" =~ ^[0-9]+$ && -n "$head" && -n "$tail" ]] || return 1
   now="$(date +%s)"
   (( now - at <= CIG_OWN_PASTE_MAX_AGE )) || return 1
   [[ "$head" == "[AUTOMATIONjob="* && "$draft" == "$head"* ]] || return 1
+  if [[ "$len" =~ ^[0-9]+$ && -n "$sum" ]] && (( ${#draft} >= len )) \
+      && [[ "$(_cig_sum "${draft:0:len}")" == "$sum" ]]; then
+    (( ${#draft} == len )) && return 0
+    return 1
+  fi
   [[ "$draft" == *"$tail" ]] && return 0
   # Claude folded the end into a placeholder: exactly one placeholder, and it
   # must be the last thing in the draft.
@@ -383,14 +396,19 @@ cig_own_paste() {
 # comms-prompt.sh files a receipt nobody awaits as stale). Submitting, not
 # erasing, because a Claude composer has no verified clear key and the job is
 # still wanted. Only on an idle screen whose live composer holds that paste.
-#   0 = submitted (composer empty again); CIG_RECOVERED_HEAD names it
+#   0 = submitted (composer empty again); CIG_RECOVERED_HEAD and
+#       CIG_RECOVERED_SUM name it
 #   1 = nothing to recover (no own paste, busy, unreadable, or a human draft)
 #   3 = CR sent, composer did not clear (outcome unknown; never retried here)
 CIG_RECOVERED_HEAD=""
+CIG_RECOVERED_SUM=""
 cig_recover_own_paste() {
   local ref="$1" screen draft i
   local CIG_READ_LINES=200
   CIG_RECOVERED_HEAD=""
+  CIG_RECOVERED_SUM=""
+  # No ledger entry, nothing to recover: no screen read on an ordinary send.
+  [[ -f "$(_cig_paste_file "$ref")" ]] || return 1
   screen="$(cig_read "$ref")"
   [[ -n "$screen" ]] || return 1
   printf '%s\n' "$screen" | screen_is_busy && return 1
@@ -404,6 +422,7 @@ cig_recover_own_paste() {
     screen="$(cig_read "$ref")"
     if [[ "$(printf '%s\n' "$screen" | cig_composer_state)" == claude-empty ]]; then
       CIG_RECOVERED_HEAD="$(sed -n 2p "$(_cig_paste_file "$ref")" 2>/dev/null)"
+      CIG_RECOVERED_SUM="$(sed -n 5p "$(_cig_paste_file "$ref")" 2>/dev/null)"
       cig_clear_paste "$ref"
       return 0
     fi
@@ -508,9 +527,10 @@ cig_force_send() {
 # loop stops immediately and the caller must not retry or re-route).
 cig_safe_send() {
   local ref="$1" text="$2" max_wait="${3:-0}" poll="${4:-3}"
-  local start now send_rc recover_rc want_head
+  local start now send_rc recover_rc want_flat want_sum pending_sum
   start="$(date +%s)"
-  want_head="$(printf '%s' "$(cig_flatten "$text")" | tr -d '[:space:]')"; want_head="${want_head:0:40}"
+  want_flat="$(printf '%s' "$(cig_flatten "$text")" | tr -d '[:space:]')"
+  want_sum="$(_cig_sum "$want_flat")"
   while true; do
     # The composer may hold our own earlier automation paste that never got
     # its CR. Submit it instead of deferring behind it
@@ -518,9 +538,13 @@ cig_safe_send() {
     recover_rc=0
     cig_recover_own_paste "$ref" || recover_rc=$?
     if (( recover_rc == 0 )); then
-      [[ -n "$want_head" && "$CIG_RECOVERED_HEAD" == "$want_head" ]] && return 0
+      [[ -n "$want_sum" && "$CIG_RECOVERED_SUM" == "$want_sum" ]] && return 0
     elif (( recover_rc == 3 )); then
-      return 3
+      # Unknown outcome for the paste in the box. It is this send only when it is
+      # this text; a new text was never typed, so the caller may retry it.
+      pending_sum="$(sed -n 5p "$(_cig_paste_file "$ref")" 2>/dev/null)"
+      [[ -n "$want_sum" && "$pending_sum" == "$want_sum" ]] && return 3
+      return 2
     fi
     if cig_safe "$ref"; then
       sleep 1.3

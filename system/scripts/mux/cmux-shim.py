@@ -421,6 +421,23 @@ def default_state_dir() -> Path:
 INJECTED_LOG_MAX_BYTES = 1_000_000
 
 
+# What can end a typed line early: a real CR or LF, and the escapes `cmux send` turns into one
+# (unescape below). Each piece Claude may receive as its own prompt gets its own hash.
+_SUBMIT_SPLIT = re.compile(r"\r\n|\r|\n|\\r\\n|\\r|\\n")
+
+
+def injected_digests(text: str) -> list[str]:
+    """Hashes for the whole text and for every piece a CR, LF or `\\r`/`\\n` escape could submit on its own.
+    The hash ignores whitespace and ` ⏎ ` (gmail_send_guard.injected_key, worker-closed.py injected_key)."""
+    def key(part: str) -> str:
+        return hashlib.sha256(re.sub(r"[\s⏎]+", "", part).encode("utf-8")).hexdigest()
+    out = [key(text)]
+    for piece in _SUBMIT_SPLIT.split(text):
+        if re.sub(r"[\s⏎]+", "", piece) and key(piece) not in out:
+            out.append(key(piece))
+    return out
+
+
 def note_injected(sid: str, text: str) -> None:
     """Record a hash of every line typed into a pane. A typed line looks like the owner's own in
     Claude Code's transcript, so gmail_send_guard.py reads this to keep a worker's "send it" from
@@ -428,11 +445,12 @@ def note_injected(sid: str, text: str) -> None:
     if os.environ.get("SWITCHBOARD_TEST_SANDBOX") == "1":
         return
     path = default_state_dir() / "injected-prompts.jsonl"
-    digest = hashlib.sha256(re.sub(r"[\s⏎]+", "", text).encode("utf-8")).hexdigest()
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
+        now = time.time()
         with path.open("a", encoding="utf-8", newline="\n") as handle:
-            handle.write(json.dumps({"at": time.time(), "surface": sid, "sha": digest}) + "\n")
+            for digest in injected_digests(text):
+                handle.write(json.dumps({"at": now, "surface": sid, "sha": digest}) + "\n")
         if path.stat().st_size > INJECTED_LOG_MAX_BYTES:
             tail = path.read_bytes()[-INJECTED_LOG_MAX_BYTES // 2:]
             path.write_bytes(tail[tail.find(b"\n") + 1:])

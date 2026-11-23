@@ -1246,7 +1246,7 @@
    "source": "repo"
   },
   "system/claude-marketplace/plugins/switchboard/hooks/worker-closed.py": {
-   "sha256": "1eb9ac2455254949a372e09efc2a6ec5cd78b9451e1fbbbfa9bb869f6688a62c",
+   "sha256": "ff7057503990abd266349f7543de48a139b28aa4a8cc548b6895092bc4e0368c",
    "source": "repo"
   },
   "system/cmux-helpers.sh": {
@@ -1750,7 +1750,7 @@
    "source": "repo"
   },
   "system/scripts/lib/cmux-inject-guard.sh": {
-   "sha256": "7eef2745484ed50089fab0d5c09a6c9cf3821ca386e1017d14e9fec235bf77a0",
+   "sha256": "21d4be68984c3561896bc8c170d3a2bf13794db161cf0a31257d5b4ebb0e8315",
    "source": "repo"
   },
   "system/scripts/lib/comms-triage.sh": {
@@ -1826,7 +1826,7 @@
    "source": "repo"
   },
   "system/scripts/mux/cmux-shim.py": {
-   "sha256": "6aa9ebd74b02bb2c692032172dc1a449fede56632ab5899d2c145a21b213308c",
+   "sha256": "99a00f7c5062ac0d9d0dd7ed3cddda719d1a59650d0b8a89db88896fdd945595",
    "source": "repo"
   },
   "system/scripts/mux/note-links.py": {
@@ -2306,7 +2306,7 @@
    "source": "repo"
   },
   "system/scripts/test_inject_guard_own_paste.py": {
-   "sha256": "5aecb979cd3a3529953b1f5e4d5d5bde6a57620add40ae8a66c5794b344e87f8",
+   "sha256": "ba5d7011668ec9e45a53dc332f26adbc34df0c1a8cdaa0db64cdc6497980c6a6",
    "source": "repo"
   },
   "system/scripts/test_install_claude_code_settings.py": {
@@ -2542,7 +2542,7 @@
    "source": "repo"
   },
   "system/scripts/test_worker_closed.py": {
-   "sha256": "96167da670c16a12504194eb6bf329d80d0c81650dc572cf419b30ef626d6ec6",
+   "sha256": "5811ae12dfc4d74693c1fb7961a9dd300eda2359409cda8852ef2f21a4973480",
    "source": "repo"
   },
   "system/scripts/turn_wait.py": {
