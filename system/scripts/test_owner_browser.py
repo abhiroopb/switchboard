@@ -478,6 +478,16 @@ class ProxyCases(unittest.TestCase):
                     {"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": 1}}], delay=0.02)
         self.assertIn(["close_page", {"pageId": 7}], self.forwarded())
 
+    def test_a_slow_cancelled_new_page_is_still_closed_on_exit(self):
+        # Wrong impl: the exit drain waited only for client calls. A cancelled new_page leaves
+        # them at once, so a client that cancels and disconnects before the tab listing answers
+        # left the tab open (the test above failed about half the time on Windows).
+        self.drive([self.call(1, "new_page", url="https://example.com"),
+                    {"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": 1}}],
+                   behavior="slow", delay=0.02)
+        self.assertIn(["close_page", {"pageId": 7}], self.forwarded())
+        self.assertEqual(self.proxy.policy.opened, set())
+
     def test_a_tab_still_opening_at_exit_is_closed(self):
         self.drive([self.call(1, "new_page", url="https://example.com")], behavior="slow", delay=0)
         self.assertIn(["close_page", {"pageId": 7}], self.forwarded())

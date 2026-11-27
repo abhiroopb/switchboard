@@ -169,7 +169,7 @@ import {
   logEvent,
   runDetached,
 } from './switchboard/lib'
-import { assignedVars, expand, planRmRf, redirectCwds, helperWord, rewriteToTrash, isWindowsHost, isAbsPath, slashPath } from './switchboard/rm-guard'
+import { assignedVars, expand, planRmRf, redirectCwds, helperWord, rewriteToTrash, rewriteNulRedirects, isWindowsHost, isAbsPath, slashPath } from './switchboard/rm-guard'
 import { tmpdir } from 'node:os'
 import { organizeExecuteViolation, ORGANIZE_EXECUTE_FIX } from './switchboard/organize-execute'
 import { envDumpViolation, ENV_FIX } from './switchboard/sensitive-reads'
@@ -1903,9 +1903,14 @@ export default function (amp: PluginAPI) {
     // Only after validating the WHOLE EOD block, hide its literal bodies from
     // command-oriented rules (e.g. rm/Gmail text in a saved retrospective).
     // Keep the actual tool input unchanged. Unsafe suffixes never qualify.
-    const cmd = isCosEodContextAppend(sh.command)
-      ? sh.command.replace(/'[^']*'/g, "'<EOD data>'")
-      : sh.command
+    // Rule 3b: on Windows a Git Bash redirect to `nul` writes a real file named nul that
+    // Win32 tools cannot read or delete. Point it at /dev/null first,
+    // so every rule below sees the command that will run.
+    const nulFixed = ruleEnabled('nul-redirect') && isWindowsHost() ? rewriteNulRedirects(sh.command) : null
+    const command = nulFixed ?? sh.command
+    const cmd = isCosEodContextAppend(command)
+      ? command.replace(/'[^']*'/g, "'<EOD data>'")
+      : command
 
     // Rule 1: git add -A / git add --all
     if (ruleEnabled('git-add-all') && bashCommandStartMatch(cmd, GIT_ADD_ALL_AT_COMMAND_START)) {
@@ -2046,7 +2051,7 @@ export default function (amp: PluginAPI) {
       // rewritten, an in-repo-only delete still runs as written (pre-approved).
       const helper = trashHelperPath()
       const word = helperWord(helper)
-      const canRewrite = config[`${PLUGIN}.rm-rf.trash.disabled`] !== true && cmd === sh.command &&
+      const canRewrite = config[`${PLUGIN}.rm-rf.trash.disabled`] !== true && cmd === command &&
         word !== null && existsSync(helper)
       const repoInvocations = plan.repo.map(t => t.invocation)
       if (plan.trash.length === 0 && repoInvocations.length > 0) {
@@ -2103,8 +2108,10 @@ export default function (amp: PluginAPI) {
 
     const toolDecision = await checkSlack(event, ctx) ?? await checkGmail(event, ctx) ?? await checkCalendar(event, ctx)
     if (toolDecision) return toolDecision
-    // Rule 3: the Trash rewrite goes out only after every other rule passed.
+    if (nulFixed) await logEvent(PLUGIN, { rule: 'nul-redirect', action: 'rewritten-to-dev-null', cmd: sh.command })
+    // Rule 3: the Trash rewrite goes out only after every other rule passed (it carries Rule 3b's fix too).
     if (trashRewrite) return { action: 'allow-with-input' as const, input: { ...event.input, cmd: trashRewrite.cmd } }
+    if (nulFixed) return { action: 'allow-with-input' as const, input: { ...event.input, cmd: nulFixed } }
     return { action: 'allow' }
   })
 

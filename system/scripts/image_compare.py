@@ -20,8 +20,10 @@ blocks (for example descriptions), click to view full size, and file paths.
     image_compare.py open PATH_OR_FILE_URL [--force]   # open any local page or image on the owner's Mac
     image_compare.py open-report --text "<report>"      # open the compare page(s) a delivered report links
 
-`build` prints JSON {path, main_path, file_url, link, main_link, images,
-opened}. `--print link` prints only the Markdown link. `--open` opens the page
+`build` prints JSON {path, main_path, file_url, url, link, main_link, images,
+opened}. Under wmux (review_surface.compare_links_http), `url`, `link` and
+`main_link` name the note-links bridge link http://127.0.0.1:7472/c/<id>, the one
+form a wmux pane opens on click; elsewhere `url` is `file_url`. `--print link` prints only the Markdown link. `--open` opens the page
 on the owner's Mac right after it is written (the default when run from a terminal;
 `--no-open` skips it). `from-report` is the report-to-cos.sh backstop: when a
 report names 2 or more local images and has no compare-page link, it builds a
@@ -220,7 +222,9 @@ def to_main(path: Path, main: Path) -> Path:
 
 def resolve_image(raw: str, top: Path, main: Path) -> tuple[Path, Path]:
     """(path as found, path on main). Relative paths try the checkout first,
-    then main. A `file://` URL is accepted."""
+    then main. A `file://` URL is accepted. An image inside the checkout maps to
+    the same path on main even when the checkout lives outside main (Windows
+    keeps task worktrees under %LOCALAPPDATA%)."""
     raw = raw.strip()
     if raw.startswith("file://"):
         from urllib.parse import unquote, urlsplit
@@ -231,7 +235,13 @@ def resolve_image(raw: str, top: Path, main: Path) -> tuple[Path, Path]:
         cands = [top / path, main / path]
         path = next((c for c in cands if c.exists()), cands[0])
     path = Path(os.path.abspath(path))
-    return path, to_main(path, main)
+    on_main = to_main(path, main)
+    if on_main == path and top != main:
+        try:
+            on_main = main / path.relative_to(top)
+        except ValueError:
+            pass
+    return path, on_main
 
 
 def file_url(path: Path) -> str:
@@ -351,13 +361,26 @@ def _label(img: Image, found: Path) -> str:
     return stem[:1].upper() + stem[1:] if stem else found.name
 
 
+def rel_src(target: Path, page_dir: Path) -> str | None:
+    """The URL path from a page's folder to an image: forward slashes and
+    URL-encoded on every platform. os.path.relpath gives backslashes on Windows,
+    which quote() turned into %5C, a path no browser resolves. None when the two sit on different drives."""
+    try:
+        rel = os.path.relpath(target, page_dir)
+    except ValueError:
+        return None
+    return quote(rel.replace(os.sep, "/"), safe="/.-_~")
+
+
 def _srcs(found: Path, on_main: Path, out_main: Path, out_actual: Path, embed: bool) -> list[str]:
     if embed and found.exists():
         mime = mimetypes.guess_type(found.name)[0] or "image/png"
         return [f"data:{mime};base64," + base64.b64encode(found.read_bytes()).decode()]
     srcs: list[str] = []
     for page, target in ((out_main, on_main), (out_actual, found)):
-        srcs.append(quote(os.path.relpath(target, page.parent), safe="/.-_~"))
+        rel = rel_src(target, page.parent)
+        if rel:
+            srcs.append(rel)
     srcs += [file_url(on_main), file_url(found)]
     return list(dict.fromkeys(srcs))
 
@@ -459,8 +482,23 @@ def build(page: Page, *, out: Path | None = None, cwd: Path | None = None, embed
     # branch lands); main_link names where it lands.
     live = out_main if out_main.exists() else out_actual
     url = file_url(live)
-    return {"path": str(out_actual), "main_path": str(out_main), "file_url": url,
-            "link": f"[{label}]({url})", "main_link": f"[{label}]({file_url(out_main)})", "images": records}
+    # Under wmux the owner can click only http(s) links, so the link goes through
+    # the note-links bridge, which serves the page; the same
+    # /c/<id> link names the worktree copy now and the landed copy later.
+    click = click_url(live, top, main)
+    return {"path": str(out_actual), "main_path": str(out_main), "file_url": url, "url": click or url,
+            "link": f"[{label}]({click or url})", "main_link": f"[{label}]({click or file_url(out_main)})",
+            "images": records}
+
+
+def click_url(path: Path, top: Path | None = None, main: Path | None = None) -> str | None:
+    """The bridge link (http://127.0.0.1:7472/c/<id>) for a compare page when
+    this surface links compare pages through the bridge (wmux), else None."""
+    try:
+        import review_surface
+        return review_surface.compare_click_url(path, main, top)
+    except Exception:  # noqa: BLE001 - a link helper failure keeps the file:// link
+        return None
 
 
 # --- open on the owner's Mac ----------------------------------------------------------
@@ -789,9 +827,11 @@ def _cmux_target_workspace(exe: str, main: Path) -> str | None:
         return None
 
 
-def _inline_src(raw: str, base: Path) -> str | None:
+def _inline_src(raw: str, base: Path, only_images: bool = False, allow=None, budget: list | None = None) -> str | None:
     """A data: URI for a local image reference (relative to the page, absolute,
-    or file://), or None when it is remote, missing, or too large."""
+    or file://), or None when it is remote, missing, or too large (or, with
+    ``only_images``, not an image type; with ``allow``, a path it refuses; with
+    ``budget``, a one-item list of bytes left, more than is left)."""
     raw = html.unescape(raw).strip()
     if not raw or raw.startswith(("data:", "http://", "https://")):
         return None
@@ -799,12 +839,48 @@ def _inline_src(raw: str, base: Path) -> str | None:
     if not path.is_absolute():
         path = base / path
     try:
-        if not path.is_file() or path.stat().st_size > VIEW_INLINE_MAX_BYTES:
+        size = path.stat().st_size if path.is_file() else -1
+        if size < 0 or size > VIEW_INLINE_MAX_BYTES or (budget is not None and size > budget[0]):
+            return None
+        if allow is not None and not allow(path):
             return None
         mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        if only_images and not mime.startswith("image/"):
+            return None
+        if budget is not None:
+            budget[0] -= size
         return f"data:{mime};base64," + base64.b64encode(path.read_bytes()).decode("ascii")
     except OSError:
         return None
+
+
+def inline_images(text: str, base: Path, only_images: bool = False, allow=None, max_total: int | None = None) -> str:
+    """The page with every local <img> (src, then each data-srcs candidate,
+    relative to ``base``) inlined as a data: URI, so a browser that cannot read
+    the image files (cmux's webview, a page the note-links bridge serves over
+    http) still shows them. The bridge passes ``only_images``, an ``allow``
+    path check (review_surface.compare_image_ok) and a ``max_total`` byte cap;
+    an image it refuses stays as written and shows as not found."""
+    budget = [max_total] if max_total is not None else None
+
+    def fix(tag: re.Match) -> str:
+        attrs = dict((k.lower(), v) for k, v in _ATTR.findall(tag.group(0)))
+        cands: list[str] = []
+        if "data-srcs" in attrs:
+            try:
+                cands = [str(c) for c in json.loads(html.unescape(attrs["data-srcs"]))]
+            except ValueError:
+                cands = []
+        if "src" in attrs:
+            cands.insert(0, attrs["src"])
+        uri = next((u for u in (_inline_src(c, base, only_images, allow, budget) for c in cands) if u), None)
+        if not uri:
+            return tag.group(0)
+        out = _ATTR.sub(lambda m: f'{m.group(1)}="{uri}"' if m.group(1).lower() == "src"
+                        else f'{m.group(1)}="{html.escape(json.dumps([uri]), quote=True)}"', tag.group(0))
+        return out.replace(' loading="lazy"', "")
+
+    return _IMG_TAG.sub(fix, text)
 
 
 def _view_copy(path: Path, main: Path, key: str) -> Path:
@@ -818,30 +894,11 @@ def _view_copy(path: Path, main: Path, key: str) -> Path:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return path
-    base = path.parent
-
-    def fix(tag: re.Match) -> str:
-        attrs = dict((k.lower(), v) for k, v in _ATTR.findall(tag.group(0)))
-        cands: list[str] = []
-        if "data-srcs" in attrs:
-            try:
-                cands = [str(c) for c in json.loads(html.unescape(attrs["data-srcs"]))]
-            except ValueError:
-                cands = []
-        if "src" in attrs:
-            cands.insert(0, attrs["src"])
-        uri = next((u for u in (_inline_src(c, base) for c in cands) if u), None)
-        if not uri:
-            return tag.group(0)
-        out = _ATTR.sub(lambda m: f'{m.group(1)}="{uri}"' if m.group(1).lower() == "src"
-                        else f'{m.group(1)}="{html.escape(json.dumps([uri]), quote=True)}"', tag.group(0))
-        return out.replace(' loading="lazy"', "")
-
     view_dir = main / ".state" / "compare-view"
     view = view_dir / f"{hashlib.sha1(key.encode()).hexdigest()[:12]}-{path.name}"
     try:
         view_dir.mkdir(parents=True, exist_ok=True)
-        view.write_text(_IMG_TAG.sub(fix, text), encoding="utf-8")
+        view.write_text(inline_images(text, path.parent), encoding="utf-8")
     except OSError:
         return path
     return view
@@ -902,6 +959,12 @@ def open_page(target: str, *, force: bool = False, cwd: Path | None = None, task
     out = {"opened": False, "path": shown}
     if not remote and not path.exists():
         return {**out, "reason": "not found", "line": f"Not found: {path}"}
+    # Under wmux a compare page is given as its bridge link, the one form the
+    # owner can click there; the path stays in "path".
+    click = None if remote else click_url(path, repo_root(cwd))
+    if click:
+        out["url"] = click
+        shown = click
     if os.environ.get("IMAGE_COMPARE_OPEN_DISABLED") == "1":
         return {**out, "reason": "disabled", "line": f"Page: {shown}"}
     main = main_root(repo_root(cwd))
@@ -925,7 +988,7 @@ def open_page(target: str, *, force: bool = False, cwd: Path | None = None, task
     via = ""
     exe = None if opener else _cmux_bin()
     if not opener and not exe and sys.platform != "darwin" and os.environ.get("SWITCHBOARD_OPEN_VIA") == "wmux":
-        ok, err = _open_in_wmux(raw if remote else file_url(path))
+        ok, err = _open_in_wmux(raw if remote else (click or file_url(path)))
         _log_open(main, {"path": shown, "via": "wmux", "opened": ok, **({"reason": err} if err else {})})
         if not ok:
             return {**out, "reason": err, "line": f"Page: {shown}"}
@@ -943,7 +1006,7 @@ def open_page(target: str, *, force: bool = False, cwd: Path | None = None, task
         via, record["surface"] = "cmux", surface
         out.update(workspace=workspace, surface=surface)
     else:
-        cmd = [*opener.split(), shown] if opener else _default_opener(raw if remote else path)
+        cmd = [*opener.split(), raw if remote else str(path)] if opener else _default_opener(raw if remote else path)
         if cmd is None:
             return {**out, "reason": "no opener on this machine", "line": f"Page: {shown}"}
         handler = _macos_html_handler() if (not opener and sys.platform == "darwin" and is_page) else None
@@ -1005,6 +1068,10 @@ def open_report_pages(text: str, *, task_id: str | None = None, limit: int = 3) 
             key = str(review_surface.resolve_local_path(_local_target(raw), "resolve", task_id))
             if key not in targets:
                 targets.append(key)
+    for m in review_surface._HTTP_COMPARE_URL.finditer(blob):
+        found = review_surface.compare_for_link_id(m.group(0).rsplit("/", 1)[-1])
+        if found and str(found) not in targets:
+            targets.append(str(found))
     pages = [open_page(t, task_id=task_id) for t in targets[:limit]]
     return {"opened": any(p["opened"] for p in pages), "pages": pages}
 
@@ -1138,7 +1205,7 @@ def main(argv: list[str] | None = None) -> int:
         if result["opened"]:
             print(f"Opened {result['path']}", file=sys.stderr)
         print({"json": json.dumps(result, ensure_ascii=False), "link": result["link"],
-               "url": result["file_url"]}[args.print_])
+               "url": result["url"]}[args.print_])
         return 0
     if args.cmd == "open":
         result = open_page(args.target, force=args.force, task_id=args.task_id or None)

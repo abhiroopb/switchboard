@@ -147,17 +147,142 @@ def build_readme(repo_root: Path) -> str:
     return "\n".join(lines)
 
 
+README_REL = "workstreams/README.md"
+
+
+def _toplevel(path: Path) -> Path | None:
+    probe = subprocess.run(["git", "-C", str(path), "rev-parse", "--show-toplevel"],
+                           capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    if probe.returncode or not probe.stdout.strip():
+        return None
+    return Path(probe.stdout.strip())
+
+
+def resolve_root(explicit: str = "", cwd: Path | None = None) -> Path:
+    """The checkout to render: --root when given, else the switchboard checkout that
+    holds the current directory, else the checkout this script sits in.
+
+    The script's own path used to win: a worker in
+    a task worktree that ran main's copy by its absolute path re-rendered MAIN's
+    README, and finish then refused the landing as a stray write. AGENTS.md:
+    scripts derive the repo root from the cwd, never their own path."""
+    if explicit:
+        return Path(explicit).resolve()
+    top = _toplevel(cwd or Path.cwd())
+    if top is not None and (top / "workstreams").is_dir() and (top / "system" / "scripts").is_dir():
+        return top
+    return Path(__file__).resolve().parents[2]
+
+
+def write_readme(repo_root: Path, readme: str) -> bool:
+    """Write README.md only when its text changed, always with LF endings (the
+    repo's .gitattributes keeps LF in the working tree; text-mode write_text on
+    Windows wrote CRLF). An unchanged README keeps its mtime, so an hourly
+    render never makes an untouched file look freshly written to finish's
+    stray-write check. Returns True when the file was written."""
+    target = repo_root / README_REL
+    data = (readme + "\n").encode("utf-8")
+    try:
+        if target.read_bytes() == data:
+            return False
+    except OSError:
+        pass
+    target.write_bytes(data)
+    return True
+
+
+def is_linked_worktree(repo_root: Path) -> bool:
+    return main_checkout(repo_root).resolve() != repo_root.resolve()
+
+
+def commit_readme(repo_root: Path) -> dict[str, object]:
+    """Commit workstreams/README.md alone on the main checkout when it differs
+    from HEAD, as the switchboard worker. A main-checkout render (the hourly context
+    snapshot, CoS) used to leave it uncommitted, and the next task whose branch
+    also re-rendered it was refused at finish.
+    Never in a task worktree: finish commits a branch. The commit is
+    path-limited, so anything else staged on main stays out of it."""
+    if is_linked_worktree(repo_root):
+        return {"committed": False, "reason": "task worktree; finish commits the branch"}
+    def g(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["git", "-C", str(repo_root), *args], capture_output=True, text=True,
+                              stdin=subprocess.DEVNULL)
+
+    tracked = not g("ls-files", "--error-unmatch", "--", README_REL).returncode
+    # Content, not stat: a rewrite that only changes line endings or the mtime is not a change.
+    if tracked and not g("diff", "--quiet", "HEAD", "--", README_REL).returncode:
+        return {"committed": False, "reason": "README matches HEAD"}
+    import owner_tabs  # lazy: only a committing run needs the ledger-side helpers
+
+    return owner_tabs.commit_written_paths(repo_root, [README_REL], "workstreams/README.md re-rendered on main")
+
+
+def landing_lock_path(repo_root: Path) -> Path:
+    """dispatch.py's landing lock (LOCKS / landing.lock)."""
+    import os
+    return Path(os.environ.get("SWITCHBOARD_LOCKS_DIR") or repo_root / ".amp" / "locks") / "landing.lock"
+
+
+def commit_outside_landing(repo_root: Path) -> dict[str, object]:
+    """commit_readme under dispatch's landing lock, taken without waiting. A
+    landing in flight resets main's README just before its fast-forward and
+    renders it again after; a commit in between would move main under it. So a
+    held lock skips this run (the next one commits) instead of racing it."""
+    try:
+        import fcntl  # type: ignore[import-not-found]
+    except ImportError:  # Windows: flock() over msvcrt
+        import flock_compat as fcntl  # type: ignore[no-redef]
+    path = landing_lock_path(repo_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a+") as handle:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except (BlockingIOError, OSError):
+            return {"committed": False, "reason": "a landing is in progress; the next render commits"}
+        try:
+            return commit_readme(repo_root)
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def register_uncommitted(repo_root: Path) -> None:
+    """A render left uncommitted on main is switchboard's own write (owner_tabs
+    registry), so finish treats it as generated output, never as a stray edit."""
+    if is_linked_worktree(repo_root):
+        return
+    def g(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["git", "-C", str(repo_root), *args], capture_output=True, text=True,
+                              stdin=subprocess.DEVNULL)
+
+    untracked = bool(g("ls-files", "--error-unmatch", "--", README_REL).returncode)
+    if untracked or g("diff", "--quiet", "HEAD", "--", README_REL).returncode == 1:
+        import owner_tabs
+
+        owner_tabs.note_own_write(repo_root, [README_REL])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--write", action="store_true", help="Write back to workstreams/README.md")
+    parser.add_argument("--root", default="", help="checkout to render (default: the switchboard checkout holding the cwd)")
+    parser.add_argument("--commit", action="store_true",
+                        help="with --write on the main checkout: commit README.md alone when it differs from HEAD")
     args = parser.parse_args()
 
-    repo_root = Path(__file__).resolve().parents[2]
+    repo_root = resolve_root(args.root)
     readme = build_readme(repo_root)
 
     if args.write:
-        target = repo_root / "workstreams" / "README.md"
-        target.write_text(readme + "\n")
+        write_readme(repo_root, readme)
+        outcome: dict[str, object] = {}
+        if args.commit:
+            outcome = commit_outside_landing(repo_root)
+            if outcome.get("committed"):
+                print(f"render-workstreams-readme: committed {README_REL} ({outcome.get('commit', '')})")
+            elif outcome.get("reason") not in {"README matches HEAD"}:
+                print(f"render-workstreams-readme: {README_REL} not committed: {outcome.get('reason')}")
+        if not outcome.get("committed"):
+            register_uncommitted(repo_root)
     else:
         print(readme)
 

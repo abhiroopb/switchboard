@@ -73,6 +73,7 @@ GITHUB_INBOX_CACHE_PATH = SOURCES_DIR / "owner-github-inbox.jsonl"
 GMAIL_SENT_CACHE_PATH = SOURCES_DIR / "owner-gmail-sent.jsonl"
 DRIVE_ACTIVITY_CACHE_PATH = SOURCES_DIR / "owner-drive-activity.jsonl"
 NOTION_ACTIVITY_CACHE_PATH = SOURCES_DIR / "owner-notion-activity.jsonl"
+BLUEPRINT_UPDATES_CACHE_PATH = SOURCES_DIR / "owner-blueprint-updates.jsonl"
 JIRA_CACHE_PATH = SOURCES_DIR / "owner-jira-issues.jsonl"
 WORKSPACE_UPDATES_PATH = SOURCES_DIR / "workspace-updates.json"
 DOC_COMMENTS_CACHE_PATH = SOURCES_DIR / "owner-doc-comments.jsonl"
@@ -192,6 +193,10 @@ ID_TOKEN_RE = re.compile(
 
 class TodoError(Exception):
     """A handled failure: the CLI prints the message and exits 1."""
+
+
+class SandboxRefused(TodoError):
+    """A test-sandboxed run tried to write outside the temp directory."""
 
 
 class PrSetRefusal(Exception):
@@ -636,6 +641,72 @@ def load_data(path: Path | str) -> dict[str, Any]:
     return raw
 
 
+# ---------------------------------------------------------------------------
+# Test sandbox: under SWITCHBOARD_TEST_SANDBOX=1 every write stays inside the temp
+# directory and never lands in a real checkout's system/state, whatever path or
+# root a test hands the CLI. An earlier import pinned to the real root once let a
+# combined test run write invented to-dos into a real list. Network and helper
+# calls are already closed by _network_allowed().
+# ---------------------------------------------------------------------------
+
+
+def test_sandbox_active() -> bool:
+    return os.environ.get("SWITCHBOARD_TEST_SANDBOX") == "1"
+
+
+def _under(target: str, directory: str) -> bool:
+    return target == directory or target.startswith(directory.rstrip("\\/") + os.sep)
+
+
+def real_state_dirs() -> list[str]:
+    """system/state of the default root, the checkout this file lives in, and its main
+    checkout when that is a worktree. Refused under the sandbox even when the temp
+    directory is one of their ancestors. The configured root is not on the list: tests
+    point it at a temp folder."""
+    roots = [Path.home() / "Development" / "switchboard"]
+    here = Path(__file__).resolve().parent
+    if len(here.parents) > 3:
+        roots.append(here.parents[3])  # <root>/system/skill-overrides/todo/scripts, with or without .git
+    for parent in (here, *here.parents):
+        marker = parent / ".git"
+        if marker.is_dir():
+            roots.append(parent)
+            break
+        if marker.is_file():
+            roots.append(parent)
+            text = marker.read_text(encoding="utf-8", errors="replace").strip()
+            if text.startswith("gitdir:"):
+                gitdir = Path(text.split(":", 1)[1].strip())
+                gitdir = gitdir if gitdir.is_absolute() else parent / gitdir
+                if gitdir.parent.name == "worktrees":  # <main>/.git/worktrees/<name>
+                    roots.append(gitdir.parent.parent.parent)
+            break
+    return [os.path.normcase(os.path.realpath(str(root / "system" / "state"))) for root in roots]
+
+
+def sandbox_allows_path(path: Path | str) -> bool:
+    """Outside a test sandbox every path is allowed; inside one, only the temp
+    directory, and never a real checkout's system/state."""
+    if not test_sandbox_active():
+        return True
+    try:
+        target = os.path.normcase(os.path.realpath(str(path)))
+        temp = os.path.normcase(os.path.realpath(tempfile.gettempdir()))
+        if any(_under(target, state) for state in real_state_dirs()):
+            return False
+    except (OSError, ValueError):
+        return False
+    return _under(target, temp)
+
+
+def guard_sandbox_write(path: Path | str) -> None:
+    if not sandbox_allows_path(path):
+        raise SandboxRefused(
+            f"SWITCHBOARD_TEST_SANDBOX=1: refusing to write {path}, which is outside the temp directory. "
+            "Point the test's --path, SWITCHBOARD_ROOT and state directory at a temp folder."
+        )
+
+
 def _replace_file(source: str, target: Path) -> None:
     deadline = time.monotonic() + 5.0
     while True:
@@ -649,6 +720,7 @@ def _replace_file(source: str, target: Path) -> None:
 
 
 def atomic_write_text(path: Path | str, text: str, temp_tag: str = "") -> None:
+    guard_sandbox_write(path)
     target = Path(os.path.realpath(str(path)))
     target.parent.mkdir(parents=True, exist_ok=True)
     handle, temp_name = tempfile.mkstemp(prefix=f".{target.name}.{temp_tag}", dir=str(target.parent))
@@ -754,6 +826,7 @@ def exclusive_lock(path: Path | str):
     on a lock their caller already holds.
     """
     lock_path = Path(f"{Path(path)}.lock")
+    guard_sandbox_write(lock_path)
     key = os.path.normcase(os.path.abspath(str(lock_path)))
     held = getattr(_LOCKS_HELD, "paths", None)
     if held is None:
@@ -853,13 +926,13 @@ def _run_command(command: list[str], timeout: float = EXTERNAL_TIMEOUT_SECONDS) 
 
 
 def run_workspace_tool(args: list[str], timeout: float = EXTERNAL_TIMEOUT_SECONDS) -> Any:
-    """Call `switchboard ...` and parse its JSON. Any failure means no evidence."""
+    """Call `switchboard agent-tools ...` and parse its JSON. Any failure means no evidence."""
     if not _network_allowed():
         return None
     executable = shutil.which("switchboard")
     if not executable:
         return None
-    output = _run_command([executable, *args], timeout)
+    output = _run_command([executable, "agent-tools", *args], timeout)
     if output is None:
         return None
     try:
@@ -1583,6 +1656,8 @@ def _record_calendar(calendar_id: str, origin: str) -> None:
     state.update({"calendar_id": calendar_id, "summary": TODO_CALENDAR_SUMMARY, "origin": origin})
     state["created_at"] = first_seen or now_z()
     path = Path(TODO_CALENDAR_STATE_PATH)
+    if not sandbox_allows_path(path):
+        return
     with contextlib.suppress(OSError):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
@@ -2019,7 +2094,7 @@ def load_local_doc_comment_index() -> dict[tuple[str, str], list[dict[str, Any]]
 def fetch_drive_comments(file_id: str, cache: dict[str, Any]) -> list[dict[str, Any]]:
     if file_id in cache:
         return cache[file_id]
-    answer = run_workspace_tool(["drive", "comments", "--file-id-or-url", file_id, "--all-pages"])
+    answer = run_workspace_tool(["google-drive", "list-comments", "--file-id-or-url", file_id, "--all-pages"])
     comments = answer.get("comments") if isinstance(answer, dict) else None
     cache[file_id] = [c for c in comments or [] if isinstance(c, dict)]
     return cache[file_id]
@@ -2028,8 +2103,8 @@ def fetch_drive_comments(file_id: str, cache: dict[str, Any]) -> list[dict[str, 
 def slack_surface_results(items: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Thread verdicts from the repo's thread-resolution helper, keyed by item id."""
     helper = _scripts_dir() / "check-thread-resolution.py"
-    if not items or not helper.is_file():
-        return {}
+    if not items or not helper.is_file() or not _network_allowed():
+        return {}  # the helper reads Slack: never from a test sandbox
     command = [sys.executable, str(helper), "--json"]
     for item in items:
         command += ["--ref", str(item.get("source_ref") or "")]
@@ -2168,6 +2243,27 @@ def notion_activity_reconciled(item: dict[str, Any], rows: list[dict[str, Any]])
         stamp = parse_moment(row.get("timestamp"))
         if stamp is not None and stamp >= created:
             return f"owner {row.get('activity_type') or 'edited'} the Notion page {row.get('page_title') or page}"
+    return None
+
+
+def blueprint_updates_reconciled(item: dict[str, Any], rows: list[dict[str, Any]]) -> str | None:
+    title = str(item.get("title") or "")
+    if not re.search(r"\bstatus updates?\b", title, re.I):
+        return None
+    terms = distinctive_terms(title)
+    slug_terms = set(_tokens(item.get("workstream")))
+    created = created_moment(item)
+    for row in rows or []:
+        if row.get("by_me") is not True:
+            continue
+        stamp = parse_moment(row.get("update_date"))
+        if stamp is None or stamp < created:
+            continue
+        for name in row.get("project_names") or []:
+            name_terms = set(_tokens(name))
+            if (sum(1 for t in terms if t in name_terms) >= 2 or (slug_terms & name_terms)
+                    or (str(name).strip() and str(name).lower() in title.lower())):
+                return f"owner posted a status update for {name}"
     return None
 
 
@@ -2389,7 +2485,7 @@ class _ScanContext:
     def sent_search(self) -> list[dict[str, str]]:
         def search() -> list[dict[str, str]]:
             answer = run_workspace_tool([
-                "mail", "search", "--query", f"in:sent newer_than:{self.lookback_days}d",
+                "gmail", "search-messages", "--query", f"in:sent newer_than:{self.lookback_days}d",
                 "--label", "all", "--max-results", "100",
             ])
             if not isinstance(answer, dict):
@@ -2400,7 +2496,7 @@ class _ScanContext:
 
     def slack_thread(self, channel: str, thread_ts: str) -> list[dict[str, Any]]:
         def read() -> list[dict[str, Any]]:
-            answer = run_workspace_tool(["slack", "thread", "--channel", channel, "--thread-ts", thread_ts,
+            answer = run_workspace_tool(["slack", "read-thread", "--channel", channel, "--thread-ts", thread_ts,
                                          "--output-format", "json"])
             return [m for m in (answer or {}).get("messages") or [] if isinstance(m, dict)] if isinstance(answer, dict) else []
 
@@ -2408,7 +2504,7 @@ class _ScanContext:
 
     def slack_search(self, terms: list[str]) -> list[dict[str, Any]]:
         def search() -> list[dict[str, Any]]:
-            answer = run_workspace_tool(["slack", "search", "--query", "from:me " + " ".join(terms),
+            answer = run_workspace_tool(["slack", "search-messages", "--query", "from:me " + " ".join(terms),
                                          "--newer-than", f"P{self.lookback_days}D", "--limit", "50",
                                          "--output-format", "json"])
             return [m for m in (answer or {}).get("messages") or [] if isinstance(m, dict)] if isinstance(answer, dict) else []
@@ -2418,7 +2514,7 @@ class _ScanContext:
     def linear_state(self, key: str) -> dict[str, Any] | None:
         def read() -> dict[str, Any] | None:
             query = "query($id: String!) { issue(id: $id) { identifier state { name type } } }"
-            answer = run_workspace_tool(["linear", "graphql", "--query", query,
+            answer = run_workspace_tool(["linear", "execute-graphql", "--query", query,
                                          "--variables", json.dumps({"id": key})])
             issue = (((answer or {}).get("data") or {}).get("issue") or {}) if isinstance(answer, dict) else {}
             return issue.get("state") if isinstance(issue.get("state"), dict) else None
@@ -2566,10 +2662,12 @@ def _reconcile_one(item: dict[str, Any], ctx: _ScanContext) -> tuple[str | None,
         return reason, attempts
 
     notion_rows = ctx.cache("NOTION_ACTIVITY_CACHE_PATH")
+    blueprint_rows = ctx.cache("BLUEPRINT_UPDATES_CACHE_PATH")
     jira_rows = ctx.cache("JIRA_CACHE_PATH")
     later: list[tuple[str, bool, Callable[[], str | None], bool]] = [
         ("notion_activity", bool(notion_rows) and ref_class == "notion",
          lambda: notion_activity_reconciled(item, notion_rows), True),
+        ("blueprint_updates", bool(blueprint_rows), lambda: blueprint_updates_reconciled(item, blueprint_rows), True),
         ("jira_state", bool(jira_rows) and bool(jira_keys(ref)), lambda: jira_state_reconciled(item, jira_rows), True),
         ("gmail", gmail_like or reply_like, lambda: gmail_network_reconciled(item, ctx, email_sourced), True),
         ("gdrive_comment", ref_class == "gdoc", lambda: gdrive_comment_network_reconciled(item, ctx), True),

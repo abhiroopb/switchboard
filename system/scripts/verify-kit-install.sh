@@ -7,8 +7,9 @@
 #   --fast   the tests minus the slow suites (SLOW_TESTS below); a good first run on Windows
 #   --full   also run the shell tests (needs bash 4+, ruby, a few minutes)
 #
-# Each test runs under a time limit (SWITCHBOARD_VERIFY_TIMEOUT seconds, default 600),
-# prints a start line, and keeps its full output in a log folder named at the end.
+# Each test runs under a time limit (SWITCHBOARD_VERIFY_TIMEOUT seconds, default 600; the
+# slow suites get SWITCHBOARD_VERIFY_SLOW_TIMEOUT, default 2400), prints a start line,
+# and keeps its full output in a log folder named at the end.
 # Exit 0 when everything passes. Prints one line per check and a summary.
 
 set -uo pipefail
@@ -35,8 +36,15 @@ bad()  { fail=$((fail+1)); failures+=("$1"); printf '  FAIL  %s\n' "$1"; }
 LOG_DIR="$ROOT/local/verify-logs/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$LOG_DIR" 2>/dev/null || LOG_DIR="$(mktemp -d)"
 TEST_TIMEOUT="${SWITCHBOARD_VERIFY_TIMEOUT:-600}"
-# Suites that take minutes on Windows (a bash or git process per case). --fast skips them.
+# Suites that take minutes on Windows (a bash or git process per case). --fast skips them,
+# and the default run gives them a longer limit: on a Windows laptop test_report_delivery.py
+# passes in about 21 minutes, so the plain 600 s limit killed it and it read as a hang.
 SLOW_TESTS=" test_dispatch.py test_report_delivery.py test_publish_switchboard_kit.py test_running_task_ledger.py test_sod_workspace_plan.py "
+SLOW_TEST_TIMEOUT="${SWITCHBOARD_VERIFY_SLOW_TIMEOUT:-2400}"
+# The time limit for one test, by its file name.
+test_limit() { # name
+  if [[ "$SLOW_TESTS" == *" $1 "* ]]; then printf '%s' "$SLOW_TEST_TIMEOUT"; else printf '%s' "$TEST_TIMEOUT"; fi
+}
 log_name() { printf '%s' "$1" | tr -c 'A-Za-z0-9._-' '_'; }
 check() { # name, command...
   local name="$1"; shift
@@ -46,15 +54,16 @@ check() { # name, command...
 # One test: a start line, a time limit, and the elapsed seconds.
 run_test() { # name, command...
   local name="$1"; shift
-  local log start status; log="$LOG_DIR/$(log_name "$name").log"; start=$SECONDS
+  local log start status limit; log="$LOG_DIR/$(log_name "$name").log"; start=$SECONDS
+  limit="$(test_limit "$name")"
   printf '  ...   %s (started %s)\n' "$name" "$(date +%H:%M:%S)"
   if command -v timeout >/dev/null 2>&1; then
-    timeout -k 10 "$TEST_TIMEOUT" "$@" >"$log" 2>&1; status=$?
+    timeout -k 10 "$limit" "$@" >"$log" 2>&1; status=$?
   else
     "$@" >"$log" 2>&1; status=$?
   fi
   if (( status == 0 )); then ok "$name ($((SECONDS - start))s)"
-  elif (( status == 124 || status == 137 )); then bad "$name (timed out after ${TEST_TIMEOUT}s)"; printf '        full log: %s\n' "$log"
+  elif (( status == 124 || status == 137 )); then bad "$name (timed out after ${limit}s)"; printf '        full log: %s\n' "$log"
   else bad "$name ($((SECONDS - start))s)"; sed 's/^/        /' "$log" | tail -20; printf '        full log: %s\n' "$log"; fi
 }
 
@@ -369,7 +378,7 @@ publisher_paths() {
   local hits form
   hits="$(MSYS_NO_PATHCONV=1 rg -n "${home_root}[a-z]" --glob '!.switchboard-kit/**' --glob '!README.md' --glob '!install.py' \
     --glob '!system/scripts/verify-kit-install.sh' --glob '!system/kit/test_build_tier.py' --glob '!system/vendor/skills/**' . \
-    | MSYS_NO_PATHCONV=1 rg --passthru -r '' "${home_root}(person|someone|tester|invented|pat|x|realguy|jane_doe|a)\b" \
+    | MSYS_NO_PATHCONV=1 rg --passthru -r '' "${home_root}(person|someone|tester|invented|pat|x|realguy|jane_doe|a|example)\b" \
     | MSYS_NO_PATHCONV=1 rg "${home_root}[a-z]")"  # drop only the test homes, so a real path on the same line still shows
   for form in "${home_forms[@]}"; do
     [[ -n "$hits" ]] || break
@@ -391,7 +400,7 @@ check "install-amp-skills.sh --dry-run" bash system/bin/install-amp-skills.sh --
 [[ $mode == quick ]] && { echo; echo "quick checks: $pass ok, $fail failed"; exit $(( fail > 0 )); }
 
 # 6. Curated python tests (every test_*.py shipped in the kit)
-echo "python tests (time limit ${TEST_TIMEOUT}s each; full logs in $LOG_DIR):"
+echo "python tests (time limit ${TEST_TIMEOUT}s each, ${SLOW_TEST_TIMEOUT}s for the slow suites; full logs in $LOG_DIR):"
 skipped=()
 for t in system/scripts/test_*.py system/scripts/test-*.py; do
   [[ -f "$t" ]] || continue

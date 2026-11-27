@@ -13,7 +13,7 @@ source "$REPO_ROOT/system/cmux-helpers.sh"
 
 if (( $# == 0 )) || [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     echo "Usage: router-dispatch.sh [--origin cos|launchpad] [--workstream <slug>] [--task-id rt-...] [--request-id <source-event-id>] [--max-attempts N] [--force-redispatch] '<prompt>'"
-    echo "       router-dispatch.sh [--origin cos|launchpad] --steer rt-... [--no-fallback-dispatch] '<steer text>'"
+    echo "       router-dispatch.sh [--origin cos|launchpad] --steer rt-... [--no-fallback-dispatch] [--record-only] '<steer text>'"
     echo "  --steer rt-x       same-task steer (correction, answer, scope change). Prints status message with the live"
     echo "                     thread id when the row is non-terminal and has a thread (send the text there by native"
     echo "                     message); dispatches a --continuation-of rt-x worker when the row is terminal: its tab is"
@@ -24,6 +24,13 @@ if (( $# == 0 )) || [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     echo "                     steers deliver in order at the worker's ack or first heartbeat; one still queued after"
     echo "                     dispatch.steer_queue_timeout_minutes sends the origin one callback. Nothing is spawned"
     echo ". The surface never parks a steer until the owner's next message."
+    echo "                     A finished row: a continuation of it that is still starting or"
+    echo "                     running takes the steer (no sibling worker); one whose newest continuation finished within"
+    echo "                     dispatch.steer_chain_window_minutes is continued from that one; the continuation forks the"
+    echo "                     parent's Claude session (claude --resume --fork-session) when its context is small enough."
+    echo "  --record-only      with --steer: a hold, ack, ruling or note with no work. On a finished row it is recorded on"
+    echo "                     the ledger row and the workstream CONTEXT (status recorded, 'steer recorded ..., no worker"
+    echo "                     started'); nothing is spawned. A live or not-started row still gets the steer as usual"
     echo "  --no-fallback-dispatch  with --steer: keep the old 'still starting; retry in about 30 s' message instead of"
     echo "                     queuing (for a caller that will message the thread itself)"
     echo "  --workstream slug  pin the owner (same as a 'Workstream: <slug>' first line; wins over one). Use it when the"
@@ -52,6 +59,7 @@ DEPENDS_ON=()
 CONTINUATION_OF=""
 STEER_TASK_ID=""
 STEER_NO_FALLBACK=""
+STEER_RECORD_ONLY=""
 WORKSTREAM="${SWITCHBOARD_DISPATCH_WORKSTREAM:-}"
 PARALLEL_WORKER=""
 while (( $# > 0 )); do
@@ -67,6 +75,7 @@ while (( $# > 0 )); do
             [[ "$STEER_TASK_ID" =~ ^rt-[0-9a-f]{12}$ ]] || { echo "error: --steer needs a ledger task id (rt-xxxxxxxxxxxx)" >&2; exit 2; }
             shift 2 ;;
         --no-fallback-dispatch) STEER_NO_FALLBACK=1; shift ;;
+        --record-only) STEER_RECORD_ONLY=1; shift ;;
         --delivery) COMPLETION_DELIVERY="${2:-}"; shift 2 ;;
         --task-id) REUSE_TASK_ID="${2:-}"; shift 2 ;;
         --request-id) REQUEST_ID="${2:-}"; shift 2 ;;
@@ -112,10 +121,12 @@ esac
 # that never comes up sends the origin one callback. --no-fallback-dispatch
 # keeps the old "still starting; retry" message for a caller that will message
 # the thread itself.
+[[ -z "$STEER_RECORD_ONLY" || -n "$STEER_TASK_ID" ]] || { echo "error: --record-only needs --steer rt-..." >&2; exit 2; }
 if [[ -n "$STEER_TASK_ID" ]]; then
     rc=0
     steer_args=(steer --origin "$ORIGIN" --task-id "$STEER_TASK_ID")
     [[ -n "$STEER_NO_FALLBACK" ]] && steer_args+=(--no-fallback-dispatch)
+    [[ -n "$STEER_RECORD_ONLY" ]] && steer_args+=(--record-only)
     result="$(python3 "$REPO_ROOT/system/scripts/dispatch.py" "${steer_args[@]}" -- "$PROMPT")" || rc=$?
     printf '%s\n' "$result"
     bash "$REPO_ROOT/system/scripts/publish-running-tasks-status.sh" >/dev/null 2>&1 || true

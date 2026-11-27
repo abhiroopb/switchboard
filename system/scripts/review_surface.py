@@ -749,7 +749,9 @@ _MD_ANY_LINK = re.compile(r"\[(?P<label>[^\]\n]+)\]\((?P<target>[^\s)]+)\)")
 
 
 def is_compare_url(url: str) -> bool:
-    return bool(_COMPARE_URL.fullmatch((url or "").rstrip(".,;:")))
+    """A local compare page: its ``file://`` URL, or its bridge link under wmux."""
+    url = (url or "").rstrip(".,;:")
+    return bool(_COMPARE_URL.fullmatch(url) or _HTTP_COMPARE_URL.fullmatch(url))
 
 
 def link_compare_paths(text: str, mode: str = "resolve", task_id: str | None = None) -> str:
@@ -762,8 +764,8 @@ def link_compare_paths(text: str, mode: str = "resolve", task_id: str | None = N
 
 def has_compare_link(text: str) -> bool:
     blob = _FENCED_BLOCK.sub(" ", _LINE_MARK.sub("\n", text or ""))
-    return bool(_COMPARE_URL.search(blob) or _COMPARE_PATH.search(blob) or _MD_COMPARE_PATH_LINK.search(blob)
-                or _OPENED_PAGE.search(blob))
+    return bool(_COMPARE_URL.search(blob) or _HTTP_COMPARE_URL.search(blob) or _COMPARE_PATH.search(blob)
+                or _MD_COMPARE_PATH_LINK.search(blob) or _OPENED_PAGE.search(blob))
 
 
 def report_image_refs(text: str) -> list[tuple[str, str]]:
@@ -1041,17 +1043,22 @@ def handler_url(rel_note: str) -> str:
 
 
 _NOTE_LINK_UP: bool | None = None
+# The protocol the probed server speaks: "1" predates /n/<id> links (no
+# X-Note-Links-Protocol header), so links stay in the long form until the
+# com.switchboard.note-links task's ensure replaces it (within 10 minutes).
+_NOTE_LINK_PROTOCOL: str | None = None
 
 
 def note_link_server_up() -> bool:
     """One short /health probe per process: an http link only when it would open."""
-    global _NOTE_LINK_UP
+    global _NOTE_LINK_UP, _NOTE_LINK_PROTOCOL
     if _NOTE_LINK_UP is None:
         import urllib.request
 
         try:
             with urllib.request.urlopen(f"http://{NOTE_LINK_HOST}:{note_link_port()}/health", timeout=0.5) as resp:
                 _NOTE_LINK_UP = resp.status == 200
+                _NOTE_LINK_PROTOCOL = (resp.headers.get("X-Note-Links-Protocol") or "1").strip()
         except OSError:
             _NOTE_LINK_UP = False
     return _NOTE_LINK_UP
@@ -1064,15 +1071,335 @@ def note_link_port() -> int:
         return NOTE_LINK_DEFAULT_PORT
 
 
+# Short ids.
+# Claude Code in wmux prints [label](url) as plain "label (url)" text (no OSC 8),
+# and wmux makes only an http(s) URL it can see on one line clickable. The old
+# /open?file=<path> link ran past 100 characters, so Claude Code's line wrap
+# split it and the click opened nothing. /n/<id> is 35 characters and never wraps.
+NOTE_LINK_ID_CHARS = 10
+_NOTE_LINK_ID = re.compile(r"[0-9a-f]{%d}" % NOTE_LINK_ID_CHARS)
+_NOTE_SCAN_SKIP = frozenset({"node_modules", "worktrees", "graphify-out"})
+_NOTE_BLOCKED = (("notes", "sensitive"), ("notes", "chrome-tabs"))
+
+
+def note_link_id(rel_note: str) -> str:
+    """Stable short id of a vault-relative note path (``.md`` kept, ``/`` separators)."""
+    import hashlib
+
+    # Lower case: Windows paths are case-insensitive, so "Workstreams/x.md" is the same note.
+    rel = rel_note.replace("\\", "/").lstrip("/").lower()
+    if not rel.endswith((".md", ".markdown")):
+        rel += ".md"
+    return hashlib.sha1(rel.encode("utf-8")).hexdigest()[:NOTE_LINK_ID_CHARS]
+
+
+_NOTE_IDS: dict[str, dict[str, str]] = {}
+_NOTE_IDS_SCANNED: dict[str, float] = {}
+# A miss rescans the vault at most this often, so a stale link repeated in a
+# ledger, or a loop of unknown ids, costs one walk per window, not one per request.
+NOTE_RESCAN_SECONDS = 5.0
+
+
+def _scan_note_ids(root: Path) -> dict[str, str]:
+    found: dict[str, str] = {}
+    for dirpath, dirs, files in os.walk(root):
+        rel_dir = Path(dirpath).relative_to(root).parts
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in _NOTE_SCAN_SKIP
+                   and (rel_dir + (d,))[:2] not in _NOTE_BLOCKED]
+        for name in files:
+            if name.endswith((".md", ".markdown")):
+                rel = "/".join(rel_dir + (name,))
+                found.setdefault(note_link_id(rel), rel)
+    return found
+
+
+def note_for_link_id(link_id: str, root: Path | None = None) -> str | None:
+    """Vault-relative note path for a short id, or None. The vault index is built
+    once per process and rebuilt on a miss, so a note written later is found."""
+    link_id = (link_id or "").strip().lower()
+    if not _NOTE_LINK_ID.fullmatch(link_id):
+        return None
+    base = (root or vault_root()).resolve()
+    key = str(base)
+    import time
+
+    index = _NOTE_IDS.get(key)
+    now = time.monotonic()
+    if index is None or (link_id not in index and now - _NOTE_IDS_SCANNED.get(key, 0.0) >= NOTE_RESCAN_SECONDS):
+        index = _NOTE_IDS[key] = _scan_note_ids(base)
+        _NOTE_IDS_SCANNED[key] = now
+    return index.get(link_id)
+
+
 def http_note_url(rel_note: str) -> str:
-    """``http://127.0.0.1:<port>/open?file=<note>`` served by mux/note-links.py."""
+    """``http://127.0.0.1:<port>/n/<id>`` served by mux/note-links.py; the long
+    ``/open?file=`` form while the probed server is an older one without /n/.
+    SWITCHBOARD_NOTE_LINK=http skips the probe, so it always gets the short form, and a
+    long-running process keeps the protocol it probed first."""
+    if _NOTE_LINK_PROTOCOL == "1":
+        return http_open_url(rel_note)
+    return f"http://{NOTE_LINK_HOST}:{note_link_port()}/n/{note_link_id(rel_note)}"
+
+
+def http_open_url(rel_note: str) -> str:
+    """The pre-2026-11-26 long form ``/open?file=<note>``; the server still answers it."""
     return f"http://{NOTE_LINK_HOST}:{note_link_port()}/open?file={quote(rel_note, safe='/')}"
 
 
+# Compare pages under wmux. A compare page
+# (image_compare.py) was linked as file:///.../assets/compare/<page>.html, and a
+# wmux pane opens only http(s) links, so the click did nothing (issue 48). Under
+# the ``http`` note-link mode a compare page links as
+# http://127.0.0.1:7472/c/<id>: the note-links bridge serves the page with its
+# local images inlined. The id is the first 10 hex characters of the SHA-1 of
+# the page's vault-relative path, so a worktree copy and its landed copy share
+# one link. The bridge finds landed pages by walking the vault, and a page not
+# landed yet through main's .state/compare-links/<id>.json, which
+# image_compare.py build and report_text write (one file per id, so two workers
+# building at once never lose each other's entry).
+COMPARE_LINK_PREFIX = "/c/"
+COMPARE_MIN_PROTOCOL = 5
+COMPARE_REGISTRY = (".state", "compare-links")
+COMPARE_REGISTRY_MAX = 500
+_COMPARE_SCAN_SKIP = _NOTE_SCAN_SKIP | {"_archive"}
+_HTTP_COMPARE_URL = re.compile(r"http://127\.0\.0\.1:\d+/c/[0-9a-f]{%d}(?![\w/?#])" % NOTE_LINK_ID_CHARS)
+
+
+def compare_rel_ok(rel: str) -> bool:
+    """True for the vault-relative path of a compare page: an .html file in a
+    folder named ``compare``, outside hidden folders (``.amp/in/artifacts`` is
+    allowed, where image_compare puts a page with no workstream), worktrees and
+    the sensitive notes folders."""
+    parts = tuple(p.lower() for p in (rel or "").replace("\\", "/").split("/") if p)
+    if len(parts) < 2 or parts[-2] != "compare" or not parts[-1].endswith((".html", ".htm")):
+        return False
+    if any(p in ("..", ".") for p in parts) or parts[:2] in _NOTE_BLOCKED:
+        return False
+    hidden = [p for p in parts[:-1] if p.startswith(".")]
+    return not hidden or (parts[:3] == (".amp", "in", "artifacts") and hidden == [".amp"])
+
+
+def compare_image_ok(path: str | Path, roots: list[Path]) -> bool:
+    """True when the bridge may inline this image into a compare page it serves:
+    a file inside one of ``roots`` (main, and the page's own checkout), outside
+    the sensitive notes folders, worktrees, and hidden folders other than
+    ``.amp/in``. Case is ignored, as Windows ignores it."""
+    try:
+        target = Path(path).resolve()
+    except (OSError, RuntimeError):
+        return False
+    for root in roots:
+        if _under(target, root):
+            parts = tuple(p.lower() for p in target.relative_to(root).parts)
+            if not parts or parts[:2] in _NOTE_BLOCKED:
+                return False
+            hidden = [p for p in parts[:-1] if p.startswith(".")]
+            return not hidden or (parts[:2] == (".amp", "in") and hidden == [".amp"])
+    return False
+
+
+def checkout_of(live: Path, rel: str) -> Path | None:
+    """The checkout root that holds ``live`` at the vault-relative path ``rel``."""
+    parts = Path(rel).parts
+    live_parts = live.parts
+    if len(live_parts) <= len(parts) or tuple(p.lower() for p in live_parts[-len(parts):]) != tuple(
+            p.lower() for p in parts):
+        return None
+    return Path(*live_parts[:-len(parts)])
+
+
+def is_worktree_of(checkout: Path, main: Path) -> bool:
+    """True when ``checkout`` is a linked git worktree of ``main``: its ``.git``
+    file names a gitdir under ``<main>/.git/worktrees/``. The bridge runs without
+    the worker's SWITCHBOARD_WORKTREES_DIR, so it checks the worktree itself."""
+    try:
+        head = (checkout / ".git").read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        return False
+    if not head.startswith("gitdir:"):
+        return False
+    gitdir = Path(head[len("gitdir:"):].strip())
+    if not gitdir.is_absolute():
+        gitdir = checkout / gitdir
+    try:
+        return _under(gitdir.resolve(), (main / ".git" / "worktrees").resolve())
+    except (OSError, RuntimeError):
+        return False
+
+
+def compare_page_rel(path: str | Path, root: Path | None = None, checkout: Path | None = None) -> str | None:
+    """Vault-relative POSIX path of a compare page on main, in a task worktree
+    (``worktrees_dir``), or in ``checkout``, else None."""
+    root = (root or vault_root()).resolve()
+    p = Path(os.path.abspath(Path(path).expanduser()))
+    bases = [(worktrees_dir(root), 1)]
+    if checkout:
+        bases.insert(0, (Path(os.path.abspath(checkout)), 0))
+    bases.append((root, 0))
+    for base, skip in bases:
+        if _under(p, base):
+            rel = "/".join(p.relative_to(base).parts[skip:])
+            if compare_rel_ok(rel):
+                return rel
+    return None
+
+
+def compare_link_id(rel: str) -> str:
+    """Stable short id of a compare page's vault-relative path (case-insensitive)."""
+    import hashlib
+
+    rel = rel.replace("\\", "/").lstrip("/").lower()
+    return hashlib.sha1(rel.encode("utf-8")).hexdigest()[:NOTE_LINK_ID_CHARS]
+
+
+def http_compare_url(rel: str) -> str:
+    return f"http://{NOTE_LINK_HOST}:{note_link_port()}{COMPARE_LINK_PREFIX}{compare_link_id(rel)}"
+
+
+def _protocol_number(value: str | None) -> int:
+    try:
+        return int(value or "1")
+    except ValueError:
+        return 1
+
+
+def compare_links_http() -> bool:
+    """True when compare pages should link through the bridge: the ``http`` note
+    link mode, and a bridge new enough to serve /c/ (a forced mode skips the probe)."""
+    if note_link_mode() != "http":
+        return False
+    return _NOTE_LINK_PROTOCOL is None or _protocol_number(_NOTE_LINK_PROTOCOL) >= COMPARE_MIN_PROTOCOL
+
+
+def register_compare_page(rel: str, live: str | Path, root: Path | None = None) -> None:
+    """Record where a compare page lives now, so the bridge can serve a /c/ link
+    before the page lands on main. Best effort: a failed write leaves the vault walk."""
+    import time
+
+    root = (root or vault_root()).resolve()
+    reg = root.joinpath(*COMPARE_REGISTRY)
+    entry = reg / f"{compare_link_id(rel)}.json"
+    try:
+        reg.mkdir(parents=True, exist_ok=True)
+        tmp = entry.with_name(f"{entry.name}.{os.getpid()}.tmp")
+        tmp.write_text(json.dumps({"rel": rel, "path": str(Path(os.path.abspath(live))), "at": int(time.time())})
+                       + "\n", encoding="utf-8")
+        tmp.replace(entry)
+        files = sorted(reg.glob("*.json"), key=lambda f: f.stat().st_mtime)
+        for old in files[:max(0, len(files) - COMPARE_REGISTRY_MAX)]:
+            old.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
+def compare_click_url(path: str | Path, root: Path | None = None, checkout: Path | None = None) -> str | None:
+    """The bridge link for a compare page when compare links go through the
+    bridge (``compare_links_http``), registering where the page lives; else None."""
+    if not compare_links_http():
+        return None
+    rel = compare_page_rel(path, root, checkout)
+    if not rel:
+        return None
+    if Path(path).exists():
+        register_compare_page(rel, path, root)
+    return http_compare_url(rel)
+
+
+_COMPARE_IDS: dict[str, dict[str, str]] = {}
+_COMPARE_IDS_SCANNED: dict[str, float] = {}
+
+
+def _scan_compare_ids(root: Path) -> dict[str, str]:
+    found: dict[str, str] = {}
+    for dirpath, dirs, files in os.walk(root):
+        rel_dir = Path(dirpath).relative_to(root).parts
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in _COMPARE_SCAN_SKIP
+                   and (rel_dir + (d,))[:2] not in _NOTE_BLOCKED]
+        if rel_dir and rel_dir[-1].lower() == "compare":
+            for name in files:
+                rel = "/".join(rel_dir + (name,))
+                if compare_rel_ok(rel):
+                    found.setdefault(compare_link_id(rel), rel)
+    extra = root / ".amp" / "in" / "artifacts" / "compare"
+    try:
+        for entry in extra.iterdir():
+            rel = f".amp/in/artifacts/compare/{entry.name}"
+            if entry.is_file() and compare_rel_ok(rel):
+                found.setdefault(compare_link_id(rel), rel)
+    except OSError:
+        pass
+    return found
+
+
+def compare_for_link_id(link_id: str, root: Path | None = None) -> Path | None:
+    """The compare page file for a /c/<id> link, or None: main's copy first,
+    then the live copy main's registry names (a page not landed yet). A
+    registered copy counts only at the same vault-relative path inside a linked
+    git worktree of main (``is_worktree_of``), so the registry can never point
+    the bridge at a file elsewhere on disk."""
+    page = compare_page_for_link_id(link_id, root)
+    return page[0] if page else None
+
+
+def compare_page_for_link_id(link_id: str, root: Path | None = None) -> tuple[Path, Path] | None:
+    """(page file, checkout root that holds it) for a /c/<id> link (``compare_for_link_id``)."""
+    link_id = (link_id or "").strip().lower()
+    if not _NOTE_LINK_ID.fullmatch(link_id):
+        return None
+    base = (root or vault_root()).resolve()
+    try:
+        entry = json.loads(base.joinpath(*COMPARE_REGISTRY, f"{link_id}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        entry = None
+    rel = entry.get("rel") if isinstance(entry, dict) else None
+    if not (isinstance(rel, str) and compare_rel_ok(rel) and compare_link_id(rel) == link_id):
+        import time
+
+        key = str(base)
+        index = _COMPARE_IDS.get(key)
+        now = time.monotonic()
+        if index is None or (link_id not in index and now - _COMPARE_IDS_SCANNED.get(key, 0.0) >= NOTE_RESCAN_SECONDS):
+            index = _COMPARE_IDS[key] = _scan_compare_ids(base)
+            _COMPARE_IDS_SCANNED[key] = now
+        rel, entry = index.get(link_id), None
+    if not rel:
+        return None
+    on_main = base / rel
+    if on_main.is_file() and _under(on_main.resolve(), base):
+        return on_main, base
+    live = Path(str((entry or {}).get("path") or ""))
+    if not (live.is_absolute() and live.is_file()):
+        return None
+    checkout = checkout_of(live, rel)
+    if checkout is None or not is_worktree_of(checkout, base) or not _under(live.resolve(), checkout.resolve()):
+        return None
+    return live, checkout
+
+
+def http_compare_links(text: str, mode: str = "resolve", task_id: str | None = None) -> str:
+    """Point every ``file://`` compare-page link at the bridge when compare
+    links go through it (``compare_click_url``); other links stay as written."""
+    if not compare_links_http():
+        return text or ""
+
+    def fix(match: re.Match) -> str:
+        raw = match.group(0)
+        url = raw.rstrip(".,;:")
+        path = resolve_local_path(_url_path(unquote(urlsplit(url).path)), mode, task_id)
+        click = compare_click_url(path)
+        return click + raw[len(url):] if click else raw
+
+    return _COMPARE_URL.sub(fix, text or "")
+
+
 def http_url_note(url: str) -> str | None:
-    """Vault-relative note path of an ``http_note_url`` link, else None."""
+    """Vault-relative note path of a note-links URL (``/n/<id>`` or ``/open?file=``), else None."""
     parts = urlsplit(url)
-    if parts.scheme != "http" or parts.hostname != NOTE_LINK_HOST or parts.path != "/open":
+    if parts.scheme != "http" or parts.hostname != NOTE_LINK_HOST:
+        return None
+    if parts.path.startswith("/n/"):
+        return note_for_link_id(parts.path[len("/n/"):])
+    if parts.path != "/open":
         return None
     file = (parse_qs(parts.query).get("file") or [""])[0]
     return file if file.endswith((".md", ".markdown")) else None
@@ -1118,7 +1445,8 @@ def review_link(url: str) -> str:
     An Obsidian pointer renders as the note path, then one line with the
     clickable link (``note_click_url``: switchboard-obsidian:// in Claude, which opens
     the note in Obsidian, in the background when its window is visible and in
-    front when it is covered; file:// in the Amp TUI, which the
+    front when it is covered; ``http://127.0.0.1:7472/n/<id>`` under wmux, the
+    only form a wmux pane opens on click; file:// in the Amp TUI, which the
     AMP_EDITOR shim routes) and the ``obsidian://`` URI itself, which the CoS
     Review web app, digests and ledgers keep parsing as the canonical pointer.
     """
@@ -1210,6 +1538,8 @@ def report_text(text: str, limit: int | None = None, review_url: str = "", *,
     # Images are links, never descriptions (external-replies Rule 14): every image path becomes a clickable file:// link first.
     text = link_compare_paths(link_image_paths(text, link_mode, task_id), link_mode, task_id)
     text = localize_file_urls(text, link_mode, task_id)
+    # Under wmux a compare page links through the note-links bridge.
+    text = http_compare_links(text, link_mode, task_id)
     urls: dict[str, str] = {}
     titles: list[str] = []
 
@@ -1256,7 +1586,8 @@ def report_text(text: str, limit: int | None = None, review_url: str = "", *,
         # The click link may be either form (file:// from an Amp render, switchboard-obsidian://
         # from a Claude render), whatever this surface would render now.
         path = review_link(url).splitlines()[0]
-        click = "|".join(re.escape(f"[Open in Obsidian]({u})") for u in (note_file_url(path), handler_url(path), http_note_url(path)))
+        click = "|".join(re.escape(f"[Open in Obsidian]({u})") for u in (
+            note_file_url(path), handler_url(path), http_note_url(path), http_open_url(path)))
         text = re.sub(re.escape(path) + r"\s*(?:" + click + r")\s*·\s*(?=\[obsidian:// link\]\(" + re.escape(url) + r"\))",
                       "", text)
         text = re.sub(re.escape(path) + r"\s*(?=\[Open in Obsidian\]\(" + re.escape(url) + r"\))", "", text)
@@ -1459,7 +1790,20 @@ def main(argv: list[str] | None = None) -> int:
     chk.add_argument("--needs-ruling", action="store_true")
     chk.add_argument("--task-id", default=None, help="reporting task; its worktree may hold the note")
     chk.add_argument("--text", action="append", default=[])
+    lnk = sub.add_parser("link", help="print the pointer lines (path, then the clickable link) for a vault note")
+    lnk.add_argument("note", help="vault-relative path, absolute path, or obsidian:// URI")
+    lnk.add_argument("--task-id", default=None, help="the note may still be in this task's worktree")
     args = parser.parse_args(argv)
+
+    if args.cmd == "link":
+        # For a note CoS names itself: the same lines review_link renders for a report
+        #, so a hand-written link never picks a form this pane cannot open.
+        rel = vault_relative_note(args.note, args.task_id)
+        if not rel:
+            print(f"[review-surface] not a vault note: {args.note}", file=sys.stderr)
+            return 2
+        print(review_link(obsidian_uri(rel)))
+        return 0
 
     pointer = args.review_artifact if isinstance(args.review_artifact, str) else None
     review_flag = args.review_artifact is True

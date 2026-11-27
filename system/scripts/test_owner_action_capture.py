@@ -58,6 +58,16 @@ import owner_action_capture as capture  # noqa: E402
 import owner_tabs  # noqa: E402
 import private_identifiers  # noqa: E402
 
+# owner_tabs reads its root and state dir once, at import. In a combined run
+# (python3 -m unittest test_archived_context_writes ... test_owner_action_capture)
+# an earlier module imports it first, pinned to main's real state, and the env
+# set above comes too late: that once wrote 49 of these invented to-dos
+# into a real list. Pin it here and again in every setUp.
+owner_tabs.REPO_ROOT = ROOT
+owner_tabs.STATE_DIR = STATE
+# And the modules under test must be this checkout's, never main's older copies.
+assert Path(capture.__file__).resolve().parent == HERE, capture.__file__
+
 TASK = "rt-invented01"
 SLUG = "widget-rename"
 PRIVATE_SLUG = "invented-private-review"
@@ -89,6 +99,11 @@ class Base(unittest.TestCase):
         patcher = mock.patch.dict(os.environ, {"OWNER_ACTION_TODO_CLI": str(STUB)})
         patcher.start()
         self.addCleanup(patcher.stop)
+        for name, value in (("REPO_ROOT", ROOT), ("STATE_DIR", STATE)):
+            pin = mock.patch.object(owner_tabs, name, value)
+            pin.start()
+            self.addCleanup(pin.stop)
+        self.assertEqual(capture.todo_path(), TODO, "the capture must write the temp list, never main's")
 
     def report(self, summary: str, status: str = "done", task: str = TASK, slug: str = SLUG, needs_ruling: bool = False) -> dict:
         return capture.capture_report(task, slug, status, summary, needs_ruling)

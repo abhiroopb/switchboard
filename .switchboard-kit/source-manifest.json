@@ -1,5 +1,5 @@
 {
- "count": 1220,
+ "count": 1225,
  "files": {
   ".agents/skills/asd-ste100/LICENSE": {
    "sha256": "d3c674e8592076c9021a59b55177adbcba6fd7e1710082becb922522b22ec672",
@@ -206,7 +206,7 @@
    "source": "repo"
   },
   ".agents/skills/drafting-docs/SKILL.md": {
-   "sha256": "3bdc62f11a3191c71218c8c717d44e95f99a5522531a5bcd656dcda358abb7e7",
+   "sha256": "6e97c3b1e84c76a5b3d5bd82dcd48e35046d73f5fbaf0c1b08f55cfb0a18002d",
    "source": "repo"
   },
   ".agents/skills/drafting-docs/references/context-box.md": {
@@ -314,7 +314,7 @@
    "source": "repo"
   },
   ".gitignore": {
-   "sha256": "3820b7d5f8e3463eab30f08438e27fa57aa0b2493904a3764611d4dedfa0e07f",
+   "sha256": "0159465cabb04aad27a24d3fbc4b7cf9c9a72c8e73e77ad3f2ae888fbb1fb441",
    "source": "repo"
   },
   ".obsidian/app.json": {
@@ -342,7 +342,7 @@
    "source": "repo"
   },
   "AGENTS.md": {
-   "sha256": "4a3268619c3c1c9625986282a23bb847c3617a203d0154d0db960f0872219d83",
+   "sha256": "d09623cf97a331f8480110861e324e2a040b3a45263b6df4adbb9be174dfbeca",
    "source": "repo"
   },
   "CLAUDE.md": {
@@ -386,7 +386,7 @@
    "source": "repo"
   },
   "adapters/PORTABILITY.md": {
-   "sha256": "6213602ff5f52ea93072d9e246090836817a96c8b6faf696e3714ad87fd273e9",
+   "sha256": "1b0577d41bdbd5d5c85960c29e8c02e8542afe16c907a57f32c21ef903555862",
    "source": "repo"
   },
   "adapters/README.md": {
@@ -406,7 +406,7 @@
    "source": "repo"
   },
   "adapters/portability.json": {
-   "sha256": "eec3b6ade3905266388d90741fa34624fd7f402e40d86ce2708a19959a63f819",
+   "sha256": "703acb690deb8b0a34913a7544d0a9544e66e6f77b3ead659d2a84d77904e54f",
    "source": "repo"
   },
   "daemon/amp-mem-weekly-distill.sh": {
@@ -422,7 +422,7 @@
    "source": "repo"
   },
   "daemon/context-snapshot.sh": {
-   "sha256": "9239664f944b017d70737c47b8af83716de66b0bd3c78a0f99b9203cbf9da62d",
+   "sha256": "14512429576a91ba955fc8ef43dad2fd4d372ad84827847e2c082658067c4676",
    "source": "repo"
   },
   "daemon/daemon-memory-watchdog.sh": {
@@ -494,7 +494,7 @@
    "source": "repo"
   },
   "docs/obsidian-onboarding.md": {
-   "sha256": "8c233a5988559584a086607aed030c5b88aadefdb24c56650d7fed54239de3f3",
+   "sha256": "57533a292fa5a7db2d92ed91a202f0d23b58ec161a97cc842f0dd938e3d1a1b8",
    "source": "repo"
   },
   "docs/profiles.md": {
@@ -502,7 +502,7 @@
    "source": "repo"
   },
   "docs/runbooks/agents-md-detail.md": {
-   "sha256": "ca31e1f96adaa2bbb08b60a5f2cc33af67a0e8a562e93cd61cd009dce5addade",
+   "sha256": "30524f26826d2f1ddc01e0de47f2bcd1015a925316eb7ae79c7cc5e71aaea985",
    "source": "repo"
   },
   "install.py": {
@@ -722,7 +722,7 @@
    "source": "repo"
   },
   "system/amp-plugins/README.md": {
-   "sha256": "410b47a504f40c93d50646b54f0fd7f19728c2fd19be09c9322d902995f258b4",
+   "sha256": "cc96a7c885a1443de7d994fe14e2c9d7b9ddaadace025b68d1ffc25ab60157e7",
    "source": "repo"
   },
   "system/amp-plugins/amp-mem.ts": {
@@ -770,7 +770,7 @@
    "source": "repo"
   },
   "system/amp-plugins/switchboard-guardrails.ts": {
-   "sha256": "0f8d6de7ef958b81f65dfc7ac52aa7a8477efcea43fa737ece6754bbbc251ad9",
+   "sha256": "84fc8ea1eb2e42bd497f82d5c0ad5e3c156a2d475bc1e4f8017f1371964296fa",
    "source": "repo"
   },
   "system/amp-plugins/switchboard-runtime.ts": {
@@ -818,7 +818,7 @@
    "source": "repo"
   },
   "system/amp-plugins/switchboard/claude-bridge-rm-trash.test.ts": {
-   "sha256": "f57b49a63f66cdc5770711e66b8aa648ac3b2e6c5dcf1342b62291f8ae9780d2",
+   "sha256": "7b4501e6ae6fe4c5a1d088b71202819bef6dc296fc87d17d5040ef55cddbe236",
    "source": "repo"
   },
   "system/amp-plugins/switchboard/claude-bridge-timing.test.ts": {
@@ -874,7 +874,7 @@
    "source": "repo"
   },
   "system/amp-plugins/switchboard/guardrails-rm-trash.test.ts": {
-   "sha256": "b1aaeeedd1f0e4c0d4d6a8eb75b83296fe0dd599f9318fcaa740e10d5d64ff2d",
+   "sha256": "688c8df07eb650067ea0396a471777399f1ed78893b1314b59ba0c2fb6ddcee5",
    "source": "repo"
   },
   "system/amp-plugins/switchboard/install-bundle.test.ts": {
@@ -909,12 +909,16 @@
    "sha256": "3302a65ba00a8ed4cac31ca240426017098127a57bc55d40bbf1cb9fcea02bb9",
    "source": "repo"
   },
+  "system/amp-plugins/switchboard/rm-guard-quotes.test.ts": {
+   "sha256": "78ffba6cd0a6cc672d2fb9b757b145d4e1afb6c128fd99c6d92e20ed10f6eb90",
+   "source": "repo"
+  },
   "system/amp-plugins/switchboard/rm-guard.test.ts": {
-   "sha256": "e20308239ad14aaba72f82c475ad549c22299ee45dffa3a8c660aaf7749fb648",
+   "sha256": "c4969ec0cceac19e1baa2e5b6eebcd3a85772007cbd814fc08da1b765104968a",
    "source": "repo"
   },
   "system/amp-plugins/switchboard/rm-guard.ts": {
-   "sha256": "72a30513b6087192e27f6d1df573ec33160bc3ff996596b0f5182ab28c1f13fb",
+   "sha256": "fb50e8eb317617a7d0af48d596743e5cd5f17e07dd7bb8ddbf7fdaedecd4a68f",
    "source": "repo"
   },
   "system/amp-plugins/switchboard/router-settings.test.ts": {
@@ -931,6 +935,10 @@
   },
   "system/amp-plugins/switchboard/slack-link-format.test.ts": {
    "sha256": "002fe8c53f68395ad2dbae0434dded09232efce6055456a09c1949032853bed4",
+   "source": "repo"
+  },
+  "system/amp-plugins/switchboard/test-fixtures/cos-dispatch-shapes.ts": {
+   "sha256": "54f9f367dcdd0b32e642619f9d642e3c3a22d4ab05afec143e57fc3bf8cb9294",
    "source": "repo"
   },
   "system/amp-plugins/switchboard/test-fixtures/rm-heredoc-remote.sh": {
@@ -1006,7 +1014,7 @@
    "source": "repo"
   },
   "system/chief-of-staff-prompt.md": {
-   "sha256": "3ff1906285baebd6fd7efaaa33eb7e7e994410390c74417fe0360d05f5d7ce32",
+   "sha256": "c2bee26bcabba35b303ed37f7f16936bac7070f4df1a511898dc66deb2511fd4",
    "source": "repo"
   },
   "system/claude-marketplace/.claude-plugin/marketplace.json": {
@@ -1270,7 +1278,7 @@
    "source": "repo"
   },
   "system/config/router.yaml": {
-   "sha256": "9e0551e86007f5593e05980ebf8e4cb62093f753543964e0ebe5238035c88a6a",
+   "sha256": "0bdae0a8f90cdff92dcec0b7943bbaa26a2379491d9d992ad5cb23e676059936",
    "source": "repo"
   },
   "system/config/runtime-adapter-map.yaml": {
@@ -1390,15 +1398,15 @@
    "source": "repo"
   },
   "system/prompts/dispatch-core-card.md": {
-   "sha256": "766f029ba869c8e56b2c3266c35f4d416605a9715401991f4273b4ef8fc68ecc",
+   "sha256": "af309e589d7b663071caf5e4b5d9f3632e82ea5d8fc581ca06d7526fbbaf4cd2",
    "source": "repo"
   },
   "system/prompts/dispatch-core.md": {
-   "sha256": "0f9e616b5afe139e09f190534a35158d250aab4c901f98dada31c55e2a836623",
+   "sha256": "6954b9ef0b95b105f1b08e7911bc7e2bc1e9e13aee78e0c983959fb9a9cd81ac",
    "source": "repo"
   },
   "system/prompts/external-replies.md": {
-   "sha256": "a15950bbe86ad72a89a6ac5bf33282fd23af5973cf6c56c6ee88f99ec015d8c6",
+   "sha256": "e048fe4a44c3415e5f805010455a153cfce1ac336c24f65b6aa66b31a7291357",
    "source": "repo"
   },
   "system/scheduled-jobs.yaml": {
@@ -1426,7 +1434,7 @@
    "source": "repo"
   },
   "system/scripts/archive-workstream.sh": {
-   "sha256": "bc2eb73350c0aa86e07b2978bc1a5156579a4df731076a2f29585aacab1f4ddd",
+   "sha256": "88621b19683deaa6c4c1ffaae84c78c419c46a049a08b234412ef9491bbc37e9",
    "source": "repo"
   },
   "system/scripts/ask-cos.sh": {
@@ -1542,7 +1550,7 @@
    "source": "repo"
   },
   "system/scripts/command-center-action.sh": {
-   "sha256": "bfa81e4dbf773eab44afdd7cad3d1474fd531b3f46283a86820bd33d89a5d258",
+   "sha256": "6e54d65845dcc81b8f1b8d035b4b6f38efbfe10a6430461236687541a9ca4093",
    "source": "repo"
   },
   "system/scripts/command-center-digest.py": {
@@ -1614,7 +1622,7 @@
    "source": "repo"
   },
   "system/scripts/dispatch.py": {
-   "sha256": "33e57e734bb7d8d0df7f46c59258e28db9dcff8c6b01ef12b86f9a194e530041",
+   "sha256": "6d4df8a127efa3c1c5466be95c23da9fc390a22592419df8e0aa87790a20fafa",
    "source": "repo"
   },
   "system/scripts/downloads_handoff.py": {
@@ -1690,7 +1698,7 @@
    "source": "repo"
   },
   "system/scripts/image_compare.py": {
-   "sha256": "878828b6c8e75656927f105e822aab80b0237f97fa800ef6f98fb8df3450d727",
+   "sha256": "7981c66b3410813c64a43aaef489e1fe0cfbed008963a03f57983919544c7e6b",
    "source": "repo"
   },
   "system/scripts/install-all.sh": {
@@ -1782,7 +1790,7 @@
    "source": "repo"
   },
   "system/scripts/lib/winlink.py": {
-   "sha256": "6e96eeda4558e92e7de5c2830584c5e48d971193c258d88dc56dac360969bf77",
+   "sha256": "f5aae9c0aa773d240cffa9447e433f022a7c62cec2da24c825ea679fc48e1421",
    "source": "repo"
   },
   "system/scripts/link_titles.py": {
@@ -1830,7 +1838,7 @@
    "source": "repo"
   },
   "system/scripts/mux/note-links.py": {
-   "sha256": "1e149a56db80d0099aa86d28999a0ace8d8c321830467998bba9d5e17b0777ff",
+   "sha256": "c75d908d5479464fe52f4de146ba68ec8490b34d5db27b1e690da42f6b896ca6",
    "source": "repo"
   },
   "system/scripts/mux/switchboard-board.py": {
@@ -1842,7 +1850,7 @@
    "source": "repo"
   },
   "system/scripts/new-workstream.py": {
-   "sha256": "ef96d675033e538b72804565ed0b91b1f092a2aac013fa4d04be3a07f61f4578",
+   "sha256": "f2a7c12641d480d49c9c87c39906e70ed2feaf3119c84b25f302005b4fd915b5",
    "source": "repo"
   },
   "system/scripts/next-up-digest.py": {
@@ -1862,11 +1870,11 @@
    "source": "repo"
   },
   "system/scripts/owner_action_capture.py": {
-   "sha256": "f403c7fb1d11b4f9c1955bdac40bc05524aab109ff1ff07d473dc9f0c86bda7a",
+   "sha256": "a0fcfca6475fb2f2dd5100172617ec84c020fd5b91bd90b68cff680ff2c3fa7d",
    "source": "repo"
   },
   "system/scripts/owner_browser.py": {
-   "sha256": "c233af9e4151d615c5bfe4f1c86bba4910780208f1d40de803efe0636910718b",
+   "sha256": "90e07b585a742737aba6bd986cf6619d6fd9e967d139189a58d53fd5c0bef71f",
    "source": "repo"
   },
   "system/scripts/owner_browser_live_check.py": {
@@ -1874,7 +1882,7 @@
    "source": "repo"
   },
   "system/scripts/owner_tabs.py": {
-   "sha256": "7f8d13ef96263f771deb23e44703827a30a6fad54b02e5042158202079f8cb11",
+   "sha256": "3020eb7e3aaac506925d3747d1ed854804e34c1ddda1910af299ade133a6a00c",
    "source": "repo"
   },
   "system/scripts/pending-calendar-invites.py": {
@@ -1958,7 +1966,7 @@
    "source": "repo"
   },
   "system/scripts/render-workstreams-readme.py": {
-   "sha256": "17781629de4c49c9b72a7c4d4ad53134218c053a0117957f7557b7c0a69c4209",
+   "sha256": "20035910e809f221fc0e4c1a070e19e3e7b36c8cbe939238e4cecf3cdb456a50",
    "source": "repo"
   },
   "system/scripts/reply_check.py": {
@@ -1970,7 +1978,7 @@
    "source": "repo"
   },
   "system/scripts/report-to-cos.sh": {
-   "sha256": "8934a1a6428cb2c73d78b70adb32e59d57eb33531da2137f42bae398743eac77",
+   "sha256": "cffee9c43a5d742b0663c2d0387c26d3f3ecc054a86f40c725970806b2cbcc44",
    "source": "repo"
   },
   "system/scripts/report-waiter.sh": {
@@ -1990,7 +1998,7 @@
    "source": "repo"
   },
   "system/scripts/review_surface.py": {
-   "sha256": "ac348e3d7ffd88c8dea1263143333f8356f2f6bf2d25cf9b0dff06fc4225e2ef",
+   "sha256": "ab8fb542e3d75306c434a696655f1b46ad918478d9102a9bd64e47edb9078acf",
    "source": "repo"
   },
   "system/scripts/rotate-cos-thread.sh": {
@@ -2010,7 +2018,7 @@
    "source": "repo"
   },
   "system/scripts/router-dispatch.sh": {
-   "sha256": "fdac660f1cb9bdffbad1f59172452914166f926044202f8bad48ae7141fdd202",
+   "sha256": "f412ca53e5e1941a6f8fce261010b32b9912ff81b620e86528ff87b465cea0d5",
    "source": "repo"
   },
   "system/scripts/router-self-close.sh": {
@@ -2030,7 +2038,7 @@
    "source": "repo"
   },
   "system/scripts/running-task-state.py": {
-   "sha256": "93796baacbf0d95b36df8a4b07e5343b1607d3c53d1a56278bd6e94d896cc8b1",
+   "sha256": "5e03c4a4f2085d08555242830d96167ef99109aa8914d79cd284fcab6eb50ecd",
    "source": "repo"
   },
   "system/scripts/running_tasks_badge.py": {
@@ -2110,7 +2118,7 @@
    "source": "repo"
   },
   "system/scripts/switchboard-trash.py": {
-   "sha256": "8fab02678c63c33915df10ca7c8b6df7584fe91e2a6047c27399d1f44bd2a9b8",
+   "sha256": "bbb8e99f12bfab64c5d0c91b787239b7ac59180147a7246eebbb9a7734ace807",
    "source": "repo"
   },
   "system/scripts/switchboard_agent.py": {
@@ -2134,7 +2142,7 @@
    "source": "repo"
   },
   "system/scripts/task_leftovers.py": {
-   "sha256": "263f70070d305237b2a20c125d7c36daa28ee5df3120862953f4acc291536335",
+   "sha256": "bb7bfcdf6231baec1c018ad2d8fc5a405cba04ef5fb08ace0c760441f5b75919",
    "source": "repo"
   },
   "system/scripts/test-agent-mode-policy.sh": {
@@ -2257,6 +2265,10 @@
    "sha256": "68b71c167cacb980d5019bbcce48f8857e66ad94ce37cc291b7508e8fe717b79",
    "source": "repo"
   },
+  "system/scripts/test_compare_links.py": {
+   "sha256": "1e1162a8f64fbf335373214a4aeeaccde086069d75bbed19723b246dc2a63115",
+   "source": "repo"
+  },
   "system/scripts/test_cos_autobind.py": {
    "sha256": "999a7bf187ea2b147abcd4f8fb1d068a1f1c580f4638ac36ce5318aee29aa24a",
    "source": "repo"
@@ -2274,7 +2286,7 @@
    "source": "repo"
   },
   "system/scripts/test_dispatch.py": {
-   "sha256": "6d21fc456e6d9c43bada4f74d36e4dba6d2484db8cfae6f9629e59a3a37224fa",
+   "sha256": "2f306bcacd68b7377bde28add2e9a8bab072c408d24a1d32df17105ecb53b10d",
    "source": "repo"
   },
   "system/scripts/test_dispatch_lock_unlink.py": {
@@ -2302,7 +2314,7 @@
    "source": "repo"
   },
   "system/scripts/test_image_compare.py": {
-   "sha256": "6d56cfbfc1835711ed244ba399a9ed3f7260dc0c3b89194ff9c582ab19fd0f13",
+   "sha256": "537ca6b84452aded3770a85f4cc047096a03dc2bf1bd98a479ba5f5defa78a9b",
    "source": "repo"
   },
   "system/scripts/test_inject_guard_own_paste.py": {
@@ -2334,7 +2346,7 @@
    "source": "repo"
   },
   "system/scripts/test_local_backup.py": {
-   "sha256": "1a1e7808f45a327b6ab57a9f7c13540f8f3ef678421d2d2d0f03254c7f99d32e",
+   "sha256": "203cc98ea7ccc635fcb3711bb8d3c35a477ee5c2f3a1bd41123132946eea71a0",
    "source": "repo"
   },
   "system/scripts/test_machine_role.py": {
@@ -2358,7 +2370,7 @@
    "source": "repo"
   },
   "system/scripts/test_note_links.py": {
-   "sha256": "89ccc1a6b4ae83fa44278ba82da7e1ecf4b41381d8e0bac8f36d3c21e86957a0",
+   "sha256": "80cfd7d521b4f137acd1e6835a6103f7bdeadbef6cea0f7a504c54bbea362d59",
    "source": "repo"
   },
   "system/scripts/test_obsidian_link_handler.py": {
@@ -2370,11 +2382,11 @@
    "source": "repo"
   },
   "system/scripts/test_owner_action_capture.py": {
-   "sha256": "41924def859a937fc1330215f044f8dacc0bfb7a2ec067856f2162e0faaeddb9",
+   "sha256": "76dc00f70b976cd92525207219d2424c17e609bf9daf9cac9cbc4b224834ebba",
    "source": "repo"
   },
   "system/scripts/test_owner_browser.py": {
-   "sha256": "766a1da054407532e99ff60cc7fafeaa447488a1ce044dc6db656c54bd764b5c",
+   "sha256": "066e7583ea4092d4988c1857af263d625492660827012e840a8dce0e9d9ae1d5",
    "source": "repo"
   },
   "system/scripts/test_owner_tabs_screen_agent.py": {
@@ -2410,7 +2422,7 @@
    "source": "repo"
   },
   "system/scripts/test_report_delivery.py": {
-   "sha256": "9aa82ffde966c53108452e2dd15e297097775b77dee64ca68a8a03e8a5636690",
+   "sha256": "b3d18ea21f94ccd1a7f7f93a61a6f217a22e078ea160b406e303fec9fbe50b48",
    "source": "repo"
   },
   "system/scripts/test_report_queue.py": {
@@ -2422,7 +2434,7 @@
    "source": "repo"
   },
   "system/scripts/test_review_surface_links.py": {
-   "sha256": "866425bed4f53bbd21273ddefc84994c87552c5c03002aa74fc916011ca3968e",
+   "sha256": "3d98680b090c7dc180ad2858a2c308fdc05209bb84a3a74a0d654fb7f4f95b17",
    "source": "repo"
   },
   "system/scripts/test_router_context_pack.py": {
@@ -2478,7 +2490,7 @@
    "source": "repo"
   },
   "system/scripts/test_switchboard_trash.py": {
-   "sha256": "c0d5a925f7c44f659f18f9b4878b90c1274c13e143fdb7a5072091645ca91dbe",
+   "sha256": "ae7b9116acfb7141a308c763bb1fdefaa82e0da728c532bf8109fa921f6d58a2",
    "source": "repo"
   },
   "system/scripts/test_sync_claude_plugin.py": {
@@ -2494,7 +2506,7 @@
    "source": "repo"
   },
   "system/scripts/test_task_leftovers.py": {
-   "sha256": "8652612a77840484a422aeddfdc103d3b8e12c9a4704cff9cc73e0cdd43d8397",
+   "sha256": "925e9516589425957498c033778863617b6cd55a4dbe590ec81f77c2bf376177",
    "source": "repo"
   },
   "system/scripts/test_thread_pointer.py": {
@@ -2506,11 +2518,15 @@
    "source": "repo"
   },
   "system/scripts/test_todo_archive.py": {
-   "sha256": "d6e1a09c05525b466d8143b720a4a613701a06c99a97c235ddea074965001885",
+   "sha256": "caceee8ca7f56bb91687098ee306a5ec2638a9065e8c9543635bcd1bc754067b",
    "source": "repo"
   },
   "system/scripts/test_todo_locking.py": {
-   "sha256": "2b3fc4a51a3727f42e3cd9ae18d68927366dd90cdd610c4a1a04574c703ba54e",
+   "sha256": "dc945e7ac36ab52eb64dd94cc27db812d731a3210e49830083bbbba083232522",
+   "source": "repo"
+  },
+  "system/scripts/test_todo_sandbox_guard.py": {
+   "sha256": "e4c83d71587278f6933ed4f6089a4db088ef38690f079c2883bb9b9e1a3e7aec",
    "source": "repo"
   },
   "system/scripts/test_todo_short_ids.py": {
@@ -2518,7 +2534,11 @@
    "source": "repo"
   },
   "system/scripts/test_todo_surface_gate.py": {
-   "sha256": "dcfe04b727168ff7474a6594953b754d8e43f78076198bbb2e78aa8d978b1ec2",
+   "sha256": "b4827b9cc1aa34f763193a09613e54da2759a57678eebb3cf9846359250cd95d",
+   "source": "repo"
+  },
+  "system/scripts/test_verify_kit_timeout.py": {
+   "sha256": "025647209b309c00812db6244ae3454055ab038d963564bee2862ad74a94a85d",
    "source": "repo"
   },
   "system/scripts/test_windows_capacity.py": {
@@ -2562,7 +2582,7 @@
    "source": "repo"
   },
   "system/scripts/verify-kit-install.sh": {
-   "sha256": "1b8334fded60a1fd0dd8fd86712a41ff81a88c34a0d9bf6cc247eda6e880cb98",
+   "sha256": "4290da6e2e67bb0a10b11e12ed0fc13180bf1921b6fae685d4a28ef34b6c3ba2",
    "source": "repo"
   },
   "system/scripts/windows_leak_trace.py": {
@@ -2614,7 +2634,7 @@
    "source": "repo"
   },
   "system/skill-overrides/todo/scripts/todo_cli.py": {
-   "sha256": "116d029ddb58f0348034c738b0969ffb82b75b3add1ac5aad095d265a4812f84",
+   "sha256": "edad6c65cb7f302a258afe94f82cca7b2e60d7a7da8ca164f1164c493751683e",
    "source": "repo"
   },
   "system/skills-development-pattern.md": {
@@ -4714,7 +4734,7 @@
    "source": "repo"
   },
   "system/windows/README.md": {
-   "sha256": "148afe697fee9339a24a1e987f87fc5a93a0f63b587797307a4288cbc549bda1",
+   "sha256": "3261c7898ea1f52bf45eeca675b43312bfa23d49fc583e1f97bbcc62b0c90543",
    "source": "repo"
   },
   "system/windows/amp-obsidian-editor.ps1": {

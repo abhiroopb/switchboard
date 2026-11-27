@@ -51,8 +51,11 @@ dispatch:
   # or id matches queues as "held until <time>" and starts on the first release pass
   # after `until` (a sweep tick or any report). The hold lifts by the clock alone; an
   # entry past `until` is inert and may be deleted at leisure. `until` needs a zone, and
-  # one more than launch_hold_max_hours ahead is ignored. Workers already running, and
-  # their relaunches, are never held.
+  # one more than launch_hold_max_hours ahead is ignored, unless that entry carries its own
+  # `max_hours: <n>` (or `allow_long: true`); nothing reaches past 31 days. Workers already
+  # running, and their relaunches, are never held, and a held ask never goes to an open
+  # owner tab. To hold one new task for days: pick its id, name it under `tasks:` here, and
+  # dispatch with --task-id <that id>.
   launch_holds: []
   launch_hold_max_hours: 24
   # Windows: new launches wait (status queued, "waiting on memory") while
@@ -138,6 +141,17 @@ dispatch:
   # many minutes after the worker began launching sends the origin one urgent
   # callback and stays queued. 0 disables the callback.
   steer_queue_timeout_minutes: 10
+  # Steers on a finished row: the continuation forks the
+  # parent's Claude session (claude --resume <parent> --fork-session) while the
+  # parent's last context is at most steer_resume_max_context_tokens, because a
+  # fork re-caches that whole context; past it a cold worker starts. A steer on a
+  # row whose continuation is live goes to that continuation, and one on a row
+  # whose newest continuation finished within steer_chain_window_minutes
+  # continues that one (one chain, never siblings). router-dispatch.sh --steer
+  # --record-only records a hold, ack or ruling on a finished row and starts nothing.
+  steer_resume_session: true
+  steer_resume_max_context_tokens: 200000
+  steer_chain_window_minutes: 10
   # Reap protection is by identity, not by ref: dispatch.py reap
   # closes a tab only when worker_tab_reason accepts it — cmux description
   # `switchboard worker <task-id>`, the title the row recorded, `<emoji> <Name> <n>`

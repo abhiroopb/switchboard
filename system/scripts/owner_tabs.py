@@ -513,7 +513,7 @@ def write_latest_results(root: Path, slug: str, task_id: str, card: str, when: d
         if first == len(lines) and lines:
             block = ["\n"] + block
         lines[first:first] = block
-        path.write_text("".join(lines), encoding="utf-8")
+        path.write_text("".join(lines), encoding="utf-8", newline="")  # LF, see _dirty
         return {"written": True, "path": str(path), "created_section": True}
     end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
     section = "".join(lines[start + 1:end])
@@ -524,8 +524,161 @@ def write_latest_results(root: Path, slug: str, task_id: str, card: str, when: d
     cards = [entry + "\n"] + [c if c.endswith("\n\n") else c.rstrip("\n") + "\n\n" for c in cards]
     new_section = intro + "".join(cards[:LATEST_RESULTS_KEEP])
     lines[start + 1:end] = [new_section]
-    path.write_text("".join(lines), encoding="utf-8")
+    path.write_text("".join(lines), encoding="utf-8", newline="")  # LF, see _dirty
     return {"written": True, "path": str(path), "kept": min(len(cards), LATEST_RESULTS_KEEP)}
+
+
+# --- switchboard's own uncommitted writes on main ------------------------------------------
+#
+# A close-out line or result card is committed on main by itself only when its
+# CONTEXT.md was clean first; a file someone is mid-edit on is left alone. That
+# rule had no way back: once one commit failed (or a card landed while the file
+# was dirty), every later writer saw the file dirty and left its own line
+# uncommitted too. switchboard-maintenance/CONTEXT.md sat dirty from 2026-11-23 05:01Z
+# with eight close-outs and five cards nobody committed. The
+# registry remembers the bytes switchboard itself left behind, so a file whose only
+# dirt is switchboard's own earlier write counts as clean and the next write commits
+# everything. Any byte change by anyone else breaks the match, and that file is
+# treated as mid-edit as before.
+
+# Inside the checkout's own .git directory: never tracked, never an untracked file in
+# `git status`, and only the main checkout has one (a linked worktree's .git is a file).
+AUTOWRITES_NAME = "switchboard-own-writes.json"
+
+
+def _autowrites_file(root: Path) -> Path | None:
+    git_dir = root / ".git"
+    return git_dir / AUTOWRITES_NAME if git_dir.is_dir() else None
+
+
+def _digest(path: Path) -> str:
+    import hashlib
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return ""
+
+
+class _RegistryLock:
+    """Exclusive lock beside the registry. Every load, change and save holds it,
+    so two writers never drop each other's entry and a reader never holds the
+    file open while a writer replaces it (Windows refuses os.replace onto an open
+    file). Code review: unlocked, two processes lost 142 of
+    300 registrations."""
+
+    def __init__(self, root: Path) -> None:
+        path = _autowrites_file(root)
+        self.path = path.with_suffix(".lock") if path is not None else None
+        self.handle = None
+
+    def __enter__(self) -> "_RegistryLock":
+        if self.path is None:
+            return self
+        try:
+            import fcntl  # type: ignore[import-not-found]
+        except ImportError:  # Windows: flock() over msvcrt
+            import flock_compat as fcntl  # type: ignore[no-redef]
+        self.fcntl = fcntl
+        self.handle = self.path.open("a+")
+        fcntl.flock(self.handle, fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        if self.handle is not None:
+            try:
+                self.fcntl.flock(self.handle, self.fcntl.LOCK_UN)
+            finally:
+                self.handle.close()
+
+
+def _read_registry(root: Path) -> dict[str, str]:
+    path = _autowrites_file(root)
+    if path is None:
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {str(k): str(v) for k, v in data.items()} if isinstance(data, dict) else {}
+
+
+def _write_registry(root: Path, data: dict[str, str]) -> None:
+    path = _autowrites_file(root)
+    if path is None:
+        return
+    import time
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    last: OSError | None = None
+    for attempt in range(6):
+        try:
+            tmp.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            os.replace(tmp, path)
+            return
+        except PermissionError as exc:  # Dropbox or a scanner holding the file open
+            last = exc
+            time.sleep(0.05 * (attempt + 1))
+        except OSError as exc:
+            last = exc
+            break
+    try:
+        tmp.unlink()
+    except OSError:
+        pass
+    sys.stderr.write(f"owner_tabs: own-write registry {path} not saved ({last}); "
+                     "a later close-out may leave its line uncommitted\n")
+
+
+def _update_registry(root: Path, change) -> None:
+    with _RegistryLock(root):
+        data = _read_registry(root)
+        if change(data):
+            _write_registry(root, data)
+
+
+def note_own_write(root: Path, rels: list[str], digests: dict[str, str] | None = None) -> None:
+    """Record `rels` as switchboard's own uncommitted write. `digests` are the bytes the
+    caller wrote, taken before any git call: re-reading after a slow failed commit
+    could record an edit the owner saved meanwhile as switchboard's own."""
+    def change(data: dict[str, str]) -> bool:
+        for rel in rels:
+            digest = (digests or {}).get(rel) or _digest(root / rel)
+            if digest:
+                data[rel] = digest
+        return True
+    _update_registry(root, change)
+
+
+def forget_own_write(root: Path, rels: list[str]) -> None:
+    def change(data: dict[str, str]) -> bool:
+        hit = any(rel in data for rel in rels)
+        for rel in rels:
+            data.pop(rel, None)
+        return hit
+    if _autowrites_file(root) is not None and (_autowrites_file(root)).exists():
+        _update_registry(root, change)
+
+
+def is_own_write(root: Path, rel: str) -> bool:
+    """True when `rel` still holds exactly the bytes switchboard last left uncommitted."""
+    registry = _autowrites_file(root)
+    if registry is None or not registry.exists():
+        return False
+    with _RegistryLock(root):
+        recorded = _read_registry(root).get(rel)
+    return bool(recorded) and recorded == _digest(root / rel)
+
+
+def dirty_by_others(root: Path, rel: str) -> bool:
+    """Dirty on this checkout for a reason other than switchboard's own earlier write."""
+    return _dirty(root, rel) and not is_own_write(root, rel)
+
+
+def _git_reason(proc: subprocess.CompletedProcess) -> str:
+    """Why a git call failed, in 200 characters, without git's line-ending
+    warnings, which can fill the space ahead of a hook's refusal."""
+    text = proc.stderr or proc.stdout or ""
+    lines = [line for line in text.splitlines() if line.strip() and not line.startswith("warning: ")]
+    return "\n".join(lines).strip()[:200]
 
 
 def commit_written_paths(root: Path, rels: list[str], message: str) -> dict[str, Any]:
@@ -540,20 +693,28 @@ def commit_written_paths(root: Path, rels: list[str], message: str) -> dict[str,
     # guard finish runs, so a listed value in a CONTEXT.md would block auto-push. Lines naming a listed private identifier are withheld first.
     import private_identifiers
     redacted = private_identifiers.redact_files(root, rels)
+    written = {rel: _digest(root / rel) for rel in rels}   # before any git call (see note_own_write)
     if redacted["status"] == "error":
+        note_own_write(root, rels, written)
         return {"committed": False, "reason": f"private identifier list unreadable; not committed ({redacted.get('reason', '')})"[:200]}
     new = [rel for rel in rels if g("ls-files", "--error-unmatch", "--", rel).returncode]
     if new:
         add = g("add", "--", *new)
         if add.returncode:
             g("reset", "-q", "--", *new)
-            return {"committed": False, "reason": (add.stderr or add.stdout).strip()[:200] or "git add failed"}
+            note_own_write(root, rels, written)
+            return {"committed": False, "reason": _git_reason(add) or "git add failed"}
     commit = g("-c", "user.name=switchboard worker", "-c", "user.email=switchboard-worker@local",
                "commit", "-q", "-m", message, "--", *rels)
     if commit.returncode:
         if new:
             g("reset", "-q", "--", *new)
-        return {"committed": False, "reason": (commit.stderr or commit.stdout).strip()[:200] or "git commit failed"}
+        # Left dirty by switchboard alone (an index.lock held by a concurrent landing, say):
+        # remembered, so the next close-out or card commits it instead of leaving
+        # its own line uncommitted behind this one.
+        note_own_write(root, rels, written)
+        return {"committed": False, "reason": _git_reason(commit) or "git commit failed"}
+    forget_own_write(root, rels)
     return {"committed": True, "commit": g("rev-parse", "--short", "HEAD").stdout.strip(), **({"added": new} if new else {}),
             **({"withheld": redacted["kinds"]} if redacted["status"] == "redacted" else {})}
 
@@ -568,8 +729,29 @@ def _commit_context(root: Path, slug: str, task_id: str, was_dirty: bool) -> dic
 
 
 def _dirty(root: Path, rel: str) -> bool:
+    """Uncommitted content on root's checkout: untracked, or different from HEAD.
+
+    A rewrite that changed only line endings is not dirty. The
+    repository stores LF (.gitattributes eol=lf) and git normalizes CRLF when it
+    commits, so `git diff` sees no change, but `git status` lists the file. On
+    Windows Python's write_text wrote every close-out and card with CRLF, so from
+    the 2026-11-26 00:54 PT card on, switchboard-maintenance/CONTEXT.md read as
+    mid-edit and the next close-out and card were left uncommitted. Writers now
+    keep LF (newline=""), and this check ignores what is left of the old CRLF."""
     out = subprocess.run(["git", "-C", str(root), "status", "--porcelain", "--", rel], capture_output=True, text=True)
-    return bool(out.stdout.strip())
+    status = out.stdout.strip()
+    if not status:
+        return False
+    if status.startswith("??"):
+        return True
+    # Staged content counts too: a path-limited commit would replace it with the
+    # working copy, so an edit staged and then undone in the file is still someone's.
+    for extra in ((), ("--cached",)):
+        diff = subprocess.run(["git", "-C", str(root), "diff", "--quiet", *extra, "HEAD", "--", rel],
+                              capture_output=True, text=True)
+        if diff.returncode != 0:
+            return True
+    return False
 
 
 def deliver_result_card(task: dict[str, Any], status: str, summary: str, review_url: str = "", reporter_ref: str = "",
@@ -610,7 +792,7 @@ def deliver_result_card(task: dict[str, Any], status: str, summary: str, review_
     else:
         fallback_reason = "no open owner tab"
     rel = f"workstreams/{slug}/CONTEXT.md"
-    was_dirty = _dirty(root, rel)
+    was_dirty = dirty_by_others(root, rel)
     if private_workstreams.is_private_slug(slug, root):  # CONTEXT.md is tracked: status and pointer only
         card = build_card(task, status, private_workstreams.WITHHELD_REPORT, review_url, root)
     written = write_latest_results(root, slug, str(task.get("id")), card)

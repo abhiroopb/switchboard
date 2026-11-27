@@ -877,6 +877,13 @@ fi
 # Report log: every report, delivered or not (append-only). Formerly the Thread Status feed;
 # that surface is retired, the log stays as delivery evidence.
 FEED_FILE="${REPORT_LOG_FILE:-${THREAD_STATUS_FEED_FILE:-$STATE_DIR/thread-status-feed.jsonl}}"
+# On Windows the writer imports flock_compat from this checkout's scripts folder. Without it
+# the fallback was $SWITCHBOARD_ROOT or ~/Development/switchboard, so an install elsewhere with no root set
+# (a fresh kit install) appended nothing and every report went unlogged. cygpath -m gives the
+# C:/ form native Python can open.
+feed_scripts_dir="$SCRIPTS"
+command -v cygpath >/dev/null 2>&1 && feed_scripts_dir="$(cygpath -m "$SCRIPTS" 2>/dev/null || printf '%s' "$SCRIPTS")"
+SWITCHBOARD_SCRIPTS_DIR="${SWITCHBOARD_SCRIPTS_DIR:-$feed_scripts_dir}" \
 FEED_TASK_JSON="$task_json" FEED_SUMMARY="$SUMMARY" FEED_ORIGIN="$origin" FEED_ROUTED_TO="$routed_to" FEED_STATUS="$STATUS" \
 FEED_OUTCOME="$outcome" FEED_DELIVERED="$delivered" FEED_THREAD_ID="$THREAD_ID" FEED_WORKSTREAM="$WORKSTREAM" \
 FEED_URGENT="$URGENT" FEED_NEEDS_RULING="$NEEDS_RULING" FEED_REVIEW_URL="$review_url" FEED_DEST_REF="$destination_ref" \

@@ -136,7 +136,10 @@ ls -1t "$SNAPSHOT_DIR"/snapshot-2*.md 2>/dev/null | tail -n +49 | xargs rm -f 2>
 
 log "Snapshot written to $SNAPSHOT_FILE ($(wc -l < "$SNAPSHOT_FILE") lines)"
 
-if python3 "$SWITCHBOARD_DIR/system/scripts/render-workstreams-readme.py" --write >> "$LOG_FILE" 2>&1; then
+# --commit: a render left uncommitted on main made the next task that also
+# re-rendered the README fail to land as a stray write. The renderer writes only when the text changed and commits
+# README.md alone, path-limited.
+if python3 "$SWITCHBOARD_DIR/system/scripts/render-workstreams-readme.py" --root "$SWITCHBOARD_DIR" --write --commit >> "$LOG_FILE" 2>&1; then
   log "Refreshed generated workstreams README"
 else
   log "WARN: Failed to refresh generated workstreams README"

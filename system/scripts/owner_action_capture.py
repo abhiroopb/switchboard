@@ -68,6 +68,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -82,6 +83,7 @@ import no_window  # noqa: E402
 import owner_tabs  # noqa: E402
 import private_identifiers  # noqa: E402
 import private_workstreams  # noqa: E402
+from repo_paths import main_checkout  # noqa: E402
 
 # The owner's first name, as workers write it in reports. Default {{OWNER_FIRST}}, so the
 # source machine reads reports as before; a kit install sets SWITCHBOARD_OWNER_FIRST, and empty means workers say only
@@ -208,6 +210,23 @@ def todo_path() -> Path:
     return Path(owner_tabs.STATE_DIR) / "todo.json"
 
 
+def sandbox_path_ok(path: Path) -> bool:
+    """Under SWITCHBOARD_TEST_SANDBOX=1 the list must sit in the temp directory; the CLI enforces the same."""
+    if os.environ.get("SWITCHBOARD_TEST_SANDBOX") != "1":
+        return True
+    try:
+        target = os.path.normcase(os.path.realpath(str(path)))
+        temp = os.path.normcase(os.path.realpath(tempfile.gettempdir()))
+        real = os.path.normcase(os.path.realpath(str(main_checkout(SCRIPTS.parents[1]) / "system" / "state")))
+    except (OSError, ValueError):
+        return False
+
+    def under(directory: str) -> bool:
+        return target == directory or target.startswith(directory.rstrip("\\/") + os.sep)
+
+    return under(temp) and not under(real)  # Main's state is refused even when TMPDIR is an ancestor.
+
+
 def cli_path() -> Path | None:
     forced = os.environ.get("OWNER_ACTION_TODO_CLI")
     if forced:
@@ -225,6 +244,10 @@ def run_cli(*args: str) -> dict[str, Any]:
     cli = cli_path()
     if cli is None:
         return {"skipped": "no to-do CLI in this environment"}
+    if not sandbox_path_ok(todo_path()):
+        # A test whose owner_tabs was imported before it set its temp state dir
+        # once wrote 49 invented to-dos into a real list.
+        return {"failed": "test sandbox: refusing the real to-do list"}
     env = {**os.environ, "SWITCHBOARD_ROOT": str(repo_root()), "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
     try:
         done = subprocess.run([sys.executable, str(cli), "--path", str(todo_path()), *args], env=env, capture_output=True,

@@ -4,13 +4,16 @@
     dispatch.py dispatch --origin launchpad|cos [--workstream SLUG] [--task-id ID]
                 [--depends-on ID]... [--continuation-of ID] [--request-id R]
                 [--delivery auto|direct|digest] "<ask>"
-    dispatch.py steer   --origin O --task-id ID [--no-fallback-dispatch] "<steer>"
+    dispatch.py steer   --origin O --task-id ID [--no-fallback-dispatch] [--record-only] "<steer>"
                                             same-task steer: delivers to the live thread (cmux agent message),
                                             dispatches --continuation-of ID when the row is terminal (reaped tab),
                                             or queues the steer on the row when the worker has not started yet
                                             (routing, queued, launching, or cmux says the recipient reads no
                                             messages); queued steers deliver in order at the worker's ack or
-                                            first heartbeat (--no-fallback-dispatch opts out)
+                                            first heartbeat (--no-fallback-dispatch opts out).
+                                            On a terminal row: a live continuation of it
+                                            takes the steer; --record-only records a hold/ack/ruling and starts
+                                            nothing; a continuation forks the parent's Claude session when it can
     dispatch.py deliver-steers [--task-id ID]
                                             deliver queued steers to workers that have started; one urgent origin
                                             callback per steer still queued after steer_queue_timeout_minutes
@@ -268,6 +271,20 @@ DEFAULTS = {
     # undelivered this many minutes after the worker began launching sends one urgent
     # callback to the origin; nothing is spawned. 0 disables the callback.
     "steer_queue_timeout_minutes": 10,
+    # Steers on a finished row.
+    # A continuation forks the parent's Claude session (`claude --resume <parent> --fork-session`)
+    # so it starts with the parent's full context and only does the steer. Forking re-caches
+    # the parent's whole context, so it pays only while that context is small: measured on
+    # one real steer, a cold worker took 7 calls, 84K cache
+    # writes, 664K cache reads and 77 s; a fork of the 121K-token parent took 2 calls, 120K
+    # writes, 118K reads and 12 s. A parent past steer_resume_max_context_tokens gets a cold
+    # worker. steer_resume_session false turns the fork off.
+    "steer_resume_session": True,
+    "steer_resume_max_context_tokens": 200000,
+    # Race guard: a steer on a row whose continuation is still starting or running goes to
+    # that continuation; a steer on a row whose newest continuation finished within this many
+    # minutes continues that one, so back-to-back steers make one chain, never siblings.
+    "steer_chain_window_minutes": 10,
     # Queue order. A free slot goes to the queued row that
     # ranks first, and a fresh dispatch launches at once only when no eligible queued row
     # ranks ahead of it. Owner asks rank before switchboard-maintenance rows, each class oldest
@@ -282,10 +299,16 @@ DEFAULTS = {
     # "held until <time>" and release_queued starts it on the first pass after `until`. The
     # hold lifts by the clock alone, so nothing has to remove it. An `until` further ahead
     # than launch_hold_max_hours, naive, or unparseable is ignored (fail open), so a typo can
-    # never hold work for days. See launch_hold().
+    # never hold work for days. One entry may run longer (a check once
+    # held a week): its own `max_hours: <n>` replaces the 24 h cap for that entry
+    # only, or `allow_long: true` lifts it to the ceiling below. Neither goes past
+    # LAUNCH_HOLD_CEILING_HOURS, so a year typo still fails open. See launch_hold().
     "launch_holds": [],
     "launch_hold_max_hours": 24,
 }
+
+# The longest any launch hold may reach, whatever its entry says (31 days).
+LAUNCH_HOLD_CEILING_HOURS = 24 * 31
 
 
 def log(msg: str) -> None:
@@ -1886,11 +1909,23 @@ def sweep_leftovers(force: bool) -> dict[str, Any]:
     try:
         LEFTOVER_SWEEP_STAMP.parent.mkdir(parents=True, exist_ok=True)
         LEFTOVER_SWEEP_STAMP.touch()
-        return task_leftovers.sweep(ledger.load_payload()["tasks"], repo_root=REPO_ROOT, worktrees_root=WORKTREES,
-                                    log_path=LEFTOVER_LOG, log=log)
+        result = task_leftovers.sweep(ledger.load_payload()["tasks"], repo_root=REPO_ROOT, worktrees_root=WORKTREES,
+                                      log_path=LEFTOVER_LOG, log=log)
     except Exception as error:
         log(f"leftover-process sweep failed: {error}")
-        return {}
+        result = {}
+    # prototyping react-starter servers recorded with their owning tab: stopped
+    # once that tab closes or, with no tab recorded, once its agent session ends; never one started by hand.
+    try:
+        owned = task_leftovers.stop_owned_dev_servers(
+            open_workspaces=lambda: {str(w.get("id")) for w in cmux_workspaces() if w.get("id")},
+            log_path=LEFTOVER_LOG, log=log)
+    except Exception as error:
+        log(f"dev-server owner sweep failed: {error}")
+        owned = {}
+    if owned.get("servers"):
+        result = {**result, "dev_servers": owned["servers"]}
+    return result
 
 
 def symlink_points_inside_repo(rel: str, target: str, cwd: Path) -> bool:
@@ -2154,6 +2189,16 @@ def finish_branch(task: dict[str, Any], allow_mass_delete: bool = False, accept_
     # likely this worker's own stray writes into main and
     # attributing them to "direct-to-main workers" would bury the leak.
     dirty = dirty_main_paths()
+    # A README on main that is exactly a fresh render of main, or the render switchboard
+    # itself left uncommitted, is generated output, not anyone's edit: it is no
+    # stray and no overlap. It goes back to HEAD only just before the fast-forward,
+    # so an earlier refusal leaves main as it was, and main is rendered again after
+    # (the hourly context snapshot once re-rendered main's README and a landing was
+    # refused as a stray write).
+    readme_reset = README_REL in changed and README_REL in dirty and (
+        readme_is_fresh_render() or owner_tabs.is_own_write(REPO_ROOT, README_REL))
+    if readme_reset:
+        dirty = dirty - {README_REL}
     overlap = sorted(set(changed) & dirty)
     strays = stray_main_writes(task, held=set(changed), dirty=dirty)
     if strays and not accept_main_edits:
@@ -2180,6 +2225,9 @@ def finish_branch(task: dict[str, Any], allow_mass_delete: bool = False, accept_
                     "reason": f"rebase conflict on branch {branch} against main's uncommitted edits to "
                               f"{', '.join(overlap[:5])} (now committed as {preserved['commit']}); "
                               f"resolve in {path} then run dispatch.py finish --task-id {task['id']}"}
+    if readme_reset:
+        git("checkout", "--", README_REL, check=False)
+        owner_tabs.forget_own_write(REPO_ROOT, [README_REL])
     ff = git("merge", "--ff-only", branch, check=False)
     # main can move between the rebase and the fast-forward (another task landing,
     # a reconciliation commit). That is not a conflict: rebase once more and retry,
@@ -2190,11 +2238,15 @@ def finish_branch(task: dict[str, Any], allow_mass_delete: bool = False, accept_
         rebase = git("rebase", "main", cwd=path, check=False)
         if rebase.returncode:
             git("rebase", "--abort", cwd=path, check=False)
+            if readme_reset:
+                rerender_main_readme()   # README was reset for this landing; give main its render back
             return {"landed": False, "conflict": True, "rebase_conflict": True, "files": changed,
                     "reason": f"rebase conflict on branch {branch} against commits that landed on main meanwhile; "
                               f"resolve in {path} then run dispatch.py finish --task-id {task['id']}"}
         ff = git("merge", "--ff-only", branch, check=False)
     if ff.returncode:
+        if readme_reset:
+            rerender_main_readme()
         return {"landed": False, "conflict": True, "reason": f"fast-forward of main from {branch} failed: {ff.stderr.strip()[:200]}"}
     outcome = {"landed": True, "commit": git("rev-parse", "--short", "main").stdout.strip(), "changes": len(changed)}
     if rejected:
@@ -2204,9 +2256,47 @@ def finish_branch(task: dict[str, Any], allow_mass_delete: bool = False, accept_
         outcome["preserved_paths"] = overlap
     if strays:
         outcome["accepted_main_edits"] = [s["path"] for s in strays]
+    if preserved:
+        owner_tabs.forget_own_write(REPO_ROOT, overlap)
+    if readme_reset:
+        outcome["readme_rerender"] = rerender_main_readme()
     if has_worktree:
         outcome["scratch"] = migrate_scratch(path, task["id"])
     return outcome
+
+
+README_REL = "workstreams/README.md"
+
+
+def _readme_renderer():
+    spec = importlib.util.spec_from_file_location("render_workstreams_readme_for_finish",
+                                                  SCRIPTS / "render-workstreams-readme.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def readme_is_fresh_render() -> bool:
+    """True when main's working-tree README is byte-for-byte (line endings aside)
+    what the renderer makes from main right now: generated output that can be
+    regenerated at will, so nothing is lost by resetting it."""
+    try:
+        current = (REPO_ROOT / README_REL).read_bytes().replace(b"\r\n", b"\n")
+        fresh = (_readme_renderer().build_readme(REPO_ROOT) + "\n").encode("utf-8")
+    except Exception:  # noqa: BLE001 - a failed probe means "not provably generated"
+        return False
+    return current == fresh
+
+
+def rerender_main_readme() -> dict[str, Any]:
+    """After a landing that reset main's generated README: render main again and
+    commit README.md alone when it differs from HEAD."""
+    try:
+        renderer = _readme_renderer()
+        renderer.write_readme(REPO_ROOT, renderer.build_readme(REPO_ROOT))
+        return renderer.commit_readme(REPO_ROOT)
+    except Exception as exc:  # noqa: BLE001 - the landing already succeeded
+        return {"committed": False, "reason": f"re-render failed: {exc}"[:200]}
 
 
 def porcelain_paths(lines: list[str]) -> set[str]:
@@ -2270,6 +2360,10 @@ def stray_main_writes(task: dict[str, Any], held: set[str] | None = None, dirty:
     for rel in sorted(held & dirty):
         target = REPO_ROOT / rel
         if not target.is_file():
+            continue
+        if owner_tabs.is_own_write(REPO_ROOT, rel):
+            # switchboard's own uncommitted close-out or card (owner_tabs.note_own_write):
+            # the ordinary overlap finish commits with attribution, never a stray.
             continue
         modified = datetime.fromtimestamp(target.stat().st_mtime, tz=timezone.utc)
         if modified < since:
@@ -2392,7 +2486,7 @@ def record_closeout(task: dict[str, Any], status: str, result: str, thread_id: s
         text = head + sep + tail.rstrip("\n") + "\n" + line + "\n"
     else:
         text = text.rstrip("\n") + f"\n\n{CLOSEOUT_HEADING}\n{line}\n"
-    path.write_text(text, encoding="utf-8")
+    path.write_text(text, encoding="utf-8", newline="")  # LF: owner_tabs._dirty
     return {"recorded": True, "path": str(path), "line": line}
 
 
@@ -2411,7 +2505,10 @@ def record_on_main(task: dict[str, Any], status: str = "", result: str = "", thr
     if owner_tabs.sandbox_reaching_main(REPO_ROOT):
         return {"recorded": False, "reason": "sandboxed run; main is not written"}
     rel = f"workstreams/{task.get('workstream')}/CONTEXT.md"
-    was_dirty = rel in dirty_main_paths()
+    # Dirty only with switchboard's own earlier uncommitted close-out or card counts as
+    # clean, so this commit carries those lines too (owner_tabs.is_own_write).
+    # A file that differs from HEAD only in line endings is clean too (owner_tabs._dirty).
+    was_dirty = owner_tabs.dirty_by_others(REPO_ROOT, rel)
     outcome = record_closeout(task, status, result or str(task.get("summary") or ""),
                               thread_id or str(task.get("thread_id") or ""), REPO_ROOT)
     if not outcome.get("recorded"):
@@ -2457,7 +2554,7 @@ def record_decision(task: dict[str, Any], text: str, root: Path, by: str = "owne
         body = head + sep + tail.rstrip("\n") + "\n" + line + "\n"
     else:
         body = body.rstrip("\n") + f"\n\n{DECISION_HEADING}\n{line}\n"
-    path.write_text(body, encoding="utf-8")
+    path.write_text(body, encoding="utf-8", newline="")  # LF: owner_tabs._dirty
     return {"recorded": True, "path": str(path), "line": line}
 
 
@@ -2474,27 +2571,41 @@ def command_decide(args: argparse.Namespace) -> int:
     if task is None:
         print(json.dumps({"status": "failed", "task_id": args.task_id, "reason": "no ledger row with that id"}))
         return 1
+    ok, ledger_out, context = record_ruling(task, text, args.by)
+    print(json.dumps({"status": "decided" if ok else "failed", "task_id": args.task_id, "text": text,
+                      "ledger": ledger_out, "context": context}))
+    return 0 if ok else 1
+
+
+def record_ruling(task: dict[str, Any], text: str, by: str) -> tuple[bool, dict[str, Any], dict[str, Any]]:
+    """Write a ruling onto the ledger row (`running-task-state.py annotate`) and under
+    DECISION_HEADING in the owning workstream's CONTEXT.md on main, committed there when
+    that file was clean. Shared by `decide` and record-only steers. Returns
+    (ok, ledger summary, context outcome)."""
     proc = subprocess.run([sys.executable, str(SCRIPTS / "running-task-state.py"), "annotate",
-                           "--task-id", args.task_id, "--text", text, "--by", args.by],
+                           "--task-id", str(task["id"]), "--text", text, "--by", by],
                           capture_output=True, text=True, stdin=subprocess.DEVNULL)
     try:
         ledger_out = json.loads((proc.stdout or "").strip().splitlines()[-1])
     except (ValueError, IndexError):
         ledger_out = {"error": (proc.stderr or proc.stdout).strip()[:300]}
     rel = f"workstreams/{task.get('workstream')}/CONTEXT.md"
-    was_dirty = rel in dirty_main_paths()
-    context = record_decision(task, text, REPO_ROOT, args.by)
-    if context.get("recorded") and not was_dirty:
-        commit = git("-c", "user.name=switchboard worker", "-c", "user.email=switchboard-worker@local", "commit", "-q",
-                     "-m", f"{task['id']}: the owner's decision recorded in {rel}", "--", rel, check=False)
-        context["committed"] = commit.returncode == 0
-    elif context.get("recorded"):
-        context.update(committed=False, reason=f"{rel} had uncommitted edits on main; line appended, left for the next landing")
+    if owner_tabs.sandbox_reaching_main(REPO_ROOT):
+        context: dict[str, Any] = {"recorded": False, "reason": "sandboxed run; main is not written"}
+    else:
+        was_dirty = owner_tabs.dirty_by_others(REPO_ROOT, rel)
+        context = record_decision(task, text, REPO_ROOT, by)
+        if context.get("recorded") and not was_dirty:
+            # The shared helper: it stages a new file, and a failed commit is remembered as
+            # switchboard's own write, so the next close-out still commits it.
+            commit = owner_tabs.commit_written_paths(REPO_ROOT, [rel], f"{task['id']}: the owner's decision recorded in {rel}")
+            context["committed"] = bool(commit.get("committed"))
+            if not commit.get("committed"):
+                context["reason"] = commit.get("reason", "")
+        elif context.get("recorded"):
+            context.update(committed=False, reason=f"{rel} had uncommitted edits on main; line appended, left for the next landing")
     ok = proc.returncode == 0 and "error" not in ledger_out
-    print(json.dumps({"status": "decided" if ok else "failed", "task_id": args.task_id, "text": text,
-                      "ledger": {k: v for k, v in ledger_out.items() if k in {"id", "status", "decisions", "_duplicate_decision", "error"}},
-                      "context": context}))
-    return 0 if ok else 1
+    return ok, {k: v for k, v in ledger_out.items() if k in {"id", "status", "decisions", "_duplicate_decision", "error"}}, context
 
 
 # --- path locks (non-repo write targets) ---------------------------------------------
@@ -2919,15 +3030,13 @@ def launch_hold(task: dict[str, Any], cfg: dict[str, Any], at: datetime | None =
     ISO time with a zone. Only a row's first attempt is held: a worker that already started
     and is relaunched after a dead tab finishes its work ("workers already running finish").
     Self-expiring by construction: past `until` the entry matches nothing, and an entry
-    whose `until` is more than launch_hold_max_hours ahead is ignored and logged."""
+    whose `until` is further ahead than its cap is ignored and logged. The cap is
+    launch_hold_max_hours (24 h), or the entry's own `max_hours`, or the ceiling with
+    `allow_long: true`; never more than LAUNCH_HOLD_CEILING_HOURS (hold_cap())."""
     holds = cfg.get("launch_holds") or []
     if not isinstance(holds, list) or not holds or int(task.get("attempt") or 1) > 1:
         return None
     at = at or now()
-    try:
-        cap = timedelta(hours=float(cfg.get("launch_hold_max_hours", DEFAULTS["launch_hold_max_hours"])))
-    except (TypeError, ValueError):
-        cap = timedelta(hours=float(DEFAULTS["launch_hold_max_hours"]))
     slug, tid = str(task.get("workstream") or ""), str(task.get("id") or "")
     found: dict[str, Any] | None = None
     for hold in holds:
@@ -2937,8 +3046,9 @@ def launch_hold(task: dict[str, Any], cfg: dict[str, Any], at: datetime | None =
         until = raw if isinstance(raw, datetime) else ledger.parse_iso(str(raw or ""))
         if until is None or until.tzinfo is None or at >= until:
             continue
+        cap, source = hold_cap(hold, cfg)
         if until - at > cap:
-            log(f"launch hold until {raw} ignored: more than {cap} ahead (dispatch.launch_hold_max_hours)")
+            log(f"launch hold until {raw} ignored: more than {cap} ahead ({source})")
             continue
         names = {str(x) for x in (hold.get("workstreams") or [])}
         ids = {str(x) for x in (hold.get("tasks") or [])}
@@ -2946,6 +3056,32 @@ def launch_hold(task: dict[str, Any], cfg: dict[str, Any], at: datetime | None =
             if found is None or until > found["until"]:
                 found = {"until": until, "reason": str(hold.get("reason") or "a dated launch hold")}
     return found
+
+
+def _positive_hours(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        hours = float(value)
+    except (TypeError, ValueError):
+        return None
+    return hours if hours > 0 and hours == hours and hours != float("inf") else None
+
+
+def hold_cap(hold: dict[str, Any], cfg: dict[str, Any]) -> tuple[timedelta, str]:
+    """How far ahead one launch_holds entry may reach, and which setting said so. The
+    global launch_hold_max_hours (24 h) unless the entry carries its own positive
+    `max_hours` or `allow_long: true` (exactly true, never a truthy string); both stop at
+    LAUNCH_HOLD_CEILING_HOURS. A bad per-entry value falls back to the global cap."""
+    ceiling = float(LAUNCH_HOLD_CEILING_HOURS)
+    own = _positive_hours(hold.get("max_hours"))
+    if own is not None:
+        return timedelta(hours=min(own, ceiling)), "its max_hours" + (" (capped at the ceiling)" if own > ceiling else "")
+    if hold.get("allow_long") is True:
+        return timedelta(hours=ceiling), "allow_long ceiling"
+    glob = _positive_hours(cfg.get("launch_hold_max_hours", DEFAULTS["launch_hold_max_hours"]))
+    hours = glob if glob is not None else float(DEFAULTS["launch_hold_max_hours"])
+    return timedelta(hours=min(hours, ceiling)), "dispatch.launch_hold_max_hours"
 
 
 def launch_hold_text(hold: dict[str, Any]) -> str:
@@ -3269,6 +3405,55 @@ def launch_prompt(task: dict[str, Any], worktree: Path, worker_id: str) -> str:
     return "\n\n".join(lines) + "\n"
 
 
+def resumed_launch_prompt(task: dict[str, Any], worktree: Path, worker_id: str, full_prompt: Path) -> str:
+    """The seed for a steer continuation that forks its parent's Claude session. The fork already holds the parent's launch prompt and everything it did,
+    so this names only what changed (task, attempt, checkout, report line, the earlier
+    task's spent ids) and the steer. The full contract for this attempt sits in
+    `full_prompt` for any rule the session does not remember."""
+    repo, tid, aid, slug = REPO_ROOT, task["id"], task["attempt_id"], task["workstream"]
+    origin = task.get("origin") or "cos"
+    plan = task.get("steer_resume") or {}
+    parent = str(plan.get("from_task") or task.get("continuation_of") or "")
+    session = str(task.get("session_id") or "<your Claude session id>")
+    report = (f"bash {repo}/system/scripts/report-to-cos.sh --task-id {tid} --attempt-id {aid} --origin {origin} "
+              f"--workstream {slug} --thread-id {session} --workspace-ref <workspace:N>")
+    old_tree = str(plan.get("parent_worktree") or "")
+    if plan.get("work") == "worktree":
+        work = (f"The earlier task's work is not on main: it is still in {old_tree} on {plan.get('parent_branch') or 'its branch'}. "
+                f"Read it there if the steer needs it and carry what it needs into this checkout; never edit or run git there.")
+    else:
+        work = ("The earlier task's work is on main, so this checkout already has it."
+                + (f" Your earlier worktree {old_tree} is not yours anymore: never edit or run git there." if old_tree else ""))
+    lines = [
+        f"RESUMED SESSION. This session is a fork of your session as the worker for {parent} (workstream {slug}). That task "
+        f"has ended and its tab is gone. You are now switchboard worker {worker_id} for a new task, {tid} (attempt {aid}), origin "
+        f"{origin}: a continuation that does only the owner's steer below, nothing else from the earlier task.",
+        f"Everything in your earlier launch prompt still binds (tool routing, sends and drafts, review notes, names never "
+        f"numbers, questions through ask-cos.sh, the report shape), with these changes:",
+        f"- Checkout: the git worktree {worktree} on branch task/{tid}, created from main just now. Edit only "
+        f"{worktree}/... paths. {work} Never push. Do not commit; the finish step commits for you.",
+        f"- Scratch: {worktree}/.amp/in/{tid}/. Paths outside the repo: python3 {repo}/system/scripts/dispatch.py lock "
+        f"--task-id {tid} --path <absolute path> first.",
+        f"- Questions: bash {repo}/system/scripts/ask-cos.sh --task-id {tid} --option \"<a>\" --option \"<b>\" --default <letter> "
+        f"\"<question>\", then continue on the default.",
+        f"- The earlier task's ids, branch and report command are spent: never run its report-to-cos.sh line again.",
+        f"- Report exactly once at the end: {report} --status done|blocked|failed '<one line result or blocker, including "
+        f"claude --resume {session}>'. Read your --workspace-ref with: CMUX_QUIET=1 cmux workspace list --json | python3 -c "
+        "'import json,os,sys; print(next(w[\"ref\"] for w in json.load(sys.stdin)[\"workspaces\"] if "
+        "w[\"id\"]==os.environ[\"CMUX_WORKSPACE_ID\"]))'. report-to-cos.sh is your last action.",
+        f"- The full contract for this attempt is in {full_prompt.as_posix()}; read it only for a rule you do not remember.",
+        f"Router return contract: task {tid}.",
+        f"Original request (preserve its scope): {task['prompt']}",
+    ]
+    # The clauses launch_prompt adds for this attempt alone are new to the fork too, so the
+    # seed carries them in full (a live primary worker on this workstream, a provisional owner).
+    if task.get("secondary_to") and not task.get("supplemental"):
+        lines.insert(2, secondary_clause(task, repo))
+    if task.get("provisional_workstream"):
+        lines.insert(2, rehome_clause(task, repo))
+    return "\n\n".join(lines) + "\n"
+
+
 def profile_worker_clauses(repo: str) -> list[str]:
     """Clauses the installed organisation profile adds to every worker prompt
     (system/prompts/profile-worker-clauses.md, copied in by apply-profile.py; absent on a
@@ -3565,6 +3750,12 @@ def launch_command_for(row: dict[str, Any]) -> str:
     if claude:
         model, effort = claude_mode_flags(mode)
         session = f" --session-id {shlex.quote(str(row['session_id']))}" if row.get("session_id") else ""
+        fork = str(row.get("session_fork_from") or "")
+        if fork and CLAUDE_SESSION_ID.match(fork) and session:
+            # A steer continuation: start from a copy of the parent's
+            # session, under this attempt's own fixed session id, so it keeps the parent's
+            # context and the ledger still finds its transcript.
+            session = f" --resume {shlex.quote(fork)} --fork-session{session}"
         # Prompt suggestions off (system/config/claude-tab-settings.json): a suggested
         # next prompt sits in the composer and the inject guard reads it as a draft.
         tab_settings = REPO_ROOT / "system" / "config" / "claude-tab-settings.json"
@@ -4095,8 +4286,16 @@ def launch(task: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any] | None:
     # under ~/.claude/projects can be found later (claude_transcript_tail). Set before
     # the prompt is written, because the prompt names it.
     session_id = str(uuid.uuid4()) if agent == "claude" else ""
-    task = {**task, "agent": agent, **({"session_id": session_id} if session_id else {})}
+    fork = launch_fork_source(task, agent, bool(resumed))
+    task = {**task, "agent": agent, **({"session_id": session_id} if session_id else {}),
+            **({"session_fork_from": fork} if fork else {})}
     prompt_text = launch_prompt({**task, "branch": branch}, worktree, worker_id)
+    if fork:
+        # The forked session already read its parent's launch prompt; it gets a short seed and
+        # keeps this attempt's full contract beside it.
+        full_file = LAUNCH_PROMPTS / f"{slug}-{task['attempt_id']}.full.md"
+        full_file.write_text(prompt_text, encoding="utf-8")
+        prompt_text = resumed_launch_prompt({**task, "branch": branch}, worktree, worker_id, full_file)
     prompt_file.write_text((resume_note(task, worktree, branch) + prompt_text) if resumed else prompt_text, encoding="utf-8")
     cwd = worktree / "workstreams" / slug
     if not cwd.is_dir():
@@ -4169,6 +4368,10 @@ def launch(task: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any] | None:
             row["session_id"] = session_id
         else:
             row.pop("session_id", None)
+        if fork:
+            row["session_fork_from"] = fork
+        else:
+            row.pop("session_fork_from", None)
         if primary:
             row["secondary_to"] = primary
         else:
@@ -4286,6 +4489,7 @@ def command_dispatch(args: argparse.Namespace) -> int:
         return 1
     task = json.loads(start.stdout)
     supplemental = bool(args.continuation_of) and bool(getattr(args, "supplemental", False))
+    steer_resume = getattr(args, "steer_resume", None) if args.continuation_of else None
     if args.continuation_of or executor_box or pending:
         def note_options(payload):
             row = ledger.find_task(payload, task_id)
@@ -4293,6 +4497,8 @@ def command_dispatch(args: argparse.Namespace) -> int:
                 row["pending_workstream"] = pending
             if args.continuation_of:
                 row["continuation_of"] = args.continuation_of
+            if steer_resume:
+                row["steer_resume"] = steer_resume
             if supplemental:
                 row["supplemental"] = True
             return row
@@ -4311,7 +4517,8 @@ def command_dispatch(args: argparse.Namespace) -> int:
                           reason=f"handled in chat: continued as {task_id}: {' '.join(steer_text.split())[:120]}")
     payload = ledger.load_payload()
     dep = unmet_dependency(task, payload)
-    if dep is None and owner_tab_eligible(args, cfg, pending, supplemental, executor_box):
+    # A dated hold also keeps the ask out of an open owner tab: the tab would start it now.
+    if dep is None and launch_hold(task, cfg) is None and owner_tab_eligible(args, cfg, pending, supplemental, executor_box):
         sent = deliver_to_owner_tab(task, slug, args.origin)
         if sent.get("delivered"):
             print(json.dumps({"router": "dispatch", "created": True, "status": "routed", "launch": "owner-tab",
@@ -4474,6 +4681,191 @@ def deliver_to_owner_tab(task: dict[str, Any], slug: str, origin: str,
     ledger.locked_mutation(bind)
     return {"delivered": True, "workspace_ref": ref, "thread_id": agent["thread_id"], "title": title,
             "message_id": sent.get("id"), "message_state": sent.get("state"), "agent_state": agent["state"]}
+
+
+# --- steers on a finished row ------------------------------------
+#
+# A hold-only question answer sent 18 s after a worker finished started a continuation
+# cold (new worktree, new tab, no context) just to record "hold"; a "stop, record and
+# finish" steer sent 5 s after that one finished started another. Two workers, no work. Now:
+#   1. a continuation forks the parent's Claude session instead of starting cold
+#      (steer_resume_plan, launch_fork_source, launch_command_for);
+#   2. `--record-only` records a hold, ack or ruling on a finished row and starts nothing
+#      (record_steer_ruling);
+#   3. a steer on a row whose continuation is live goes to it, and one on a row whose newest
+#      continuation just finished continues that one (steer_chain_target).
+
+def session_context_tokens(session_id: str) -> int | None:
+    """The context size of a Claude session's last main-thread call (input + cache read +
+    cache write tokens), or None when the transcript is missing or has no usage. A fork of
+    the session re-caches about this much on its first call."""
+    path = claude_transcript_path(session_id)
+    if path is None:
+        return None
+    last: int | None = None
+    try:
+        with path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if '"usage"' not in line:
+                    continue
+                try:
+                    record = json.loads(line)
+                except ValueError:
+                    continue
+                if record.get("type") != "assistant" or record.get("isSidechain"):
+                    continue
+                usage = (record.get("message") or {}).get("usage") or {}
+                total = sum(int(usage.get(k) or 0) for k in ("input_tokens", "cache_read_input_tokens",
+                                                              "cache_creation_input_tokens"))
+                if total:
+                    last = total
+    except OSError:
+        return None
+    return last
+
+
+def steer_resume_plan(parent: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
+    """Whether a continuation of the finished `parent` can fork its Claude session.
+    {"resume": True, "session_id", "from_task", "context_tokens", "work": "main"|"worktree",
+    "parent_worktree", "parent_branch"} or {"resume": False, "reason", ...}. A fork needs a
+    Claude parent whose transcript is still on disk, whose work is on main (landed) or in
+    its kept worktree, and whose last context is at most steer_resume_max_context_tokens,
+    because the fork re-caches all of it (measured, see DEFAULTS)."""
+    sid = str(parent.get("session_id") or "")
+    plan: dict[str, Any] = {"resume": False, "session_id": sid, "from_task": str(parent.get("id") or "")}
+    if not cfg.get("steer_resume_session", True):
+        return {**plan, "reason": "dispatch.steer_resume_session is off"}
+    if str(parent.get("agent") or "") != "claude" or not CLAUDE_SESSION_ID.match(sid):
+        return {**plan, "reason": "the parent row is not a Claude session"}
+    if agent_kind() != "claude":
+        return {**plan, "reason": "workers run Amp, which cannot fork a Claude session"}
+    if claude_transcript_path(sid) is None:
+        return {**plan, "reason": f"the parent's transcript ({sid}) is gone"}
+    worktree, branch = str(parent.get("worktree") or ""), str(parent.get("branch") or "")
+    if parent.get("landed_commit"):
+        work = "main"
+    elif worktree and Path(worktree).is_dir():
+        work = "worktree"
+    elif branch and on_main(branch):
+        work = "main"
+    else:
+        return {**plan, "reason": "the parent's work is neither on main nor in a kept worktree"}
+    tokens = session_context_tokens(sid)
+    if tokens is None:
+        return {**plan, "reason": "the parent's transcript records no usage"}
+    try:
+        limit = int(cfg.get("steer_resume_max_context_tokens", DEFAULTS["steer_resume_max_context_tokens"]))
+    except (TypeError, ValueError):
+        limit = int(DEFAULTS["steer_resume_max_context_tokens"])
+    plan.update(context_tokens=tokens, work=work, parent_worktree=worktree, parent_branch=branch)
+    if tokens > limit:
+        return {**plan, "reason": f"the parent's context is {tokens} tokens, past steer_resume_max_context_tokens "
+                                  f"({limit}); a fork would re-cache all of it, so a cold worker is cheaper"}
+    return {**plan, "resume": True}
+
+
+def launch_fork_source(task: dict[str, Any], agent: str, resumed: bool) -> str:
+    """The parent session this launch forks, or "". Only a Claude worker's first attempt of a
+    steer continuation forks; a retry (a dead or limit-stopped attempt) carries on from its
+    own checkout instead, and a transcript that vanished since the steer falls back to cold."""
+    plan = task.get("steer_resume") or {}
+    sid = str(plan.get("session_id") or "") if plan.get("resume") else ""
+    if agent != "claude" or not CLAUDE_SESSION_ID.match(sid) or resumed or int(task.get("attempt") or 1) > 1:
+        return ""
+    if claude_transcript_path(sid) is None:
+        log(f"{task['id']}: parent session {sid} has no transcript any more; starting a cold worker")
+        return ""
+    return sid
+
+
+def continuation_descendants(task_id: str, payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every non-supplemental continuation chained from `task_id` (children, their children,
+    ...), newest first."""
+    children: dict[str, list[dict[str, Any]]] = {}
+    for row in payload.get("tasks") or []:
+        if row.get("continuation_of") and not row.get("supplemental"):
+            children.setdefault(str(row["continuation_of"]), []).append(row)
+    found, todo, seen = [], [task_id], {task_id}
+    while todo:
+        for child in children.get(todo.pop(), []):
+            if child.get("id") not in seen:
+                seen.add(str(child.get("id")))
+                found.append(child)
+                todo.append(str(child.get("id")))
+    return sorted(found, key=lambda r: str(r.get("created_at") or ""), reverse=True)
+
+
+def continuation_root(row: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    """The first row of `row`'s continuation chain (itself when it continues nothing). A
+    supplemental worker is not a link: it ends the walk."""
+    root, seen = row, {str(row.get("id") or "")}
+    while root.get("continuation_of") and not root.get("supplemental"):
+        parent = ledger.find_task(payload, str(root["continuation_of"]))
+        if parent is None or str(parent.get("id")) in seen:
+            break
+        seen.add(str(parent["id"]))
+        root = parent
+    return root
+
+
+def _ended_at(row: dict[str, Any]) -> datetime | None:
+    return ledger.parse_iso(row.get("finished_at") or row.get("updated_at"))
+
+
+def steer_chain_target(row: dict[str, Any], payload: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any] | None:
+    """The race guard for a steer on a terminal row, over its whole chain (root and every
+    continuation, siblings included). {"action": "redirect", "task_id"} when another row of
+    the chain is still starting or running: the steer goes to it (message or queue), never a
+    second worker on the same work. {"action": "chain", "task_id"} when a row of the chain
+    newer than the named one finished within steer_chain_window_minutes: the new
+    continuation continues that one. None otherwise."""
+    named = str(row.get("id") or "")
+    root = continuation_root(row, payload)
+    chain = [r for r in [root, *continuation_descendants(str(root.get("id") or ""), payload)] if str(r.get("id")) != named]
+    live = sorted((r for r in chain if str(r.get("status") or "") not in ledger.TERMINAL_STATUSES),
+                  key=lambda r: str(r.get("created_at") or ""), reverse=True)
+    if live:
+        return {"action": "redirect", "task_id": str(live[0]["id"]), "status": str(live[0].get("status") or ""),
+                "reason": f"{named}'s chain already has a continuation in progress ({live[0]['id']}, {live[0].get('status')})"}
+    newer = [r for r in chain if str(r.get("created_at") or "") > str(row.get("created_at") or "")
+             and str(r.get("status") or "") != "cancelled" and _ended_at(r) is not None]
+    if not newer:
+        return None
+    newest = max(newer, key=lambda r: _ended_at(r))   # type: ignore[arg-type, return-value]
+    try:
+        window = max(0.0, float(cfg.get("steer_chain_window_minutes", DEFAULTS["steer_chain_window_minutes"])))
+    except (TypeError, ValueError):
+        window = float(DEFAULTS["steer_chain_window_minutes"])
+    age = (now() - _ended_at(newest)).total_seconds()   # type: ignore[operator]
+    if age > window * 60:
+        return None
+    return {"action": "chain", "task_id": str(newest["id"]), "status": str(newest.get("status") or ""),
+            "reason": f"{named}'s newest continuation {newest['id']} finished {int(age)} s ago; continuing it instead"}
+
+
+def freshest_session_row(parent: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    """The row whose session a continuation of `parent` forks: the newest finished
+    continuation in `parent`'s own lineage (it was forked from `parent`, so it knows
+    `parent`'s work and its own), else `parent` itself. A fork of a stale parent would not
+    know what its later continuations changed."""
+    done = [r for r in continuation_descendants(str(parent.get("id") or ""), payload)
+            if str(r.get("status") or "") in ledger.TERMINAL_STATUSES and r.get("status") != "cancelled"]
+    return done[0] if done else parent
+
+
+@contextmanager
+def steer_chain_lock(row: dict[str, Any]) -> Iterator[None]:
+    """One steer at a time per continuation chain, from the race check to the new row's
+    continuation_of write, so two steers sent together (CoS and a CoS Review reply, or CoS
+    and Launchpad) never both start a continuation."""
+    root = str(continuation_root(row, ledger.load_payload()).get("id") or row.get("id") or "unknown")
+    LOCKS.mkdir(parents=True, exist_ok=True)
+    with (LOCKS / f"steer-chain-{root}.lock").open("w") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
 
 
 def steer_decision(row: dict[str, Any] | None, agents: dict[str, dict[str, Any]],
@@ -4934,28 +5326,136 @@ def command_steer(args: argparse.Namespace) -> int:
         # The row went terminal between the decision and the write: continue it instead.
         row = ledger.find_task(ledger.load_payload(), args.task_id) or {}
         decision = {**decision, "action": "continuation", "status": str(row.get("status") or decision["status"])}
-    log(f"steer on terminal row {args.task_id} ({decision['status']}): dispatching a continuation")
+    return steer_terminal_row(args, row or {}, decision, slug, text)
+
+
+def run_captured(func: Any, ns: argparse.Namespace) -> tuple[int, dict[str, Any]]:
+    """Run a command_* function and return (exit code, its last JSON line)."""
+    out = io.StringIO()
+    with redirect_stdout(out):
+        code = func(ns)
+    lines = out.getvalue().strip().splitlines()
+    try:
+        return code, (json.loads(lines[-1]) if lines else {})
+    except ValueError:
+        return code, {"status": "failed", "reason": lines[-1][:300] if lines else "no output"}
+
+
+def steer_terminal_row(args: argparse.Namespace, row: dict[str, Any], decision: dict[str, Any], slug: str,
+                       text: str) -> int:
+    """A steer on a finished row. In order: another row of its chain
+    that is still live takes the steer (race guard); --record-only records the ruling and
+    starts nothing; otherwise one continuation starts, chained onto the newest continuation
+    when that one just finished, and forking the freshest finished session when it can.
+    One steer per chain runs this at a time (steer_chain_lock)."""
+    if getattr(args, "steer_redirected_from", None):
+        # The redirect target ended between the race check and the queue write: the outer
+        # call holds this chain's lock, so continue that target here without the guard.
+        return _steer_terminal_row(args, row, decision, slug, text, guard=False)
+    with steer_chain_lock(row):
+        fresh = ledger.find_task(ledger.load_payload(), args.task_id) or row
+        return _steer_terminal_row(args, fresh, decision, slug, text, guard=True)
+
+
+REDIRECT_DELIVERED = {"steer-queued", "delivered", "message"}
+
+
+def _steer_terminal_row(args: argparse.Namespace, row: dict[str, Any], decision: dict[str, Any], slug: str,
+                        text: str, guard: bool) -> int:
+    cfg = config()
+    lead = task_lead(args.task_id, slug)
+    payload = ledger.load_payload()
+    chain = steer_chain_target(row, payload, cfg) if guard else None
+    if chain and chain["action"] == "redirect":
+        log(f"steer on terminal row {args.task_id}: {chain['reason']}; sending it there")
+        ns = argparse.Namespace(**{**vars(args), "task_id": chain["task_id"], "steer_redirected_from": args.task_id})
+        code, result = run_captured(command_steer, ns)
+        result.update(redirected_from=args.task_id, chain=chain)
+        if result.get("message") and result.get("status") in REDIRECT_DELIVERED:
+            # Only a steer that reached the live row says "no new worker"; one whose target
+            # ended mid-redirect started a continuation, and its own line says so.
+            result["message"] = (f"{lead} had already ended ({decision['status']}) and its continuation "
+                                 f"{chain['task_id']} is already {chain['status']}, so the steer went to that one, "
+                                 f"no new worker: {result['message']}")
+        print(json.dumps(result))
+        return code
+    if getattr(args, "record_only", False):
+        target = row
+        if chain and chain["action"] == "chain":
+            # The newest continuation, finished moments ago, holds the open question and ruling to-do.
+            target = ledger.find_task(payload, chain["task_id"]) or row
+        return record_only_steer(args, row, target, decision, slug, text)
+    parent_id, parent = args.task_id, row
+    if chain and chain["action"] == "chain":
+        parent_id = chain["task_id"]
+        parent = ledger.find_task(payload, parent_id) or row
+        log(f"steer on terminal row {args.task_id}: {chain['reason']}")
+    source = freshest_session_row(parent, payload)
+    plan = steer_resume_plan(source, cfg)
+    log(f"steer on terminal row {args.task_id} ({decision['status']}): dispatching a continuation of {parent_id} "
+        + (f"that forks the session of {source.get('id')}" if plan["resume"] else f"from a cold start ({plan.get('reason')})"))
     note_owner_action_steer(args.task_id, text)
     prompt = (f"Steer on {args.task_id} ({slug}), continued because that row is "
               f"{decision['status']} and its tab is reaped:\n\n{text}")
+    if parent_id != args.task_id:
+        prompt = (f"Steer on {args.task_id} ({slug}), continued from its newest continuation {parent_id}, which "
+                  f"finished moments ago:\n\n{text}")
     ns = argparse.Namespace(prompt=[prompt], origin=args.origin, workstream=None, task_id=None, request_id=None,
-                            delivery=None, depends_on=[], continuation_of=args.task_id, force_redispatch=False,
-                            retire_parent_ask=True, supplemental=False)
-    out = io.StringIO()
-    with redirect_stdout(out):
-        code = command_dispatch(ns)
-    lines = out.getvalue().strip().splitlines()
-    try:
-        result = json.loads(lines[-1]) if lines else {}
-    except ValueError:
-        result = {"status": "failed", "reason": lines[-1][:300] if lines else "no output"}
+                            delivery=None, depends_on=[], continuation_of=parent_id, force_redispatch=False,
+                            retire_parent_ask=True, supplemental=False,
+                            steer_resume={k: v for k, v in plan.items() if k != "reason"} if plan["resume"] else None)
+    code, result = run_captured(command_dispatch, ns)
+    if parent_id != args.task_id:
+        retire_review_ask(args.task_id, by=f"dispatch:{args.origin}",
+                          reason=f"handled in chat: continued as {result.get('task_id')}: {' '.join(text.split())[:120]}")
     result["steer"] = decision
-    # The surface replies with this one line, so it says the steer started new work on a finished task.
-    if result.get("message"):
-        result["message"] = (f"{task_lead(args.task_id, slug)} had already ended ({decision['status']}), "
-                             f"so this steer started a continuation: {result['message']}")
+    result["resume"] = {k: v for k, v in plan.items() if k in ("resume", "session_id", "from_task", "context_tokens", "reason")}
+    if chain:
+        result["chain"] = chain
+    # The surface replies with this one line, so it says what the steer did on a finished task.
+    if result.get("message") and result.get("status") != "failed":
+        via = f" (continuing {parent_id}, which finished moments ago)" if parent_id != args.task_id else ""
+        if result.get("launch") == "owner-tab":
+            # An open, idle owner tab takes the work before any worker opens.
+            what = f"so this steer went to the open owner tab{via}, no new worker"
+        else:
+            how = ("resumes its session with full context" if plan["resume"]
+                   else f"starts fresh because {plan.get('reason')}")
+            what = f"so this steer started a continuation that {how}{via}"
+        result["message"] = f"{lead} had already ended ({decision['status']}), {what}: {result['message']}"
     print(json.dumps(result))
     return code
+
+
+def record_only_steer(args: argparse.Namespace, named: dict[str, Any], target: dict[str, Any], decision: dict[str, Any],
+                      slug: str, text: str) -> int:
+    """--record-only on a finished row: a hold, an ack, a ruling or a
+    note that needs no work is recorded and nothing is spawned. The ruling goes on the
+    target row (the named row, or its newest continuation when that one finished moments
+    ago) and under the owner decisions heading of the workstream's CONTEXT.md on main.
+    Only once it is recorded are the open worker questions answered, the owner's ruling
+    to-dos closed and the CoS Review asks retired, on the target and the named row."""
+    tid = str(target.get("id") or args.task_id)
+    ok, ledger_out, context = record_ruling(target, text, f"the owner via {args.origin} steer")
+    if ok:
+        for row_id in dict.fromkeys([tid, args.task_id]):
+            mark_worker_question_answered(row_id, text)
+            note_owner_action_steer(row_id, text)
+            retire_review_ask(row_id, by=f"dispatch:{args.origin}",
+                              reason=f"handled in chat: recorded, no worker: {' '.join(text.split())[:120]}")
+    log(f"record-only steer on terminal row {args.task_id} ({decision['status']}): "
+        f"{'recorded on ' + tid if ok else 'not recorded'}, nothing spawned "
+        f"(context {'recorded' if context.get('recorded') else context.get('reason')})")
+    lead = task_lead(args.task_id, slug)
+    on = "the row" if tid == args.task_id else f"its newest continuation {tid}"
+    where = (f"on {on} and in the {steer_worker_name(slug)} CONTEXT" if context.get("recorded")
+             else f"on {on} ({context.get('reason') or 'CONTEXT not written'})")
+    message = (f"{lead} had already ended ({decision['status']}); steer recorded {where}, no worker started" if ok
+               else f"{lead} steer not recorded: {ledger_out.get('error') or 'ledger annotate failed'}; no worker started")
+    print(json.dumps({"status": "recorded" if ok else "failed", "delivered": False, "recorded": ok, "spawned": False,
+                      "task_id": args.task_id, "recorded_on": tid, "workstream": slug, "steer": decision,
+                      "ledger": ledger_out, "context": context, "message": message}))
+    return 0 if ok else 1
 
 
 def command_release(args: argparse.Namespace) -> int:
@@ -8235,6 +8735,10 @@ def main() -> int:
                          "instead of queuing the steer (default: queue)")
     st.add_argument("--no-deliver", action="store_true",
                     help="never deliver the steer by cmux agent message; print the old status message reply")
+    st.add_argument("--record-only", action="store_true",
+                    help="a hold, ack, ruling or note with no work: on a finished row, record it "
+                         "on the ledger row and the workstream CONTEXT, answer the row's open question and ruling to-do, "
+                         "and start no worker; a live or not-started row still gets the steer as usual")
     st.add_argument("prompt", nargs="+")
     st.set_defaults(func=command_steer)
     ds = sub.add_parser("deliver-steers", help="deliver queued steers to workers that have started (ack/heartbeat spawn "

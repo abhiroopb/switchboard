@@ -61,6 +61,69 @@ def is_link(path: str | os.PathLike[str]) -> bool:
     return os.path.islink(path) or is_junction(path)
 
 
+# Windows reserved device names. Win32 reads `C:\x\nul` as the NUL device, not a file
+# in C:\x, so os.path.lexists() is True with no file there and unlink fails. Git Bash
+# makes such files for real: `cmd > nul` writes a file named nul (MSYS uses the NT API),
+# and MSYS turns a /dev/null argument to a native program into `nul`. Which names
+# Win32 maps depends on the Windows version (Windows 11 maps only NUL in a folder;
+# Windows 10 also CON, PRN, AUX, COM1-9, LPT1-9, with or without an extension), so
+# device_name() asks Win32 itself (GetFullPathNameW) instead of keeping a list.
+RESERVED_NAME_RE = re.compile(
+    r"^(con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3]|conin\$|conout\$)(\..*)?$", re.I)
+
+
+def is_reserved_name(name: str) -> bool:
+    """True for a name some Windows version reserves (nul, CON.txt, com1, `nul .`). Any OS."""
+    return bool(RESERVED_NAME_RE.match(name.rstrip(" .")))
+
+
+def device_name(path: str | os.PathLike[str]) -> str | None:
+    """On Windows, the device Win32 reads `path` as (`nul` for `C:\\x\\nul`); None for
+    an ordinary path, a path already in `\\\\?\\` form, and always off Windows."""
+    raw = os.fspath(path)
+    if not is_windows() or raw.replace("/", "\\").startswith(("\\\\?\\", "\\\\.\\")):
+        return None
+    if not is_reserved_name(os.path.basename(raw.rstrip("\\/"))):
+        return None
+    full = os.path.abspath(raw)
+    return full[4:] if full.startswith("\\\\.\\") else None
+
+
+def extended_path(path: str | os.PathLike[str]) -> str:
+    """`path` in `\\\\?\\` form, which Win32 passes through unparsed, so a file named nul
+    is that file. The last name is kept verbatim (abspath would turn it into the
+    device). A path already in that form, and any path off Windows, is returned as is."""
+    raw = os.fspath(path)
+    if not is_windows():
+        return raw
+    if re.match(r"^/[A-Za-z](?:/|$)", raw):   # Git Bash /c/x (a forward-slash path only)
+        raw = raw[1] + ":" + raw[2:]
+    raw = raw.replace("/", "\\")
+    if raw.startswith(("\\\\?\\", "\\\\.\\")):
+        return raw
+    if raw.startswith("\\") and not raw.startswith("\\\\"):   # rooted with no drive: the working folder's drive
+        raw = os.path.splitdrive(os.getcwd())[0] + raw
+    # Joined and normalised as text, never through GetFullPathNameW, which would turn
+    # any folder named nul on the way (C:\x\nul\aux) into the device.
+    drive, rest = os.path.splitdrive(raw)
+    if not rest.startswith("\\"):
+        # Relative (`x\nul`) or drive-relative (`D:x\nul`): Win32 keeps a working folder per drive.
+        cwd = os.getcwd()
+        base = cwd if not drive or os.path.splitdrive(cwd)[0].lower() == drive.lower() else os.path.abspath(drive)
+        raw = os.path.join(base, rest)
+    full = os.path.normpath(raw).rstrip("\\") or raw
+    if full.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + full[2:]
+    return "\\\\?\\" + (full + "\\" if re.fullmatch(r"[A-Za-z]:", full) else full)
+
+
+def real_path(path: str | os.PathLike[str]) -> str:
+    """The form that names the file on disk: `\\\\?\\` form for a reserved device name
+    (Windows), otherwise `path` unchanged."""
+    raw = os.fspath(path)
+    return extended_path(raw) if device_name(raw) else raw
+
+
 def points_into(path: str | os.PathLike[str], root: str | os.PathLike[str]) -> bool:
     """True when `path` is a link whose real target lies inside `root`."""
     return is_link(path) and os.path.realpath(path).startswith(os.path.realpath(root) + os.sep)
@@ -292,7 +355,7 @@ def rmtree(path: str | os.PathLike[str], ignore_errors: bool = False) -> None:
     junction: each link is deleted on its own and its target is left alone. A path
     that is itself a link is unlinked, not emptied. A read-only file is made
     writable and retried (Windows refuses to delete it otherwise)."""
-    root = os.fspath(path)
+    root = real_path(path)
     try:
         if is_link(root):
             remove_link(root)
@@ -313,17 +376,18 @@ def _remove_dir(directory: str, ignore_errors: bool) -> None:
             return
         raise
     for entry in entries:
+        target = real_path(entry.path)   # a file named nul (Windows) is removed as that file, not the device
         try:
-            if is_link(entry.path):
-                remove_link(entry.path)
+            if is_link(target):
+                remove_link(target)
             elif entry.is_dir(follow_symlinks=False):
-                _remove_dir(entry.path, ignore_errors)
+                _remove_dir(target, ignore_errors)
             else:
                 try:
-                    os.unlink(entry.path)
+                    os.unlink(target)
                 except PermissionError:
-                    _make_writable(entry.path)
-                    os.unlink(entry.path)
+                    _make_writable(target)
+                    os.unlink(target)
         except OSError:
             if not ignore_errors:
                 raise

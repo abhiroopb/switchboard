@@ -54,8 +54,12 @@ class _Vault(unittest.TestCase):
         self.wt = self.main / ".amp" / "worktrees" / "rt-abc"
         (self.wt / "workstreams" / "demo" / "assets").mkdir(parents=True)
         (self.main / "workstreams" / "other" / "assets").mkdir(parents=True)
-        self._env = {k: os.environ.get(k) for k in ("SWITCHBOARD_VAULT_ROOT", "SWITCHBOARD_COMPARE_ROOT", "SWITCHBOARD_WORKTREES_DIR")}
+        self._env = {k: os.environ.get(k) for k in ("SWITCHBOARD_VAULT_ROOT", "SWITCHBOARD_COMPARE_ROOT", "SWITCHBOARD_WORKTREES_DIR",
+                                                      "SWITCHBOARD_NOTE_LINK")}
         os.environ["SWITCHBOARD_VAULT_ROOT"] = str(self.main)
+        # file:// links whatever the host runs: under wmux with the note-links bridge up,
+        # links would otherwise render as 127.0.0.1:7472/c/<id> (test_compare_links covers that).
+        os.environ["SWITCHBOARD_NOTE_LINK"] = "file"
         os.environ["SWITCHBOARD_COMPARE_ROOT"] = str(self.wt)
         os.environ.pop("SWITCHBOARD_WORKTREES_DIR", None)
 

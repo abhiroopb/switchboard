@@ -685,6 +685,222 @@ def sweep(tasks: list[dict[str, Any]], *, repo_root: str | os.PathLike[str], wor
                    killer=killer, dry_run=dry_run, log=log)
 
 
+# --- dev servers owned by a tab (prototyping react-starter) ---------------------------
+#
+# A react-starter server started inside an owner's interview tab, not a worker, has no
+# task id tying it to anything, so the reap sweep above never sees it.
+# `session.py react` now writes one record per port, <interview home>/dev-servers/port-<n>.json:
+# the server pid, its start time, the port, and its owner (the mux tab id and the agent's pid
+# and session). The sweep stops a recorded server, and frees its port, only when:
+#   * its tab was recorded and the mux tab list, read successfully, no longer has it; or
+#   * no tab was recorded and its agent process is gone (the session ended).
+# Never stopped: a record marked manual (started by hand outside an agent, or --keep), a
+# server whose tab is still open or whose tab list cannot be read, one whose agent still runs
+# when no tab was recorded, a pid whose start time does not match the record (reused), and any
+# process plain npm started, which has no record. A record whose server is gone is dropped.
+
+DEV_RECORD_SLACK_S = 15.0   # the server's creation time vs the record's started_at
+
+
+def dev_server_registries() -> list[Path]:
+    """Where session.py writes its records: <interview home>/dev-servers, for the interview
+    homes session.py can use (AIP_HOME, the Windows default, the legacy root), plus any
+    SWITCHBOARD_DEV_SERVER_REGISTRY folders (os.pathsep separated)."""
+    homes: list[Path] = []
+    if os.environ.get("AIP_HOME"):
+        homes.append(Path(os.environ["AIP_HOME"]))
+    if os.name == "nt" and os.environ.get("LOCALAPPDATA"):
+        homes.append(Path(os.environ["LOCALAPPDATA"]) / "switchboard" / "prototyping")
+    homes.append(Path.home() / "Documents" / "Demos" / "prototyping")
+    dirs = [h / "dev-servers" for h in homes]
+    dirs += [Path(x) for x in (os.environ.get("SWITCHBOARD_DEV_SERVER_REGISTRY") or "").split(os.pathsep) if x.strip()]
+    out: list[Path] = []
+    for d in dirs:
+        if d not in out:
+            out.append(d)
+    return out
+
+
+def read_dev_server_records(dirs: Iterable[Path]) -> list[tuple[Path, dict[str, Any]]]:
+    found = []
+    for d in dirs:
+        try:
+            files = sorted(Path(d).glob("port-*.json"))
+        except OSError:
+            continue
+        for f in files:
+            try:
+                rec = json.loads(f.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if isinstance(rec, dict):
+                found.append((f, rec))
+    return found
+
+
+def _num(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _tree_leaves_first(root: Proc, procs: list[Proc]) -> list[Proc]:
+    children: dict[int, list[Proc]] = {}
+    for p in procs:
+        children.setdefault(p.ppid, []).append(p)
+    order, queue, seen = [], [root], {root.pid}
+    while queue:
+        cur = queue.pop(0)
+        order.append(cur)
+        for child in children.get(cur.pid, []):
+            if child.pid in seen or (child.created is not None and cur.created is not None and child.created < cur.created):
+                continue   # a reused PID is never walked
+            seen.add(child.pid)
+            queue.append(child)
+    return list(reversed(order))
+
+
+def owned_dev_server_plan(records: list[tuple[Path, dict[str, Any]]], procs: list[Proc],
+                          open_workspaces: set[str] | None) -> dict[str, Any]:
+    """Pure: which recorded servers to stop. `open_workspaces` is the set of open mux tab
+    ids, or None when the list could not be read. Returns {"stop": victims (execute()'s
+    shape), "spared": [...], "drop": [record files whose server is gone], "servers": [...]}."""
+    by_pid = {p.pid: p for p in procs}
+    me = by_pid.get(os.getpid())
+    never = {os.getpid()} | ({a.pid for a in _ancestors(me, by_pid)} if me else set())
+    stop: list[dict[str, Any]] = []
+    spared: list[dict[str, Any]] = []
+    drop: list[str] = []
+    servers: list[dict[str, Any]] = []
+    for path, rec in records:
+        port, pid, started = rec.get("port"), int(_num(rec.get("pid")) or 0), _num(rec.get("started_at"))
+        owner = rec.get("owner") if isinstance(rec.get("owner"), dict) else {}
+        label = f"react-starter on port {port}"
+        if rec.get("manual") is not False:
+            # Only a record that says manual: false is ever stopped; a missing or odd value is kept.
+            spared.append({"record": str(path), "why": f"{label}: {rec.get('why_manual') or 'started by hand'}"})
+            continue
+        server = by_pid.get(pid)
+        if server is None:
+            drop.append(str(path))   # the server already ended
+            continue
+        if started is None or server.created is None:
+            spared.append({"record": str(path), "why": f"{label}: start time unknown, a reused pid cannot be ruled out"})
+            continue
+        if abs(server.created - started) > DEV_RECORD_SLACK_S:
+            drop.append(str(path))   # the recorded server ended and its pid was reused
+            continue
+        tab = str(owner.get("workspace_id") or "")
+        agent_pid = int(_num(owner.get("agent_pid")) or 0)
+        if tab:
+            if open_workspaces is None:
+                spared.append({"record": str(path), "why": f"{label}: tab list unreadable"})
+                continue
+            if tab in open_workspaces:
+                spared.append({"record": str(path), "why": f"{label}: its tab is still open"})
+                continue
+            reason = f"{label}: its tab closed"
+        elif agent_pid:
+            agent = by_pid.get(agent_pid)
+            alive = agent is not None and (agent.created is None or agent.created <= started + 1)
+            if alive:
+                spared.append({"record": str(path), "why": f"{label}: its agent session still runs"})
+                continue
+            reason = f"{label}: its agent session ended"
+        else:
+            spared.append({"record": str(path), "why": f"{label}: no owner recorded"})
+            continue
+        tree = [p for p in _tree_leaves_first(server, procs)
+                if p.pid not in never and norm_name(p.name) in KILLABLE and not protected(p)]
+        owner_task = str(owner.get("task_id") or "") or "prototyping"
+        for p in tree:
+            stop.append({"pid": p.pid, "name": p.name, "task_id": owner_task, "reason": reason, "cmdline": p.cmdline,
+                         "created": p.created, "record": str(path), "port": port})
+        servers.append({"record": str(path), "port": port, "pid": pid, "reason": reason, "processes": len(tree)})
+    return {"stop": stop, "spared": spared, "drop": drop, "servers": servers}
+
+
+def _answers(host: str, port: Any, timeout: float) -> bool:
+    import socket
+    try:
+        with socket.create_connection((host, int(port)), timeout=timeout):
+            return True
+    except (OSError, ValueError, TypeError):
+        return False
+
+
+def port_free(port: Any, hosts: tuple[str, ...] = ("127.0.0.1", "::1"), timeout: float = 0.5, wait: float = 3.0) -> bool:
+    """True once nothing answers on the port over IPv4 or IPv6 loopback (Vite on Windows may bind
+    ::1 only); a just-stopped server takes a moment to let go."""
+    deadline = time.time() + wait
+    while True:
+        if not any(_answers(h, port, timeout) for h in hosts):
+            return True
+        if time.time() >= deadline:
+            return False
+        time.sleep(0.2)
+
+
+def stop_owned_dev_servers(*, open_workspaces: Callable[[], Any], procs: list[Proc] | None = None,
+                           registries: list[Path] | None = None, log_path: str | os.PathLike[str] | None = None,
+                           killer: Callable[[dict[str, Any]], str] | None = None, dry_run: bool = False,
+                           log: Callable[[str], None] | None = None,
+                           is_port_free: Callable[[Any], bool] | None = None) -> dict[str, Any]:
+    """Sweep step: stop each recorded react-starter server whose tab closed or whose session
+    ended, check its port is free, and drop its record. The tab list is read only when a
+    record needs it. Best effort: nothing is stopped when the process list is empty."""
+    if disabled():
+        return {"stopped": 0, "skipped": "SWITCHBOARD_LEFTOVER_SWEEP=off"}
+    records = read_dev_server_records(registries if registries is not None else dev_server_registries())
+    if not records:
+        return {"stopped": 0}
+    procs = snapshot() if procs is None else procs
+    if not procs:
+        return {"stopped": 0, "records": len(records)}
+    need_tabs = any(r.get("manual") is False and isinstance(r.get("owner"), dict) and r["owner"].get("workspace_id")
+                    for _, r in records)
+    try:
+        listed = open_workspaces() if need_tabs else None
+    except Exception:   # an unreadable tab list stops nothing
+        listed = None
+    tabs = {str(t) for t in listed} if listed else None   # an empty list is a failed read: CoS is always open
+    planned = owned_dev_server_plan(records, procs, tabs)
+    result = execute({"stop": planned["stop"], "spared": planned["spared"]}, context="dev-server owner sweep",
+                     log_path=log_path, killer=killer, dry_run=dry_run, log=log)
+    failed = {r["pid"] for r in result["records"] if r["result"] not in ("stopped", "dry run")}
+    is_port_free = is_port_free or port_free
+    say = log or (lambda msg: print(f"task_leftovers: {msg}", file=sys.stderr))
+    servers = []
+    for srv in planned["servers"]:
+        victims = {v["pid"] for v in planned["stop"] if v["record"] == srv["record"]}
+        clean = not dry_run and not (victims & failed)
+        srv = {**srv, "port_free": bool(clean and is_port_free(srv["port"]))}
+        if clean:
+            planned["drop"].append(srv["record"])
+            if not srv["port_free"]:
+                say(f"port {srv['port']} still answers after its react-starter server stopped; something else holds it")
+        servers.append(srv)
+    seen = {str(path): (rec.get("pid"), rec.get("started_at")) for path, rec in records}
+    dropped = []
+    if not dry_run:
+        for f in planned["drop"]:
+            try:
+                now = json.loads(Path(f).read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                now = None
+            if isinstance(now, dict) and (now.get("pid"), now.get("started_at")) != seen.get(f):
+                continue   # `react` wrote a new record for this port meanwhile: keep it
+            try:
+                Path(f).unlink()
+                dropped.append(f)
+            except OSError:
+                pass
+    return {**result, "servers": servers, "dropped": dropped, "spared_servers": planned["spared"]}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -692,6 +908,8 @@ def main(argv: list[str] | None = None) -> int:
     scan.add_argument("--task-id", help="only this task's worktree (path rule), as at worktree removal")
     scan.add_argument("--worktree", help="that task's worktree path (default <worktrees>/<task-id>)")
     scan.add_argument("--apply", action="store_true", help="stop them")
+    dev = sub.add_parser("dev-servers", help="recorded react-starter servers whose tab closed (dry run unless --apply)")
+    dev.add_argument("--apply", action="store_true", help="stop them")
     args = parser.parse_args(argv)
 
     import subprocess as sp
@@ -708,7 +926,12 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     log_path = state / "worker-dispatch" / "leftover-stops.jsonl"
     common = dict(repo_root=main_root, worktrees_root=worktrees, log_path=log_path, dry_run=not args.apply)
-    if args.task_id:
+    if args.cmd == "dev-servers":
+        def tabs() -> set[str]:
+            import dispatch  # noqa: E402  (its retried cmux/wmux tab list)
+            return {str(w.get("id")) for w in dispatch.cmux_workspaces() if w.get("id")}
+        result = stop_owned_dev_servers(open_workspaces=tabs, log_path=log_path, dry_run=not args.apply)
+    elif args.task_id:
         result = stop_in_worktree(args.task_id, args.worktree or worktrees / args.task_id, tasks, **common)
     else:
         result = sweep(tasks, **common)

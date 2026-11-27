@@ -887,6 +887,7 @@ def load_installer():
     return module
 
 
+@unittest.skipUnless(INSTALL_PY.is_file(), "the installer ships only in the kit, not in an install")
 class LocalIsProtected(unittest.TestCase):
     """Install and cleanup can never delete local/."""
 
@@ -968,6 +969,7 @@ class LocalIsProtected(unittest.TestCase):
                 self.assertNotRegex(line, r"git\s+clean\s+-[a-z]*x", f"{script.name}:{number} would delete ignored files")
 
 
+@unittest.skipUnless(INSTALL_PY.is_file(), "the installer ships only in the kit, not in an install")
 class ReinstallSimulation(unittest.TestCase):
     """A lost machine: scratch home, a moved switchboard folder, the backup only on Dropbox.
 

@@ -113,6 +113,8 @@ interface SimpleCommand {
   heredocs: Heredoc[]
   /** Redirection targets (`> file`): never commands, but they may hold substitutions. */
   redirects: Word[]
+  /** The operator of each redirect, same order (`>`, `2>` is `>`, `<<<`). */
+  redirectOps?: string[]
 }
 
 const CONTROL_OPS = new Set([';', '&&', '||', '|', '|&', '&', '\n', '(', ')', ';;'])
@@ -243,11 +245,11 @@ function readWord(s: string, i: number): Word {
 /** Split a command string into simple commands, with heredoc bodies attached to their owner. */
 function parse(s: string): SimpleCommand[] {
   const commands: SimpleCommand[] = []
-  let cur: SimpleCommand = { words: [], heredocs: [], redirects: [] }
+  let cur: SimpleCommand = { words: [], heredocs: [], redirects: [], redirectOps: [] }
   const pending: Array<{ cmd: SimpleCommand; delim: string; stripTabs: boolean }> = []
   const flush = () => {
     if (cur.words.length || cur.heredocs.length || cur.redirects.length) commands.push(cur)
-    cur = { words: [], heredocs: [], redirects: [] }
+    cur = { words: [], heredocs: [], redirects: [], redirectOps: [] }
   }
   let i = 0
   while (i < s.length) {
@@ -300,6 +302,7 @@ function parse(s: string): SimpleCommand[] {
         pending.push({ cmd: cur, delim: target.value, stripTabs: op === '<<-' })
       } else {
         cur.redirects.push(target)
+        cur.redirectOps!.push(op)
       }
       continue
     }
@@ -852,11 +855,221 @@ export function helperWord(helper: string): string | null {
 
 export function rewriteToTrash(cmd: string, invocations: RmInvocation[], helper: string): string | null {
   if (invocations.some(inv => !inv.rewritable || inv.wordStart < 0 || inv.wordEnd <= inv.wordStart)) return null
+  // Never rewrite text this parser cannot read to its end; the caller then rejects or asks.
+  if (!shellTextComplete(cmd)) return null
   let out = cmd
   for (const inv of [...invocations].sort((a, b) => b.wordStart - a.wordStart)) {
     out = out.slice(0, inv.wordStart) + helper + out.slice(inv.wordEnd)
   }
-  return out
+  return shellTextComplete(out) ? out : null
+}
+
+const BACKSLASH = '\x5c'
+
+/**
+ * True when every quote, backtick, `$(…)`, `$((…))`, `${…}`, `$'…'`, and heredoc in `s`
+ * closes before the end of the text, as bash would read it. A rewriter that edits command
+ * text (Rule 3's Trash helper, Rule 3b's nul fix) runs only on text that passes this, and
+ * checks its own output too, so it never hands Claude a command with an open quote
+ *. It answers one question, "does the text close", and is not a syntax
+ * check. A heredoc that ends at end of file counts as open (bash only warns), and any
+ * scanner error counts as open, so the rewriters leave such text alone.
+ */
+export function shellTextComplete(s: string): boolean {
+  try {
+    return new ShellCloseScanner(s).code(0, '') === s.length
+  } catch {
+    return false
+  }
+}
+
+const SHELL_WORD_BREAK = /[\s;&|()<>]/
+
+/** Each method returns the index after its closing mark, or -1 when the text ends first. */
+class ShellCloseScanner {
+  constructor(private readonly s: string) {}
+
+  private wordStart(j: number): boolean { return j === 0 || SHELL_WORD_BREAK.test(this.s[j - 1]) }
+
+  private single(j: number): number { const k = this.s.indexOf("'", j + 1); return k < 0 ? -1 : k + 1 }
+
+  /** `$'…'` from the `$`: backslash escapes count. */
+  private ansiC(j: number): number {
+    for (let k = j + 2; k < this.s.length; k++) {
+      if (this.s[k] === BACKSLASH) { k++; continue }
+      if (this.s[k] === "'") return k + 1
+    }
+    return -1
+  }
+
+  private backtick(j: number): number {
+    for (let k = j + 1; k < this.s.length; k++) {
+      if (this.s[k] === BACKSLASH) { k++; continue }
+      if (this.s[k] === '`') return k + 1
+    }
+    return -1
+  }
+
+  /** A `$…` expansion at `j` (pointing at `$`); null when `$` starts none. */
+  private dollar(j: number, inDouble: boolean): number | null {
+    const n = this.s[j + 1]
+    if (n === '(' && this.s[j + 2] === '(') return this.arith(j + 3)
+    if (n === '(') return this.code(j + 2, ')')
+    if (n === '{') return this.param(j + 2, inDouble)
+    if (n === "'" && !inDouble) return this.ansiC(j)
+    return null
+  }
+
+  private double(j: number): number {
+    let k = j + 1
+    while (k < this.s.length) {
+      const c = this.s[k]
+      if (c === BACKSLASH) { k += 2; continue }
+      if (c === '"') return k + 1
+      if (c === '`') { k = this.backtick(k); if (k < 0) return -1; continue }
+      if (c === '$') { const e = this.dollar(k, true); if (e === null) { k++; continue } if (e < 0) return -1; k = e; continue }
+      k++
+    }
+    return -1
+  }
+
+  /** The body of `${…}` from `j`: single quotes are quotes only outside double quotes. */
+  private param(j: number, inDouble: boolean): number {
+    let depth = 0
+    let k = j
+    while (k < this.s.length) {
+      const c = this.s[k]
+      if (c === BACKSLASH) { k += 2; continue }
+      if (c === "'" && !inDouble) { k = this.single(k); if (k < 0) return -1; continue }
+      if (c === '"') { k = this.double(k); if (k < 0) return -1; continue }
+      if (c === '`') { k = this.backtick(k); if (k < 0) return -1; continue }
+      if (c === '$') { const e = this.dollar(k, inDouble); if (e === null) { k++; continue } if (e < 0) return -1; k = e; continue }
+      if (c === '{') depth++
+      else if (c === '}') { if (depth === 0) return k + 1; depth-- }
+      k++
+    }
+    return -1
+  }
+
+  /** The body of `$((…))` or `((…))` from `j` (after the two parens): no heredocs, `<<` shifts. */
+  private arith(j: number): number {
+    let depth = 0
+    let k = j
+    while (k < this.s.length) {
+      const c = this.s[k]
+      if (c === BACKSLASH) { k += 2; continue }
+      if (c === "'") { k = this.single(k); if (k < 0) return -1; continue }
+      if (c === '"') { k = this.double(k); if (k < 0) return -1; continue }
+      if (c === '`') { k = this.backtick(k); if (k < 0) return -1; continue }
+      if (c === '$') { const e = this.dollar(k, false); if (e === null) { k++; continue } if (e < 0) return -1; k = e; continue }
+      if (c === '(') depth++
+      else if (c === ')') {
+        if (depth === 0) return this.s[k + 1] === ')' ? k + 2 : -1
+        depth--
+      }
+      k++
+    }
+    return -1
+  }
+
+  /**
+   * Shell code from `j`. With `close` ')' it ends at the paren that closes a `$(`, and
+   * returns -1 if the text ends first; with '' it reads to the end of the text and returns
+   * its length. Heredocs open inside this code must reach their delimiter line.
+   */
+  code(j: number, close: string): number {
+    const s = this.s
+    const pending: Array<{ delim: string; stripTabs: boolean }> = []
+    let depth = 0
+    let i = j
+    while (i < s.length) {
+      const c = s[i]
+      if (c === BACKSLASH) { i += 2; continue }
+      if (c === '\n') {
+        i++
+        // Heredoc bodies start on the line after their `<<WORD`.
+        while (pending.length) {
+          const h = pending.shift()!
+          let found = false
+          while (i < s.length) {
+            const nl = s.indexOf('\n', i)
+            const lineEnd = nl < 0 ? s.length : nl
+            let line = s.slice(i, lineEnd)
+            if (line.endsWith('\r')) line = line.slice(0, -1)
+            if (h.stripTabs) line = line.replace(/^\t+/, '')
+            i = nl < 0 ? s.length : nl + 1
+            if (line === h.delim) { found = true; break }
+          }
+          if (!found) return -1
+        }
+        continue
+      }
+      if (c === '#' && this.wordStart(i)) { const nl = s.indexOf('\n', i); i = nl < 0 ? s.length : nl; continue }
+      if (c === "'") { i = this.single(i); if (i < 0) return -1; continue }
+      if (c === '"') { i = this.double(i); if (i < 0) return -1; continue }
+      if (c === '`') { i = this.backtick(i); if (i < 0) return -1; continue }
+      if (c === '$') { const e = this.dollar(i, false); if (e === null) { i++; continue } if (e < 0) return -1; i = e; continue }
+      if (c === '(' && s[i + 1] === '(' && this.wordStart(i)) { i = this.arith(i + 2); if (i < 0) return -1; continue }
+      if (c === '<' && s[i + 1] === '<') {
+        if (s[i + 2] === '<' || s[i + 2] === '=') { i += 3; continue }   // here-string, `<<=`
+        let k = i + 2
+        const stripTabs = s[k] === '-'
+        if (stripTabs) k++
+        while (s[k] === ' ' || s[k] === '\t') k++
+        // `<<WORD`, `<<'WORD'`, `<<"WORD"`, `<<\WORD`: the delimiter is the word with quotes removed.
+        let delim = ''
+        while (k < s.length && !SHELL_WORD_BREAK.test(s[k])) {
+          const d = s[k]
+          if (d === "'" || d === '"') { const e = s.indexOf(d, k + 1); if (e < 0) return -1; delim += s.slice(k + 1, e); k = e + 1; continue }
+          if (d === BACKSLASH) { delim += s[k + 1] ?? ''; k += 2; continue }
+          delim += d
+          k++
+        }
+        if (!delim) return -1
+        pending.push({ delim, stripTabs })
+        i = k
+        continue
+      }
+      if (c === '(') depth++
+      else if (c === ')') {
+        if (depth > 0) depth--
+        else if (close === ')') return pending.length ? -1 : i + 1
+      }
+      i++
+    }
+    if (pending.length) return -1
+    return close ? -1 : s.length
+  }
+}
+
+/** Redirect operators that open a file (not `<<<`, which feeds the word itself). */
+const FILE_REDIRECTS = new Set(['>', '>>', '&>', '&>>', '>|', '<', '<>'])
+
+/**
+ * `cmd` with every redirect to `nul` (`> nul`, `2>nul`, `&>NUL`, `>> nul`) pointed at
+ * `/dev/null` instead; null when there is none. In Git Bash a redirect to `nul`
+ * writes a real file named nul in the current folder (MSYS opens it through the NT
+ * API), which Win32 tools then cannot read or delete. Only real
+ * redirect targets change: quoted text, heredoc bodies, and `cmd /c "… >nul"` stay.
+ */
+export function rewriteNulRedirects(cmd: string): string | null {
+  // `(( a > nul ))` and `[[ $a > nul ]]` compare, they do not redirect; the parser cannot
+  // tell `((` apart, so any arithmetic command leaves the whole line as written.
+  if (cmd.includes('((')) return null
+  // Fail open: text whose quotes or heredocs this file cannot read to the end runs as written.
+  if (!/nul/i.test(cmd) || !shellTextComplete(cmd)) return null
+  const spans: Array<{ start: number; end: number }> = []
+  for (const command of parse(cmd)) {
+    if (command.words[0]?.value === '[[') continue
+    command.redirects.forEach((target, n) => {
+      if (!FILE_REDIRECTS.has(command.redirectOps?.[n] ?? '')) return   // `<<< nul` is the text nul
+      if (/^nul:?$/i.test(target.value) && target.subs.length === 0) spans.push({ start: target.start, end: target.end })
+    })
+  }
+  if (!spans.length) return null
+  let out = cmd
+  for (const span of spans.sort((a, b) => b.start - a.start)) out = out.slice(0, span.start) + '/dev/null' + out.slice(span.end)
+  return shellTextComplete(out) ? out : null
 }
 
 /** True on a Windows host. Test seam: SWITCHBOARD_RM_GUARD_PLATFORM names the platform. */

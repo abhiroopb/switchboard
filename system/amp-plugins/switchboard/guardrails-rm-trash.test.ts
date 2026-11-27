@@ -235,3 +235,28 @@ test('CoS steer 3: the delivery gate resolves variables the command assigns', as
   expect(await h.call(bash(`sd=${SCRATCH}; switchboard slack search --query x > $sd/q.json`))).toEqual({ action: 'allow' })
   expect(h.prompt).not.toHaveBeenCalled()
 })
+
+test('Windows: a Git Bash redirect to nul goes to /dev/null, combined with the Trash rewrite', async () => {
+  // `> nul` in Git Bash writes a real file named nul that Win32 tools cannot delete.
+  const saved = process.env.SWITCHBOARD_RM_GUARD_PLATFORM
+  try {
+    process.env.SWITCHBOARD_RM_GUARD_PLATFORM = 'win32'
+    const win = harness()
+    expect(await win.call(bash('git rev-parse HEAD >nul 2>nul && ls', '/c/Users/Pat/proj'))).toEqual({
+      action: 'allow-with-input', input: { cmd: 'git rev-parse HEAD >/dev/null 2>/dev/null && ls', workdir: '/c/Users/Pat/proj' },
+    })
+    expect(logs).toContainEqual(expect.objectContaining({ rule: 'nul-redirect', action: 'rewritten-to-dev-null' }))
+    expect(await win.call(bash('rm -rf /c/Users/Pat/old-work 2>nul'))).toEqual({
+      action: 'allow-with-input', input: { cmd: `${HW} -rf /c/Users/Pat/old-work 2>/dev/null` },
+    })
+    expect((await win.call(bash('printf "%s" "where py >nul" | wc -c'))).input).toBeUndefined()   // quoted text is never rewritten
+    const off = harness({ 'switchboard-guardrails.nul-redirect.disabled': true })
+    expect((await off.call(bash('ls 2>nul'))).input).toBeUndefined()
+    // macOS and Linux have no device named nul: a file of that name is just a file.
+    process.env.SWITCHBOARD_RM_GUARD_PLATFORM = 'darwin'
+    expect((await harness().call(bash('ls 2>nul'))).input).toBeUndefined()
+  } finally {
+    if (saved === undefined) delete process.env.SWITCHBOARD_RM_GUARD_PLATFORM
+    else process.env.SWITCHBOARD_RM_GUARD_PLATFORM = saved
+  }
+})

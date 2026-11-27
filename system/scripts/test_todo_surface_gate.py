@@ -11,6 +11,9 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
+import os
+
+os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"  # todo_cli writes only temp files and makes no calendar call
 
 
 TODO_CLI = Path(__file__).resolve().parents[1] / "skill-overrides" / "todo" / "scripts" / "todo_cli.py"

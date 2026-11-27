@@ -3,7 +3,7 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { analyzeRm, assignedVars, classifyTarget, planRmRf, helperWord, redirectCwds, rewriteToTrash } from './rm-guard'
+import { analyzeRm, assignedVars, classifyTarget, planRmRf, helperWord, redirectCwds, rewriteNulRedirects, rewriteToTrash } from './rm-guard'
 
 // Trash instead of delete, and no false positives on temp or remote deletes.
 // Run: bun test system/amp-plugins/switchboard/rm-guard.test.ts
@@ -320,6 +320,31 @@ test('an escaped helper runs as one word at top level and inside every quoting f
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
+})
+
+// in Git Bash `> nul` writes a real file named nul that Win32 tools cannot delete.
+test('a redirect to nul is pointed at /dev/null, and nothing else changes', () => {
+  expect(rewriteNulRedirects('where py >nul 2>nul')).toBe('where py >/dev/null 2>/dev/null')
+  expect(rewriteNulRedirects('ls x > NUL; echo ok &>nul && cat y >> nul'))
+    .toBe('ls x > /dev/null; echo ok &>/dev/null && cat y >> /dev/null')
+  expect(rewriteNulRedirects('git status 2> "nul" | head')).toBe('git status 2> /dev/null | head')
+  expect(rewriteNulRedirects('x 2>nul: ; y')).toBe('x 2>/dev/null ; y')
+  // Not redirects to nul: quoted text, a .cmd body in a heredoc, cmd.exe's own redirect, other names.
+  for (const cmd of [
+    'echo "where py >nul 2>nul" > run.cmd',
+    "cat > run.cmd <<'EOF'\nwhere py >nul 2>nul\nEOF\necho done",
+    'cmd //c "dir >nul"',
+    'ls > null.txt 2>/dev/null',
+    'ls > ./nul-notes.md',
+    'grep -c nul file.txt',
+    'echo 2>&1',
+    'grep -c x <<< nul',
+    '[[ $a > nul ]] && echo y',
+    '(( a > nul )) && echo y',
+  ]) expect(rewriteNulRedirects(cmd)).toBeNull()
+  expect(rewriteNulRedirects('wc -l < nul')).toBe('wc -l < /dev/null')
+  // A redirect after a heredoc body is still a redirect.
+  expect(rewriteNulRedirects("cat <<'EOF' >nul\nbody >nul\nEOF")).toBe("cat <<'EOF' >/dev/null\nbody >nul\nEOF")
 })
 
 test('in-repo-only invocations are planned for the helper, never the Trash list', () => {

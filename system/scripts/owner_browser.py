@@ -1107,9 +1107,13 @@ class Proxy:
             return None
         if hashable and request_id in self.internal:
             result = message.get("result")
-            callback = self.internal.pop(request_id)
-            if isinstance(result, dict):
-                callback(result)
+            # Popped only after the callback, so shutdown's drain never sees the request
+            # answered before the tab it reports is recorded as ours.
+            try:
+                if isinstance(result, dict):
+                    self.internal[request_id](result)
+            finally:
+                self.internal.pop(request_id, None)
             return None
         with self.state_lock:
             entry = self.pending.pop(request_id, None) if hashable else None
@@ -1255,8 +1259,11 @@ class Proxy:
                 self._send({"jsonrpc": "2.0", "id": request_id, "error": {"code": -32603, "message": CHILD_GONE}})
 
     def _unanswered(self) -> bool:
+        """A client call, or the proxy's own tab listing, is still out. A cancelled new_page
+        leaves pending at once but its tab is found only by the listing that follows: exiting
+        before that answer left the tab open."""
         with self.state_lock:
-            return bool(self.pending)
+            return bool(self.pending) or any(str(key).startswith("internal-") for key in list(self.internal))
 
     def shutdown(self) -> None:
         """Close the tabs this session left open, then end the server. In attach mode it only disconnects."""

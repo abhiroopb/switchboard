@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { helperWord } from './rm-guard'
+import { DOUBLE_QUOTED, HEREDOC } from './test-fixtures/cos-dispatch-shapes'
 
 // In a Claude tab the bridge turns the Rule 3 Trash rewrite
 // into PreToolUse `allow` + updatedInput, so the worker never waits on a
@@ -98,4 +99,20 @@ test('on Windows a delete that cannot be rewritten is refused, never asked', asy
   expect(String(hook.permissionDecisionReason)).toContain('Recycle Bin')
   expect(String(hook.permissionDecisionReason)).toContain('/opt/example')
   expect(ask).toBeNull()
+}, 30_000)
+
+// on Windows the bridge runs Rule 3b (nul) on every Bash call. The two long
+// CoS dispatch shapes must pass with no updatedInput, and a nul tail changes only that redirect.
+test('long CoS dispatch briefs pass through the Windows bridge unchanged', async () => {
+  for (const cmd of [DOUBLE_QUOTED, HEREDOC]) {
+    const { hook, ask } = await preToolUse(cmd, '/c/Users/someone/proj', {}, 'win32')
+    expect(hook.updatedInput).toBeUndefined()
+    expect(hook.permissionDecision ?? 'allow').toBe('allow')
+    expect(ask).toBeNull()
+  }
+}, 60_000)
+
+test('a nul redirect after a long CoS brief is the only thing the bridge changes', async () => {
+  const { hook } = await preToolUse(`${HEREDOC}\nwhere py 2>nul`, '/c/Users/someone/proj', {}, 'win32')
+  expect(hook.updatedInput).toEqual({ command: `${HEREDOC}\nwhere py 2>/dev/null`, description: 'test' })
 }, 30_000)

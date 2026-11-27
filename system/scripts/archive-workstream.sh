@@ -131,7 +131,7 @@ done
 # Refresh the workstreams README table
 if [ -x "$SWITCHBOARD_DIR/system/scripts/render-workstreams-readme.py" ] || \
    [ -f "$SWITCHBOARD_DIR/system/scripts/render-workstreams-readme.py" ]; then
-  python3 "$SWITCHBOARD_DIR/system/scripts/render-workstreams-readme.py" >> "$LOG_FILE" 2>&1 || \
+  python3 "$SWITCHBOARD_DIR/system/scripts/render-workstreams-readme.py" --root "$SWITCHBOARD_DIR" --write >> "$LOG_FILE" 2>&1 || \
     log "warn: render-workstreams-readme.py failed (non-fatal)"
 fi
 

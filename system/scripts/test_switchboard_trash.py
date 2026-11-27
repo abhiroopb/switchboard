@@ -19,6 +19,15 @@ from pathlib import Path
 from unittest import mock
 
 SCRIPT = Path(__file__).resolve().parent / "switchboard-trash.py"
+sys.path.insert(0, str(SCRIPT.parent))
+from lib import winlink  # noqa: E402
+
+windows_only = unittest.skipUnless(os.name == "nt", "Win32 reserved device names exist only on Windows")
+
+
+def _reserved(path: Path) -> str:
+    """`path` in \\\\?\\ form, so a name like nul is a file, never the device."""
+    return winlink.extended_path(str(path))
 
 
 def _can_symlink() -> bool:
@@ -53,6 +62,8 @@ class SwitchboardTrashTest(unittest.TestCase):
         }
 
     def tearDown(self) -> None:
+        if os.name == "nt":   # a file named nul defeats shutil.rmtree; winlink.rmtree reaches it by \\?\
+            winlink.rmtree(self.tmp.name, ignore_errors=True)
         self.tmp.cleanup()
 
     def run_helper(self, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
@@ -563,6 +574,197 @@ class SwitchboardTrashTest(unittest.TestCase):
         self.assertEqual(self.run_helper("-rf", str(target)).returncode, 0)
         [row] = self.rows()
         self.assertEqual(row["trashed_via"], "folder")   # the hermetic run uses SWITCHBOARD_TRASH_DIR
+
+    # ── Windows reserved device names ────────────────────
+    # `rm -rf /dev/null` in Git Bash reached the helper as `nul`; Win32 reads <cwd>\nul as
+    # the NUL device, so it "existed" and the Recycle Bin checks failed on the device.
+    # A real file named nul (Git Bash `cmd > nul` makes one) needs the \\?\ form.
+
+    def test_reserved_names_are_recognised_on_every_os(self) -> None:
+        for name in ("nul", "NUL", "nul.txt", "nul ", "nul.", "con", "prn", "aux.tar.gz", "com1", "LPT9", "conin$"):
+            self.assertTrue(winlink.is_reserved_name(name), name)
+        for name in ("null", "nulx", "console", "com", "lpt", "my-nul", "nul-notes.md", "x.nul"):
+            self.assertFalse(winlink.is_reserved_name(name), name)
+
+    @unittest.skipIf(os.name == "nt", "off Windows only")
+    def test_reserved_names_are_plain_paths_off_windows(self) -> None:
+        self.assertIsNone(winlink.device_name(str(self.home / "nul")))
+        self.assertEqual(winlink.real_path(str(self.home / "nul")), str(self.home / "nul"))
+        target = self.home / "nul"
+        target.write_text("x")
+        self.assertEqual(self.run_helper("-rf", str(target)).returncode, 0)
+        self.assertFalse(target.exists())
+
+    @windows_only
+    def test_windows_dev_null_from_git_bash_is_the_device_not_a_file(self) -> None:
+        self.assertEqual(winlink.device_name(str(self.home / "nul")), "nul")
+        self.assertIsNone(winlink.device_name(_reserved(self.home / "nul")))
+        result = self.run_helper("-rf", "nul")   # what MSYS passes for `rm -rf /dev/null`
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("NUL device", result.stderr)
+        self.assertEqual(self.rows(), [], "nothing was there: no failed row for the report to call a stray file")
+        plain = self.run_helper("nul")
+        self.assertEqual(plain.returncode, 1, "without -f, a missing file is an error, as rm says")
+
+    @windows_only
+    def test_windows_real_nul_file_goes_to_the_trash_folder(self) -> None:
+        folder = self.home / "scratch"
+        folder.mkdir()
+        with open(_reserved(folder / "nul"), "w") as handle:
+            handle.write("stray")
+        result = self.run_helper("-rf", "nul", cwd=folder)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(os.path.lexists(_reserved(folder / "nul")))
+        [row] = self.rows()
+        self.assertEqual(row["action"], "trashed")
+        [moved] = [p for p in os.listdir(_reserved(self.trash)) if p.startswith("nul (switchboard ")]
+        with open(_reserved(self.trash / moved)) as handle:
+            self.assertEqual(handle.read(), "stray")
+
+    @windows_only
+    def test_windows_temp_tree_holding_nul_is_deleted(self) -> None:
+        temp = Path(self.tmp.name).resolve() / "tmp"
+        tree = temp / "build-scratch"
+        (tree / "sub").mkdir(parents=True)
+        os.mkdir(_reserved(tree / "nul"))
+        for where in (tree / "nul" / "nul", tree / "sub" / "nul", tree / "con"):
+            with open(_reserved(where), "w") as handle:
+                handle.write("x")
+        self.env["SWITCHBOARD_TRASH_TEMP_PREFIXES"] = str(temp) + ";"
+        result = self.run_helper("-rf", str(tree))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(tree.exists())
+
+    def windows_reserved(self, **kwargs):
+        """windows() on a real Windows host, with the real _windows_plain (the \\\\?\\ form must be stripped)."""
+        m, calls, stack = self.windows(**kwargs)
+        return m, calls, [p for p in stack if getattr(p, "attribute", None) != "_windows_plain"]
+
+    @windows_only
+    def test_windows_nul_file_is_renamed_then_recycled(self) -> None:
+        folder = self.home / "scratch"
+        folder.mkdir()
+        with open(_reserved(folder / "nul"), "w") as handle:
+            handle.write("stray")
+        m, calls, stack = self.windows_reserved()
+        status, err = self.run_windows(stack, m, "-rf", str(folder / "nul"))
+        self.assertEqual(status, 0, err)
+        [call] = calls
+        self.assertEqual(call["env"]["SWITCHBOARD_TRASH_TARGET"], str(folder / "nul (switchboard renamed)"))
+        self.assertFalse(os.path.lexists(_reserved(folder / "nul")))
+        self.assertTrue((Path(self.tmp.name) / "fake-recycle-bin" / "nul (switchboard renamed)").is_file())
+        [row] = self.rows()
+        self.assertEqual((row["action"], row["trashed_via"]), ("trashed", "recycle-bin"))
+        self.assertIn("reserves the name", row["trashed_to"])
+
+    @windows_only
+    def test_windows_folder_holding_reserved_names_is_recycled_whole(self) -> None:
+        # SHFileOperation refuses a folder with a nul inside ("This function is not supported on this system").
+        target = self.home / "probe"
+        (target / "sub").mkdir(parents=True)
+        os.mkdir(_reserved(target / "nul"))
+        for where in (target / "nul" / "nul", target / "sub" / "nul.txt", target / "keep.txt"):
+            with open(_reserved(where), "w") as handle:
+                handle.write("x")
+        m, calls, stack = self.windows_reserved()
+        status, err = self.run_windows(stack, m, "-rf", str(target))
+        self.assertEqual(status, 0, err)
+        [call] = calls
+        self.assertEqual(call["env"]["SWITCHBOARD_TRASH_TARGET"], str(target))
+        binned = Path(self.tmp.name) / "fake-recycle-bin" / "probe"
+        self.assertEqual(sorted(os.listdir(binned)), ["keep.txt", "nul (switchboard renamed)", "sub"])
+        self.assertEqual(os.listdir(binned / "nul (switchboard renamed)"), ["nul (switchboard renamed)"])
+        if winlink.device_name(str(target / "sub" / "nul.txt")):   # Windows 10 reserves nul.txt too; 11 does not
+            self.assertEqual(os.listdir(binned / "sub"), ["nul_txt (switchboard renamed)"])
+        else:
+            self.assertEqual(os.listdir(binned / "sub"), ["nul.txt"])
+
+    @windows_only
+    def test_windows_failed_move_renames_reserved_names_back(self) -> None:
+        target = self.home / "probe"
+        target.mkdir()
+        os.mkdir(_reserved(target / "nul"))
+        with open(_reserved(target / "nul" / "nul"), "w") as handle:
+            handle.write("x")
+        m, calls, stack = self.windows_reserved(ps_exit=1, ps_stderr="boom")
+        status, err = self.run_windows(stack, m, "-rf", str(target / "nul"))
+        self.assertEqual(status, 1)
+        self.assertIn("nothing was deleted", err)
+        self.assertEqual(calls[0]["env"]["SWITCHBOARD_TRASH_TARGET"], str(target / "nul (switchboard renamed)"))
+        self.assertEqual(os.listdir(_reserved(target)), ["nul"])
+        self.assertEqual(os.listdir(_reserved(target / "nul")), ["nul"])
+        [row] = self.rows()
+        self.assertEqual(row["action"], "failed")
+
+    @windows_only
+    def test_windows_refused_move_renames_nothing(self) -> None:
+        # The Recycle Bin checks run before any rename: a volume that deletes for good leaves names as they are.
+        target = self.home / "probe"
+        target.mkdir()
+        with open(_reserved(target / "nul"), "w") as handle:
+            handle.write("x")
+        m, calls, stack = self.windows_reserved(config={"nuke": True, "policy_off": False, "max_bytes": None})
+        status, err = self.run_windows(stack, m, "-rf", str(target))
+        self.assertEqual(status, 1)
+        self.assertEqual(calls, [])
+        self.assertEqual(os.listdir(target), ["nul"])
+        self.assertIn("deletes files instead of recycling", err)
+
+    @windows_only
+    def test_windows_failed_undo_says_where_the_item_is(self) -> None:
+        target = self.home / "probe"
+        target.mkdir()
+        with open(_reserved(target / "nul"), "w") as handle:
+            handle.write("x")
+        m, calls, stack = self.windows_reserved(ps_exit=1, ps_stderr="boom")
+        real_rename = os.rename
+
+        def rename(source, dest):
+            if str(source).endswith("(switchboard renamed)"):
+                raise PermissionError(13, "in use")   # the rename back fails
+            return real_rename(source, dest)
+        stack.append(mock.patch.object(m.os, "rename", side_effect=rename))
+        status, err = self.run_windows(stack, m, "-rf", str(target / "nul"))
+        self.assertEqual(status, 1)
+        renamed = str(target / "nul (switchboard renamed)")
+        self.assertIn(f"still on disk at: {renamed}", err)
+        self.assertNotIn("is gone", err)
+        [row] = self.rows()
+        self.assertEqual((row["action"], row["now_at"]), ("failed", renamed))
+        line = m.summary_line(self.rows())
+        self.assertIn("Not trashed, still in place (1)", line)
+
+    @windows_only
+    def test_windows_extended_path_forms(self) -> None:
+        drive = os.path.splitdrive(os.getcwd())[0]
+        self.assertEqual(winlink.extended_path(r"C:\x\nul\aux"), r"\\?\C:\x\nul\aux")
+        self.assertEqual(winlink.extended_path("/c/x/nul"), r"\\?\c:\x\nul")
+        self.assertEqual(winlink.extended_path(r"\tmp\nul"), "\\\\?\\" + drive + r"\tmp\nul")
+        self.assertEqual(winlink.extended_path(r"\a\nul"), "\\\\?\\" + drive + r"\a\nul", "a rooted path is not /a/")
+        self.assertEqual(winlink.extended_path(r"\\server\share\nul"), r"\\?\UNC\server\share\nul")
+        self.assertEqual(winlink.extended_path(r"C:\x\y\..\nul"), r"\\?\C:\x\nul")
+        self.assertEqual(winlink.extended_path("nul"), "\\\\?\\" + os.path.join(os.getcwd(), "nul"))
+        self.assertEqual(winlink.extended_path("C:\\"), "\\\\?\\C:\\")
+
+    @unittest.skipIf(os.name == "nt", "a POSIX device node")
+    def test_dev_null_is_never_trashed(self) -> None:
+        result = self.run_helper("-rf", "/dev/null")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("is a device", result.stderr)
+        self.assertEqual(self.rows(), [])
+        self.assertFalse(self.trash.exists() and any(self.trash.iterdir()))
+
+    @windows_only
+    def test_winlink_rmtree_removes_reserved_names(self) -> None:
+        tree = self.home / "tree"
+        tree.mkdir()
+        os.mkdir(_reserved(tree / "nul"))
+        with open(_reserved(tree / "nul" / "aux"), "w") as handle:
+            handle.write("x")
+        with open(_reserved(tree / "nul" / "nul"), "w") as handle:
+            handle.write("x")
+        winlink.rmtree(str(tree))
+        self.assertFalse(tree.exists())
 
 
 if __name__ == "__main__":

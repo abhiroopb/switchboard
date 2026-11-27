@@ -118,6 +118,154 @@ class DevServers(Base):
         self.assertEqual(self.killed, [])
 
 
+class OwnedDevServers(Base):
+    """prototyping react-starter servers recorded with their owning tab:
+    stopped once that tab closes or its session ends, never while the tab is open, never one
+    started by hand, never a reused pid."""
+
+    TAB, OTHER_TAB, AGENT = "ws-interview", "ws-cos", 700
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.reg = Path(self.tmp.name) / "dev-servers"
+        self.reg.mkdir()
+        self.free_checked: list = []
+
+    def record(self, *, port=5173, pid=100, started=1000.0, manual=False, tab=TAB, agent_pid=AGENT, **extra) -> Path:
+        rec = {"kind": "prototyping react-starter", "pid": pid, "port": port, "started_at": started,
+               "manual": manual, "owner": {"workspace_id": tab, "agent_pid": agent_pid, "session_id": "s-1"}, **extra}
+        f = self.reg / f"port-{port}.json"
+        f.write_text(json.dumps(rec), encoding="utf-8")
+        return f
+
+    def agent(self, created=900.0) -> Proc:
+        return Proc(self.AGENT, 1, "claude.exe", "claude", created=created)
+
+    def run_owned(self, procs, tabs=(OTHER_TAB,), dry_run=False):
+        def free(port):
+            self.free_checked.append(port)
+            return True
+        with mock.patch("os.getpid", return_value=SELF_PID):
+            return tl.stop_owned_dev_servers(open_workspaces=lambda: set(tabs), procs=self.me() + procs,
+                                             registries=[self.reg], log_path=self.log_path, killer=self.killer,
+                                             log=lambda m: None, dry_run=dry_run, is_port_free=free)
+
+    def test_tab_closed_stops_the_whole_tree_frees_the_port_and_drops_the_record(self) -> None:
+        f = self.record()
+        result = self.run_owned(vite_tree("", base_pid=100) + [self.agent()])
+        self.assertEqual(sorted(self.killed), [100, 101, 102, 103, 104, 105])
+        self.assertLess(self.killed.index(105), self.killed.index(100))   # children before the wrapper
+        self.assertNotIn(self.AGENT, self.killed, "the agent itself is never stopped")
+        self.assertEqual(result["servers"][0]["port_free"], True)
+        self.assertEqual(self.free_checked, [5173])
+        self.assertFalse(f.exists())
+        logged = [json.loads(line) for line in self.log_path.read_text(encoding="utf-8").splitlines()]
+        self.assertTrue(all("its tab closed" in r["reason"] for r in logged), logged)
+
+    def test_tab_still_open_is_never_stopped_even_if_the_session_ended(self) -> None:
+        f = self.record()
+        result = self.run_owned(vite_tree("", base_pid=100), tabs=(self.TAB, self.OTHER_TAB))
+        self.assertEqual(self.killed, [])
+        self.assertTrue(f.exists())
+        self.assertIn("still open", result["spared_servers"][0]["why"])
+
+    def test_unreadable_tab_list_stops_nothing(self) -> None:
+        self.record()
+        for tabs in ((), None):
+            def boom():
+                raise RuntimeError("cmux down")
+            with mock.patch("os.getpid", return_value=SELF_PID):
+                tl.stop_owned_dev_servers(open_workspaces=(boom if tabs is None else (lambda: set())),
+                                          procs=self.me() + vite_tree("", base_pid=100), registries=[self.reg],
+                                          killer=self.killer, log=lambda m: None, is_port_free=lambda p: True)
+        self.assertEqual(self.killed, [])
+
+    def test_without_a_tab_it_goes_when_the_agent_session_ends(self) -> None:
+        self.record(tab="")
+        self.run_owned(vite_tree("", base_pid=100) + [self.agent()])
+        self.assertEqual(self.killed, [], "agent still running")
+        self.run_owned(vite_tree("", base_pid=100))
+        self.assertEqual(sorted(self.killed), [100, 101, 102, 103, 104, 105])
+
+    def test_a_reused_agent_pid_counts_as_ended(self) -> None:
+        self.record(tab="")
+        self.run_owned(vite_tree("", base_pid=100) + [self.agent(created=5000.0)])   # born after the server
+        self.assertIn(100, self.killed)
+
+    def test_started_by_hand_or_keep_is_never_stopped(self) -> None:
+        for manual in (True, None, "no"):
+            self.record(manual=manual, why_manual="started by hand")
+            result = self.run_owned(vite_tree("", base_pid=100))
+            self.assertEqual(self.killed, [], manual)
+            self.assertIn("by hand", result["spared_servers"][0]["why"])
+        # An unrecorded npm run dev in a closed tab: no record, nothing to stop.
+        for f in self.reg.glob("*.json"):
+            f.unlink()
+        self.assertEqual(self.run_owned(vite_tree("", base_pid=100)), {"stopped": 0})
+        self.assertEqual(self.killed, [])
+
+    def test_a_reused_server_pid_is_not_stopped_and_the_stale_record_goes(self) -> None:
+        f = self.record(started=1000.0 - 3600)   # the recorded server ended an hour before this pid began
+        self.run_owned(vite_tree("", base_pid=100))
+        self.assertEqual(self.killed, [])
+        self.assertFalse(f.exists())
+
+    def test_a_server_already_gone_drops_its_record(self) -> None:
+        f = self.record(pid=4242)
+        result = self.run_owned([Proc(5, 1, "node.exe", "node other.js", created=1.0)])
+        self.assertEqual(self.killed, [])
+        self.assertFalse(f.exists())
+        self.assertEqual(result["dropped"], [str(f)])
+
+    def test_a_failed_stop_keeps_the_record(self) -> None:
+        f = self.record()
+        with mock.patch("os.getpid", return_value=SELF_PID):
+            result = tl.stop_owned_dev_servers(open_workspaces=lambda: {self.OTHER_TAB},
+                                               procs=self.me() + vite_tree("", base_pid=100), registries=[self.reg],
+                                               killer=lambda v: "access denied", log=lambda m: None,
+                                               is_port_free=lambda p: True)
+        self.assertTrue(f.exists())
+        self.assertFalse(result["servers"][0]["port_free"])
+
+    def test_dry_run_and_kill_switch(self) -> None:
+        f = self.record()
+        self.run_owned(vite_tree("", base_pid=100), dry_run=True)
+        self.assertEqual(self.killed, [])
+        self.assertTrue(f.exists())
+        with mock.patch.dict(os.environ, {"SWITCHBOARD_LEFTOVER_SWEEP": "off"}):
+            self.assertEqual(self.run_owned(vite_tree("", base_pid=100))["skipped"], "SWITCHBOARD_LEFTOVER_SWEEP=off")
+        self.assertEqual(self.killed, [])
+
+    def test_a_record_rewritten_during_the_sweep_is_kept(self) -> None:
+        f = self.record()
+
+        def killer(victim):
+            self.killed.append(victim["pid"])
+            if victim["pid"] == 100:   # `react` writes a new record for the port meanwhile
+                self.record(pid=200, started=2000.0)
+            return ""
+        with mock.patch("os.getpid", return_value=SELF_PID):
+            tl.stop_owned_dev_servers(open_workspaces=lambda: {self.OTHER_TAB}, procs=self.me() + vite_tree("", base_pid=100),
+                                      registries=[self.reg], killer=killer, log=lambda m: None, is_port_free=lambda p: True)
+        self.assertIn(100, self.killed)
+        self.assertEqual(json.loads(f.read_text(encoding="utf-8"))["pid"], 200)
+
+    def test_port_free_checks_ipv6_loopback_too(self) -> None:
+        seen = []
+        with mock.patch.object(tl, "_answers", side_effect=lambda h, p, t: seen.append(h) or h == "::1"):
+            self.assertFalse(tl.port_free(5173, wait=0))
+        self.assertIn("::1", seen)
+        with mock.patch.object(tl, "_answers", return_value=False):
+            self.assertTrue(tl.port_free(5173, wait=0))
+
+    def test_protected_and_non_killable_processes_in_the_tree_are_spared(self) -> None:
+        self.record()
+        tree = vite_tree("", base_pid=100) + [Proc(106, 104, "brave.exe", "brave --type=renderer", created=1010.0)]
+        self.run_owned(tree)
+        self.assertNotIn(106, self.killed)
+        self.assertIn(104, self.killed)
+
+
 class PathRule(Base):
     def test_tail_monitor_on_removed_worktree_is_stopped(self) -> None:
         """2026-11-14: tail plus grep following a log in a worktree removed the day before, msys path spelling."""

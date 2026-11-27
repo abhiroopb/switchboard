@@ -81,7 +81,8 @@ graphify-out/
 **/__pycache__/
 *.pyc
 **/.skill-data/
-workstreams/*/.signals/
+# Any depth: an archived workstream keeps its .signals/ at _archive/<slug>/.signals/
+workstreams/**/.signals/
 workstreams/*/generated/
 workstreams/**/.amp/
 # A workstream's verbatim asks (new-workstream.py writes them here, never to tracked files)

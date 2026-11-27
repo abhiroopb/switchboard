@@ -2339,6 +2339,126 @@ class CloseoutRecordTests(HermeticRepo):
         self.assertIn("the owner mid-edit", self.ctx.read_text())
         self.assertIn("`rt-two`", self.ctx.read_text())
 
+    def test_a_failed_closeout_commit_is_recovered_by_the_next_closeout(self) -> None:
+        # One close-out commit failed and left
+        # switchboard-maintenance/CONTEXT.md dirty, so every later close-out and card saw
+        # it dirty and left its own line uncommitted too (eight lines, five cards).
+        # Wrong impls: keep treating switchboard's own leftover as someone's mid-edit;
+        # treat any dirty file as ours (would commit the owner's edit).
+        with self._index_locked():   # a concurrent landing holds main's index
+            first = dispatch.record_on_main(self.task)
+        self.assertTrue(first["recorded"])
+        self.assertFalse(first["committed"], first)
+        self.assertTrue(dispatch.owner_tabs.is_own_write(self.repo, "workstreams/switchboard-maintenance/CONTEXT.md"))
+        self.assertEqual(dispatch.stray_main_writes({**self.task, "started_at": "2020-01-01T00:00:00Z"},
+                                                    held={"workstreams/switchboard-maintenance/CONTEXT.md"}), [])
+        second = dispatch.record_on_main({**self.task, "id": "rt-two"}, result="second")
+        self.assertTrue(second["committed"], second)
+        self.assertEqual(self._git("status", "--porcelain").strip(), "")
+        committed = self._git("show", "HEAD:workstreams/switchboard-maintenance/CONTEXT.md")
+        self.assertIn("`rt-wt`", committed)
+        self.assertIn("`rt-two`", committed)
+        self.assertNotIn("own-writes", self._git("status", "--porcelain", "--ignored", "--untracked-files=all"),
+                         "the registry lives in .git and never shows in the tree")
+        # A later edit by anyone else breaks the match: that file is mid-edit again.
+        with self._index_locked():
+            dispatch.record_on_main({**self.task, "id": "rt-three"}, result="third")
+        self.ctx.write_text(self.ctx.read_text() + "\nthe owner typing\n")
+        fourth = dispatch.record_on_main({**self.task, "id": "rt-four"}, result="fourth")
+        self.assertFalse(fourth["committed"])
+        self.assertIn("uncommitted edits on main", fourth["reason"])
+
+    def test_a_line_ending_only_rewrite_is_not_a_mid_edit(self) -> None:
+        # Python's write_text on Windows wrote CONTEXT.md
+        # with CRLF. With eol=lf, git status listed the file although git diff saw no
+        # change, so the next close-out and result card were left uncommitted.
+        # Wrong impls: keep reading CRLF-only as a mid-edit; keep writing CRLF;
+        # treat a real edit as clean.
+        rel = "workstreams/switchboard-maintenance/CONTEXT.md"
+        (self.repo / ".gitattributes").write_bytes(b"* text=auto eol=lf\n")
+        self._git("add", ".gitattributes")
+        self._git("commit", "-q", "-m", "attrs")
+        self.assertTrue(dispatch.record_on_main(self.task)["committed"])
+        self.ctx.write_bytes(self.ctx.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+        self.assertIn(rel, dispatch.dirty_main_paths())  # git status lists it
+        self.assertFalse(dispatch.owner_tabs.dirty_by_others(self.repo, rel))
+        second = dispatch.record_on_main({**self.task, "id": "rt-two"}, result="second")
+        self.assertTrue(second["committed"], second)
+        self.assertNotIn(b"\r", self.ctx.read_bytes())  # written back with LF
+        self.assertEqual(self._git("status", "--porcelain").strip(), "")
+        self.assertIn("`rt-two`", self._git("show", f"HEAD:{rel}"))
+        # A result card keeps LF too.
+        dispatch.owner_tabs.write_latest_results(self.repo, "switchboard-maintenance", "rt-card", "### card `rt-card`\nbody\n")
+        self.assertNotIn(b"\r", self.ctx.read_bytes())
+        self._git("commit", "-q", "-m", "card", "--", rel)
+        # A real edit still counts as someone's mid-edit.
+        self.ctx.write_bytes(self.ctx.read_bytes() + b"\nthe owner typing\n")
+        third = dispatch.record_on_main({**self.task, "id": "rt-three"}, result="third")
+        self.assertFalse(third["committed"])
+        self.assertIn("uncommitted edits on main", third["reason"])
+
+    def test_dirty_counts_staged_deleted_and_untracked_content(self) -> None:
+        rel = "workstreams/switchboard-maintenance/CONTEXT.md"
+        dirty = dispatch.owner_tabs._dirty
+        self.assertFalse(dirty(self.repo, rel))
+        original = self.ctx.read_bytes()
+        # Staged, then undone in the file: a path-limited commit would drop the staged edit.
+        self.ctx.write_bytes(original + b"staged by the owner\n")
+        self._git("add", rel)
+        self.ctx.write_bytes(original)
+        self.assertTrue(dirty(self.repo, rel))
+        self._git("reset", "-q", "--", rel)
+        self.assertFalse(dirty(self.repo, rel))
+        self.ctx.unlink()
+        self.assertTrue(dirty(self.repo, rel))
+        self.ctx.write_bytes(original)
+        new = self.repo / "workstreams" / "brand-new" / "CONTEXT.md"
+        new.parent.mkdir(parents=True)
+        new.write_bytes(b"# new\n")
+        self.assertTrue(dirty(self.repo, "workstreams/brand-new/CONTEXT.md"))
+        self.assertEqual(dispatch.owner_tabs._git_reason(
+            dispatch.subprocess.CompletedProcess([], 1, "", "warning: in the working copy of 'x', LF will be replaced\nrefused by hook\n")),
+            "refused by hook")
+
+    def _index_locked(self):
+        lock = self.repo / ".git" / "index.lock"
+        test = self
+
+        class Held:
+            def __enter__(self_inner):
+                lock.write_text("")
+            def __exit__(self_inner, *exc):
+                lock.unlink()
+                test.assertFalse(lock.exists())
+        return Held()
+
+    def test_a_result_card_after_a_failed_closeout_commit_commits_both(self) -> None:
+        # The other writer of the same file: a card must not see switchboard's own close-out as a mid-edit.
+        with self._index_locked():
+            self.assertFalse(dispatch.record_on_main(self.task)["committed"])
+        out = dispatch.owner_tabs.deliver_result_card(dict(self.task), "done", "sidebar lane shipped", "",
+                                                      workspaces=[], by_ws={}, root=self.repo)
+        self.assertEqual(out["card"], "context", out)
+        self.assertTrue(out.get("committed"), out)
+        self.assertEqual(self._git("status", "--porcelain").strip(), "")
+        committed = self._git("show", "HEAD:workstreams/switchboard-maintenance/CONTEXT.md")
+        self.assertIn("Result card", committed)
+        self.assertIn("## Worker close-outs", committed)
+
+    def test_concurrent_registry_writers_keep_every_entry(self) -> None:
+        # Code review: unlocked load-change-save lost about half of 300 entries across two processes.
+        rels = [f"workstreams/f{n}.md" for n in range(40)]
+        for rel in rels:
+            (self.repo / rel).write_text(rel)
+        threads = [threading.Thread(target=dispatch.owner_tabs.note_own_write, args=(self.repo, [rel])) for rel in rels]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        self.assertTrue(all(dispatch.owner_tabs.is_own_write(self.repo, rel) for rel in rels))
+        dispatch.owner_tabs.forget_own_write(self.repo, rels)
+        self.assertFalse(any(dispatch.owner_tabs.is_own_write(self.repo, rel) for rel in rels))
+
     def test_record_on_main_commits_a_context_md_it_creates_for_a_new_workstream(self) -> None:
         # A rename mid-task pointed the row at a folder with no tracked CONTEXT.md. Wrong impl
         # (the old one): `git commit -- <path>` on the file record_closeout just created fails
@@ -3343,14 +3463,8 @@ class WedgedWorkerTests(HermeticRepo):
         self.assertIsNone(dispatch.thread_last_activity_export({}))
 
 
-class LaunchVerificationTests(HermeticRepo):
-    """A launch command typed into a fresh tab can be consumed before the agent
-    starts, so the launcher reads the screen. Wrong impls: retype the command
-    into a tab whose screen is unreadable or still rendering (Amp would receive
-    it as a message); retype more than once per launcher pause; treat the command
-    echo or a mid-render screen as a shell prompt; answer a prompt on screen, which
-    is for a person; skip the check on the sweep's relaunch path (it goes through
-    release_queued → launch, the same as here)."""
+class LaunchFixture(HermeticRepo):
+    """Shared launch fixture: release_queued for one queued row against a scripted cmux."""
 
     ACK_PROMPT = ("================================================================\n"
                   "  NOTICE: example security notice\n"
@@ -3414,6 +3528,16 @@ class LaunchVerificationTests(HermeticRepo):
                 patch.object(dispatch, "AMP_VERIFY_SECONDS", self.budget), redirect_stdout(io.StringIO()):
             dispatch.release_queued(dispatch.DEFAULTS)
         return self.row(task_id)
+
+
+class LaunchVerificationTests(LaunchFixture):
+    """A launch command typed into a fresh tab can be consumed before the agent
+    starts, so the launcher reads the screen. Wrong impls: retype the command
+    into a tab whose screen is unreadable or still rendering (Amp would receive
+    it as a message); retype more than once per launcher pause; treat the command
+    echo or a mid-render screen as a shell prompt; answer a prompt on screen, which
+    is for a person; skip the check on the sweep's relaunch path (it goes through
+    release_queued → launch, the same as here)."""
 
     # --- the prompt names the session the tab is launched with ------------------
 
@@ -3893,6 +4017,94 @@ class ScratchIsolationTests(HermeticRepo):
         landed = dispatch.finish_branch(self.task)
         self.assertTrue(landed["landed"], landed)
         self.assertIn("branch line", (self.repo / "a.md").read_text())
+
+    def _readme_fixture(self) -> Path:
+        """A workstream whose config the branch changes, with README.md rendered and
+        committed on main, as in the real repo."""
+        (self.repo / ".gitattributes").write_text("* text=auto eol=lf\n")   # as in the real repo
+        ws = self.repo / "workstreams" / "alpha"
+        ws.mkdir(parents=True)
+        (ws / "CONTEXT.md").write_text("# alpha\n")
+        (ws / "config.yaml").write_text("name: alpha\nstatus: active\nnext_step: First step.\n")
+        renderer = dispatch._readme_renderer()
+        renderer.write_readme(self.repo, renderer.build_readme(self.repo))
+        self._git("add", "-A", "--", "workstreams", ".gitattributes")
+        self._git("commit", "-q", "-m", "alpha")
+        self._git("reset", "-q", "--hard")                     # re-check out with the LF rule
+        self._git("reset", "-q", "--hard", "main", cwd=self.path)   # the branch has no commits yet
+        self.assertIn("alpha", (self.path / "workstreams" / "README.md").read_text())
+        return ws
+
+    def test_a_readme_that_is_a_fresh_render_of_main_is_not_a_stray_write(self) -> None:
+        # The hourly snapshot re-rendered main's README
+        # after this task started, and finish refused the landing as a stray write.
+        # Wrong impls: commit main's render then rebase (the branch's own render
+        # conflicts on the same row); keep refusing; reset a README someone edited.
+        self._readme_fixture()
+        renderer = dispatch._readme_renderer()
+        wt_cfg = self.path / "workstreams" / "alpha" / "config.yaml"
+        wt_cfg.write_text("name: alpha\nstatus: active\nnext_step: Branch step.\n")
+        renderer.write_readme(self.path, renderer.build_readme(self.path))
+        # Main moves meanwhile (another landing changed nothing in the README) and a
+        # main-checkout render rewrites README.md with new bytes: CRLF, as text-mode
+        # write_text made on Windows.
+        readme = self.repo / "workstreams" / "README.md"
+        readme.write_bytes(readme.read_bytes().replace(b"\n", b"\r\n"))
+        self.assertTrue(dispatch.readme_is_fresh_render())
+        outcome = dispatch.finish_branch(self.task)
+        self.assertTrue(outcome["landed"], outcome)
+        self.assertIn("Branch step.", readme.read_text())
+        self.assertEqual(self._git("status", "--porcelain", "--", "workstreams").strip(), "",
+                         (outcome, self._git("diff", "--", "workstreams")))
+        self.assertIn("readme_rerender", outcome)
+
+    def test_an_uncommitted_switchboard_render_that_went_stale_still_lands_without_overlap(self) -> None:
+        # Code review: the daemon's commit failed (README noted as switchboard's own), then a
+        # config on main changed with no re-render. Wrong impl: commit main's stale render
+        # as overlap and rebase the branch onto it.
+        self._readme_fixture()
+        renderer = dispatch._readme_renderer()
+        (self.path / "workstreams" / "alpha" / "config.yaml").write_text("name: alpha\nstatus: active\nnext_step: Branch step.\n")
+        renderer.write_readme(self.path, renderer.build_readme(self.path))
+        readme = self.repo / "workstreams" / "README.md"
+        readme.write_text(readme.read_text().replace("First step.", "Stale render."))
+        dispatch.owner_tabs.note_own_write(self.repo, ["workstreams/README.md"])
+        self.assertFalse(dispatch.readme_is_fresh_render())
+        outcome = dispatch.finish_branch(self.task)
+        self.assertTrue(outcome["landed"], outcome)
+        self.assertNotIn("preserved_paths", outcome)
+        self.assertIn("Branch step.", readme.read_text())
+        self.assertNotIn("Stale render.", self._git("log", "-p", "--format=", "main", "--", "workstreams/README.md"))
+
+    def test_a_refused_landing_leaves_mains_generated_readme_alone(self) -> None:
+        # Code review: the README reset ran before the stray refusal, so a refused
+        # landing changed main although the refusal says nothing on main was changed.
+        self._readme_fixture()
+        renderer = dispatch._readme_renderer()
+        (self.path / "workstreams" / "alpha" / "config.yaml").write_text("name: alpha\nstatus: active\nnext_step: Branch step.\n")
+        renderer.write_readme(self.path, renderer.build_readme(self.path))
+        (self.path / "a.md").write_text("".join(self.lines) + "branch line\n")
+        (self.repo / "a.md").write_text("".join(self.lines) + "stray\n")      # a real stray write
+        readme = self.repo / "workstreams" / "README.md"
+        rendered = readme.read_bytes().replace(b"\n", b"\r\n")
+        readme.write_bytes(rendered)
+        outcome = dispatch.finish_branch(self.task)
+        self.assertFalse(outcome["landed"], outcome)
+        self.assertEqual([s["path"] for s in outcome["stray_writes"]], ["a.md"])
+        self.assertEqual(readme.read_bytes(), rendered)
+
+    def test_an_edited_readme_on_main_is_still_a_stray_write(self) -> None:
+        self._readme_fixture()
+        renderer = dispatch._readme_renderer()
+        (self.path / "workstreams" / "alpha" / "config.yaml").write_text("name: alpha\nstatus: active\nnext_step: Branch step.\n")
+        renderer.write_readme(self.path, renderer.build_readme(self.path))
+        readme = self.repo / "workstreams" / "README.md"
+        readme.write_text(readme.read_text() + "hand edit on main\n")
+        self.assertFalse(dispatch.readme_is_fresh_render())
+        outcome = dispatch.finish_branch(self.task)
+        self.assertFalse(outcome["landed"], outcome)
+        self.assertEqual([s["path"] for s in outcome["stray_writes"]], ["workstreams/README.md"])
+        self.assertIn("hand edit on main", readme.read_text())
 
     def test_accept_main_edits_lands_with_attribution(self) -> None:
         self._branch_edit()
@@ -4639,6 +4851,11 @@ class QueueOrderTests(unittest.TestCase):
         self.assertEqual(dispatch.queue_rank({"workstream": "switchboard-maintenance"}, cfg, self.at), (1, float("inf")))
 
 
+def run_dispatch_with(cfg: dict, **kwargs) -> tuple[int, dict]:
+    with patch.object(dispatch, "config", return_value=cfg):
+        return run_dispatch(**kwargs)
+
+
 class DatedLaunchHoldTests(unittest.TestCase):
     """Dated launch holds (for example: hold new switchboard-maintenance launches until a
     set time so memory stays free for a reviewer demo). A hold names workstreams or
@@ -4702,6 +4919,62 @@ class DatedLaunchHoldTests(unittest.TestCase):
         junk = {**self.CAP, "launch_holds": [{"workstreams": ["switchboard-maintenance"], "until": "two pm"}, "not a dict"]}
         for cfg in (far, naive, junk, {**self.CAP, "launch_holds": None}, dispatch.DEFAULTS):
             self.assertIsNone(dispatch.launch_hold(row, cfg), cfg.get("launch_holds"))
+
+    def test_one_entry_may_hold_for_days_with_its_own_max_hours_and_others_keep_24h(self) -> None:
+        # A week-long hold on one task, nothing else held past 24 h.
+        week = 60 * 24 * 7
+        row, other = self.queued("rt-week", 1, workstream="example-notes"), self.queued("rt-other", 1)
+        long_entry = {"tasks": ["rt-week"], "until": iso(self.at + timedelta(minutes=week)), "max_hours": 24 * 8,
+                      "reason": "one week of single-writer plays"}
+        short_far = {"workstreams": ["switchboard-maintenance"], "until": iso(self.at + timedelta(hours=30)), "reason": "typo"}
+        cfg = {**self.CAP, "launch_holds": [long_entry, short_far]}
+        hold = dispatch.launch_hold(row, cfg, self.at)
+        self.assertIsNotNone(hold)
+        self.assertEqual(hold["reason"], "one week of single-writer plays")
+        self.assertIsNone(dispatch.launch_hold(other, cfg, self.at), "an entry without max_hours keeps the 24 h cap")
+        # Its own cap still binds: max_hours 48 cannot reach a week out.
+        tight = {**self.CAP, "launch_holds": [{**long_entry, "max_hours": 48}]}
+        self.assertIsNone(dispatch.launch_hold(row, tight, self.at))
+        # It lifts by the clock like any other hold.
+        self.assertIsNone(dispatch.launch_hold(row, cfg, self.at + timedelta(minutes=week + 1)))
+
+    def test_allow_long_reaches_the_ceiling_and_nothing_passes_it(self) -> None:
+        row = self.queued("rt-week", 1)
+        days = lambda n: iso(self.at + timedelta(days=n))
+        entry = {"workstreams": ["switchboard-maintenance"], "allow_long": True, "reason": "long"}
+        self.assertIsNotNone(dispatch.launch_hold(row, {**self.CAP, "launch_holds": [{**entry, "until": days(20)}]}, self.at))
+        ceiling_days = dispatch.LAUNCH_HOLD_CEILING_HOURS / 24
+        for bad in ({**entry, "until": days(ceiling_days + 1)},                   # past the ceiling
+                    {**entry, "allow_long": None, "max_hours": 24 * 400, "until": days(ceiling_days + 1)},
+                    {**entry, "allow_long": "yes", "until": days(3)},             # only a real true counts
+                    {**entry, "allow_long": False, "max_hours": "a week", "until": days(3)},   # bad value: 24 h cap
+                    {**entry, "allow_long": False, "max_hours": -5, "until": days(3)},
+                    {**entry, "allow_long": False, "max_hours": True, "until": days(3)},
+                    {**entry, "allow_long": True, "until": (self.at + timedelta(days=3)).replace(tzinfo=None).isoformat()}):  # naive time still ignored
+            self.assertIsNone(dispatch.launch_hold(row, {**self.CAP, "launch_holds": [bad]}, self.at), bad)
+
+    def test_a_held_ask_never_goes_to_an_open_owner_tab(self) -> None:
+        write_ledger(*self.live)
+        sent = {"delivered": True, "workspace_ref": "workspace:5", "thread_id": "T-owner", "title": "Example Notes"}
+        with patch.object(dispatch, "owner_tab_eligible", return_value=True),                 patch.object(dispatch, "deliver_to_owner_tab", return_value=sent) as deliver:
+            code, result = self.dispatch_fresh(self.held_cfg(minutes_ahead=60 * 24 * 7, max_hours=24 * 8))
+            self.assertEqual((code, result["status"]), (0, "queued"), result)
+            self.assertIn("held until", result["reason"])
+            deliver.assert_not_called()
+            # Without a hold the same dispatch still uses the owner tab.
+            code, result = run_dispatch_with(self.CAP, task_id="rt-fresh2")
+            self.assertEqual(result.get("launch"), "owner-tab", result)
+
+    def test_a_row_queued_on_a_prerequisite_is_still_held_once_the_prerequisite_ends(self) -> None:
+        # How a dated task is queued before the hold lands: --depends-on, then the hold names its id.
+        prereq = {**self.live[0], "id": "rt-prereq", "status": "done", "attempt_id": "rt-prereq.a1.aaa"}
+        write_ledger(self.live[1], prereq, self.queued("rt-week", 5, workstream="example-notes", depends_on=["rt-prereq"]))
+        cfg = {**self.CAP, "launch_holds": [{"tasks": ["rt-week"], "until": iso(self.at + timedelta(days=7)),
+                                             "max_hours": 24 * 8, "reason": "one week of single-writer plays"}]}
+        result = self.release(cfg)
+        self.assertEqual(result["started"], [])
+        self.assertEqual([h["task_id"] for h in result["held"]], ["rt-week"])
+        self.assertEqual(self.status("rt-week"), "queued")
 
     def test_shipped_router_yaml_holds_are_dated_and_zoned(self) -> None:
         import yaml  # type: ignore
@@ -4898,10 +5171,8 @@ class CapacityReportTests(unittest.TestCase):
         self.assertFalse(dispatch.at_capacity(50, dispatch.DEFAULTS))
 
 
-class SteerTargetTests(unittest.TestCase):
-    """A steer sent by native message can arrive after `reap` closed the worker's tab
-    (row done, report delivered, grace elapsed) and never be acted on. `dispatch.py steer` is the one entry point: a terminal row becomes a
-    --continuation-of dispatch, a non-terminal row keeps the native message."""
+class SteerFixture(unittest.TestCase):
+    """Shared steer fixture: a temp ledger, a fake launch and cmux message, and run_steer."""
 
     PARENT = "rt-000000000049"
 
@@ -4950,6 +5221,12 @@ class SteerTargetTests(unittest.TestCase):
         with redirect_stdout(out), redirect_stderr(err):
             code = dispatch.command_steer(args)
         return code, json.loads(out.getvalue().strip().splitlines()[-1])
+
+
+class SteerTargetTests(SteerFixture):
+    """A steer sent by native message can arrive after `reap` closed the worker's tab
+    (row done, report delivered, grace elapsed) and never be acted on. `dispatch.py steer` is the one entry point: a terminal row becomes a
+    --continuation-of dispatch, a non-terminal row keeps the native message."""
 
     def test_every_terminal_status_takes_a_continuation(self) -> None:
         # Wrong impl: only "done" is treated as reaped; a blocked/failed row's tab is reaped the same way.
@@ -8140,6 +8417,453 @@ class UsageLimitParseTests(unittest.TestCase):
         found = usage_limits.classify_record(self.record("Claude AI usage limit reached|1794200000"))
         self.assertEqual(found["resets_at"], datetime(2026, 11, 9, 9, 48, 3, tzinfo=timezone.utc))
 
+
+
+# --- steers on a finished row -------------------------------------------------------------
+#
+# A hold-only q3 answer 18 s after rt-000000000101 finished started rt-000000000102 cold,
+# and a "stop, record and finish" steer 5 s after that one finished started rt-000000000103:
+# two workers, no work.
+
+def write_transcript(root: Path, sid: str, contexts: list[int], sidechain_context: int = 0) -> Path:
+    """A Claude transcript whose main-thread assistant calls had these context sizes."""
+    folder = root / "example-worktrees-rt-parent"
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{sid}.jsonl"
+    lines = [json.dumps({"type": "user", "message": {"role": "user", "content": "go"}})]
+    for n, total in enumerate(contexts):
+        lines.append(json.dumps({"type": "assistant", "timestamp": "2026-11-27T22:39:00Z",
+                                 "message": {"id": f"m{n}", "role": "assistant", "content": [{"type": "text", "text": "ok"}],
+                                             "usage": {"input_tokens": 4, "cache_read_input_tokens": total - 1004,
+                                                       "cache_creation_input_tokens": 1000, "output_tokens": 50}}}))
+    if sidechain_context:
+        lines.append(json.dumps({"type": "assistant", "isSidechain": True,
+                                 "message": {"id": "side", "usage": {"input_tokens": sidechain_context}}}))
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def run_captured_steer(args: argparse.Namespace) -> tuple[int, dict]:
+    out = io.StringIO()
+    with redirect_stdout(out), redirect_stderr(io.StringIO()):
+        code = dispatch.command_steer(args)
+    return code, json.loads(out.getvalue().strip().splitlines()[-1])
+
+class FinishedRowSteerTests(SteerFixture):
+    """Race guard and session resume on the steer path. Wrong impls: a second steer on a
+    finished row while its continuation is still starting opens a sibling worker; a steer
+    on a row whose continuation just finished forks the stale parent instead of the newest
+    link; a Claude parent with a small, landed session still starts a cold worker; a parent
+    whose context is huge (a fork re-caches all of it) or whose transcript is gone is
+    forked anyway; the reply line hides which of these happened."""
+
+    SID = "7112046f-33ad-4573-9cbe-af04ab3ad4c3"
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.projects = TMP / f"claude-projects-{self.id().rsplit('.', 1)[-1]}"
+        self.projects.mkdir(exist_ok=True)
+        for p in [patch.object(dispatch, "CLAUDE_PROJECTS", self.projects),
+                  patch.dict(os.environ, {"SWITCHBOARD_AGENT": "claude"}),
+                  patch.object(dispatch, "retire_review_ask", return_value=None)]:
+            p.start()
+            self.addCleanup(p.stop)
+
+    def finished(self, minutes_ago: float = 0.2, **extra: Any) -> dict:
+        done = datetime.now(timezone.utc) - timedelta(minutes=minutes_ago)
+        return self.row("done", **{"finished_at": iso(done), "updated_at": iso(done), "reaped_at": None, **extra})
+
+    def claude_parent(self, **extra: Any) -> dict:
+        return self.finished(**{"agent": "claude", "session_id": self.SID, "landed_commit": "0906ac4",
+                                "worktree": str(TMP / "wt-parent-gone"), "branch": f"task/{self.PARENT}", **extra})
+
+    def child(self, tid: str, status: str, minutes_ago: float = 0.5, parent: str | None = None, **extra: Any) -> dict:
+        at = iso(datetime.now(timezone.utc) - timedelta(minutes=minutes_ago))
+        row = {"id": tid, "status": status, "attempt": 1, "attempt_id": f"{tid}.a1.0a1b2c", "workstream": "launch-notes",
+               "origin": "cos", "prompt": f"Steer on {parent or self.PARENT}", "continuation_of": parent or self.PARENT,
+               "created_at": at, "updated_at": at}
+        if status in ledger.TERMINAL_STATUSES:
+            row.update(finished_at=at, report_delivered=True)
+        row.update(extra)
+        return row
+
+    # --- deliverable 3: race guard ---------------------------------------------------------
+
+    def test_back_to_back_steers_make_one_continuation_not_two(self) -> None:
+        # The incident replay: the first steer starts a continuation (routing, no thread yet);
+        # the second steer on the same finished row queues on that continuation.
+        write_ledger(self.finished())
+        code, first = self.run_steer("q3 answer: hold.")
+        self.assertEqual((code, first["status"]), (0, "routed"), first)
+        child_id = first["task_id"]
+        code, second = self.run_steer("Stop, record and finish.")
+        self.assertEqual(code, 0, second)
+        self.assertEqual(second["status"], "steer-queued", second)
+        self.assertEqual((second["task_id"], second["redirected_from"]), (child_id, self.PARENT))
+        self.assertIn("so the steer went to that one, no new worker", second["message"])
+        tasks = ledger.load_payload()["tasks"]
+        self.assertEqual(sorted(t["id"] for t in tasks), sorted([self.PARENT, child_id]))
+        queued = ledger.find_task(ledger.load_payload(), child_id)["pending_steers"]
+        self.assertEqual([e["text"] for e in queued], ["Stop, record and finish."])
+
+    def test_live_continuation_with_a_thread_gets_the_message(self) -> None:
+        write_ledger(self.finished(), self.child("rt-c0ffee000001", "active", thread_id="T-child",
+                                                 workspace_ref="workspace:801", started_at=iso(datetime.now(timezone.utc))))
+        code, result = self.run_steer()
+        self.assertEqual(code, 0, result)
+        self.assertEqual((result["status"], result["task_id"], result["thread_id"]), ("message", "rt-c0ffee000001", "T-child"))
+        self.assertEqual(len(ledger.load_payload()["tasks"]), 2, "no third row")
+
+    def test_grandchild_in_progress_is_found_from_the_root(self) -> None:
+        write_ledger(self.finished(), self.child("rt-c0ffee000001", "done", minutes_ago=3),
+                     self.child("rt-c0ffee000002", "routing", minutes_ago=1, parent="rt-c0ffee000001"))
+        code, result = self.run_steer()
+        self.assertEqual((code, result["status"], result["task_id"]), (0, "steer-queued", "rt-c0ffee000002"), result)
+
+    def test_just_finished_continuation_is_chained_onto(self) -> None:
+        write_ledger(self.finished(minutes_ago=5), self.child("rt-c0ffee000001", "done", minutes_ago=1))
+        code, result = self.run_steer()
+        self.assertEqual((code, result["status"]), (0, "routed"), result)
+        self.assertEqual(result["continuation_of"], "rt-c0ffee000001", "continues the newest link, not the stale parent")
+        self.assertEqual(result["chain"]["action"], "chain")
+        self.assertIn("continuing rt-c0ffee000001, which finished moments ago", result["message"])
+        new = ledger.find_task(ledger.load_payload(), result["task_id"])
+        self.assertEqual(new["continuation_of"], "rt-c0ffee000001")
+        self.assertIn("Also move the Help button", new["prompt"])
+
+    def test_old_continuation_leaves_the_named_row_as_parent(self) -> None:
+        write_ledger(self.finished(minutes_ago=90), self.child("rt-c0ffee000001", "done", minutes_ago=60))
+        code, result = self.run_steer()
+        self.assertEqual((code, result["continuation_of"]), (0, self.PARENT), result)
+        self.assertNotIn("chain", result)
+
+    def test_cancelled_continuation_is_not_chained_onto(self) -> None:
+        write_ledger(self.finished(minutes_ago=5), self.child("rt-c0ffee000001", "cancelled", minutes_ago=1))
+        code, result = self.run_steer()
+        self.assertEqual((code, result["continuation_of"]), (0, self.PARENT), result)
+
+    def test_supplemental_rows_are_not_part_of_the_chain(self) -> None:
+        write_ledger(self.finished(), self.child("rt-c0ffee000001", "routing", supplemental=True))
+        self.assertIsNone(dispatch.steer_chain_target(self.finished(), ledger.load_payload(), dispatch.DEFAULTS))
+
+    # --- deliverable 1: continuations fork the parent's session -----------------------------
+
+    def test_small_landed_claude_parent_is_forked(self) -> None:
+        write_transcript(self.projects, self.SID, [60000, 121000])
+        write_ledger(self.claude_parent())
+        code, result = self.run_steer()
+        self.assertEqual((code, result["status"]), (0, "routed"), result)
+        self.assertTrue(result["resume"]["resume"], result)
+        self.assertEqual(result["resume"]["context_tokens"], 121000)
+        self.assertIn("started a continuation that resumes its session with full context", result["message"])
+        child = ledger.find_task(ledger.load_payload(), result["task_id"])
+        self.assertEqual(child["steer_resume"]["session_id"], self.SID)
+        self.assertEqual(child["steer_resume"]["work"], "main")
+        self.assertEqual(child["steer_resume"]["from_task"], self.PARENT)
+
+    def test_fork_falls_back_to_cold_with_the_reason_in_the_reply(self) -> None:
+        cases = {
+            "huge": (lambda: write_transcript(self.projects, self.SID, [389454]), {}, "past steer_resume_max_context_tokens"),
+            "no transcript": (lambda: None, {}, "transcript (7112046f-33ad-4573-9cbe-af04ab3ad4c3) is gone"),
+            "amp parent": (lambda: write_transcript(self.projects, self.SID, [50000]), {"agent": "amp"}, "not a Claude session"),
+            "work gone": (lambda: write_transcript(self.projects, self.SID, [50000]), {"landed_commit": None}, "neither on main"),
+        }
+        for name, (make, extra, why) in cases.items():
+            with self.subTest(name), patch.object(dispatch, "on_main", return_value=False):
+                for f in self.projects.rglob("*.jsonl"):
+                    f.unlink()
+                make()
+                write_ledger(self.claude_parent(**extra))
+                code, result = self.run_steer()
+                self.assertEqual((code, result["status"]), (0, "routed"), result)
+                self.assertFalse(result["resume"]["resume"])
+                self.assertIn(why, result["resume"]["reason"])
+                self.assertIn("starts fresh because", result["message"])
+                self.assertNotIn("steer_resume", ledger.find_task(ledger.load_payload(), result["task_id"]))
+
+    def test_resume_plan_rules(self) -> None:
+        write_transcript(self.projects, self.SID, [150000])
+        base = self.claude_parent()
+        self.assertTrue(dispatch.steer_resume_plan(base, dispatch.DEFAULTS)["resume"])
+        off = dispatch.steer_resume_plan(base, {**dispatch.DEFAULTS, "steer_resume_session": False})
+        self.assertEqual((off["resume"], off["reason"]), (False, "dispatch.steer_resume_session is off"))
+        tight = dispatch.steer_resume_plan(base, {**dispatch.DEFAULTS, "steer_resume_max_context_tokens": 100000})
+        self.assertFalse(tight["resume"])
+        kept = TMP / "wt-parent-kept"
+        kept.mkdir(exist_ok=True)
+        unlanded = dispatch.steer_resume_plan({**base, "landed_commit": None, "worktree": str(kept)}, dispatch.DEFAULTS)
+        self.assertEqual((unlanded["resume"], unlanded["work"], unlanded["parent_worktree"]), (True, "worktree", str(kept)))
+        with patch.dict(os.environ, {"SWITCHBOARD_AGENT": "amp"}):
+            self.assertFalse(dispatch.steer_resume_plan(base, dispatch.DEFAULTS)["resume"])
+
+    def test_context_size_reads_the_last_main_thread_call(self) -> None:
+        write_transcript(self.projects, self.SID, [40000, 90000], sidechain_context=500000)
+        self.assertEqual(dispatch.session_context_tokens(self.SID), 90000)
+        self.assertIsNone(dispatch.session_context_tokens("0fd3afb0-1234-4abc-8def-0123456789ab"))
+
+
+    # --- code-reviewer pass ----------------------------------------------------------------
+
+    def test_live_sibling_in_the_chain_takes_the_steer(self) -> None:
+        # A done; C1 (of A) done 30 min ago; C2 (of A) routing. A steer naming C1 has no children
+        # of its own, but C2 is live work on the same chain: it goes there, never a C3.
+        write_ledger(self.finished(minutes_ago=90), self.child("rt-c0ffee000001", "done", minutes_ago=30),
+                     self.child("rt-c0ffee000002", "routing", minutes_ago=1))
+        args = argparse.Namespace(prompt=["Answer to C1's question: yes."], origin="cos", task_id="rt-c0ffee000001",
+                                  no_fallback_dispatch=False)
+        code, result = run_captured_steer(args)
+        self.assertEqual((code, result["status"], result["task_id"]), (0, "steer-queued", "rt-c0ffee000002"), result)
+        self.assertEqual(len(ledger.load_payload()["tasks"]), 3, "no fourth row")
+
+    def test_redirect_whose_target_ended_does_not_claim_no_new_worker(self) -> None:
+        write_ledger(self.finished(), self.child("rt-c0ffee000001", "routing", thread_id=None))
+
+        def ended_meanwhile(task_id: str, origin: str, text: str) -> None:
+            def mutate(payload):
+                row = ledger.find_task(payload, task_id)
+                row.update(status="done", finished_at=iso(datetime.now(timezone.utc)))
+                return row
+            ledger.locked_mutation(mutate)
+            return None
+
+        with patch.object(dispatch, "queue_steer", side_effect=ended_meanwhile):
+            code, result = self.run_steer()
+        self.assertEqual((code, result["status"]), (0, "routed"), result)
+        self.assertEqual(result["continuation_of"], "rt-c0ffee000001")
+        self.assertNotIn("no new worker", result["message"])
+        self.assertIn("started a continuation", result["message"])
+
+    def test_owner_tab_delivery_is_reported_as_such(self) -> None:
+        write_transcript(self.projects, self.SID, [60000])
+        write_ledger(self.claude_parent())
+        sent = {"delivered": True, "workspace_ref": "workspace:5", "thread_id": "T-owner", "title": "Launch Notes"}
+        with patch.object(dispatch, "owner_tab_eligible", return_value=True), \
+                patch.object(dispatch, "deliver_to_owner_tab", return_value=sent):
+            code, result = self.run_steer()
+        self.assertEqual((code, result["launch"]), (0, "owner-tab"), result)
+        self.assertIn("so this steer went to the open owner tab, no new worker", result["message"])
+        self.assertNotIn("resumes its session", result["message"])
+
+    def test_fork_comes_from_the_newest_finished_link_even_outside_the_window(self) -> None:
+        newer = "5d4873cd-35cc-412c-8330-14e755b36928"
+        write_transcript(self.projects, self.SID, [60000])
+        write_transcript(self.projects, newer, [70000])
+        write_ledger(self.claude_parent(minutes_ago=120),
+                     self.child("rt-c0ffee000001", "done", minutes_ago=60, agent="claude", session_id=newer,
+                                landed_commit="abc1234"))
+        code, result = self.run_steer()
+        self.assertEqual((code, result["continuation_of"]), (0, self.PARENT), result)   # outside the window: no chain
+        self.assertEqual((result["resume"]["from_task"], result["resume"]["session_id"]), ("rt-c0ffee000001", newer))
+
+    def test_concurrent_steers_on_one_chain_start_one_continuation(self) -> None:
+        write_ledger(self.finished())
+        results: list[dict] = []
+        with dispatch.steer_chain_lock(self.finished()):
+            worker = threading.Thread(target=lambda: results.append(self.run_steer("second")[1]))
+            worker.start()
+            worker.join(timeout=1.0)
+            self.assertTrue(worker.is_alive(), "the second steer waits for the chain lock")
+            code, first = self.run_steer_unlocked("first")
+        worker.join(timeout=30)
+        self.assertEqual(first["status"], "routed")
+        self.assertEqual(results[0]["status"], "steer-queued", results)
+        self.assertEqual(results[0]["task_id"], first["task_id"])
+        self.assertEqual(len(ledger.load_payload()["tasks"]), 2)
+
+    def run_steer_unlocked(self, text: str) -> tuple[int, dict]:
+        """A steer that already holds the chain lock (the test does), as the first of two."""
+        row = ledger.find_task(ledger.load_payload(), self.PARENT)
+        args = argparse.Namespace(prompt=[text], origin="cos", task_id=self.PARENT, no_fallback_dispatch=False)
+        out = io.StringIO()
+        with redirect_stdout(out), redirect_stderr(io.StringIO()):
+            code = dispatch._steer_terminal_row(args, row, {"action": "continuation", "status": "done"},
+                                                "launch-notes", text, guard=True)
+        return code, json.loads(out.getvalue().strip().splitlines()[-1])
+
+
+class ForkLaunchTests(unittest.TestCase):
+    """The fork reaches the worker's command line and seed. Wrong impls: the fork drops
+    --session-id (the ledger loses the transcript) or puts --resume after it; a retry
+    attempt or a resumed checkout forks again; a vanished transcript still forks; the seed
+    leaves out the new task's report line, re-runs the parent's, or lets the fork edit its
+    old worktree."""
+
+    PARENT_SID = "7112046f-33ad-4573-9cbe-af04ab3ad4c3"
+    NEW_SID = "8118af97-8780-4b85-bbce-27cc18c8e10c"
+    ROW = {"workstream": "example-notes", "attempt_id": "rt-c0ffee000001.a1.abc", "worker_id": "worker-1",
+           "id": "rt-c0ffee000001", "worktree": "/tmp/wt-child", "mode": "ultra", "agent": "claude",
+           "session_id": NEW_SID}
+
+    def test_command_line_forks_under_the_new_session_id(self) -> None:
+        command = dispatch.launch_command_for({**self.ROW, "session_fork_from": self.PARENT_SID})
+        self.assertIn(f"--resume {self.PARENT_SID} --fork-session --session-id {self.NEW_SID}", command)
+        self.assertNotIn("--resume", dispatch.launch_command_for(self.ROW))
+        self.assertNotIn("--resume", dispatch.launch_command_for({**self.ROW, "session_fork_from": "not-a-uuid"}))
+
+    def test_fork_source_is_first_attempt_claude_with_a_transcript(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.object(dispatch, "CLAUDE_PROJECTS", Path(tmp)):
+            task = {"id": "rt-c0ffee000001", "attempt": 1,
+                    "steer_resume": {"resume": True, "session_id": self.PARENT_SID}}
+            self.assertEqual(dispatch.launch_fork_source(task, "claude", False), "", "no transcript, no fork")
+            write_transcript(Path(tmp), self.PARENT_SID, [50000])
+            self.assertEqual(dispatch.launch_fork_source(task, "claude", False), self.PARENT_SID)
+            self.assertEqual(dispatch.launch_fork_source({**task, "attempt": 2}, "claude", False), "")
+            self.assertEqual(dispatch.launch_fork_source(task, "claude", True), "")
+            self.assertEqual(dispatch.launch_fork_source(task, "amp", False), "")
+            not_planned = {**task, "steer_resume": {"resume": False, "session_id": self.PARENT_SID}}
+            self.assertEqual(dispatch.launch_fork_source(not_planned, "claude", False), "")
+
+    def test_resumed_seed_names_the_new_ids_and_fences_the_old_ones(self) -> None:
+        task = {**self.ROW, "origin": "cos", "continuation_of": "rt-000000000101",
+                "prompt": "Steer on rt-000000000101 (example-notes), continued because that row is done:\n\nApply option a.",
+                "steer_resume": {"resume": True, "session_id": self.PARENT_SID, "from_task": "rt-000000000101",
+                                 "work": "main", "parent_worktree": "/tmp/wt-parent"}}
+        full = Path("/tmp/prompts/example-notes-rt-c0ffee000001.a1.abc.full.md")
+        seed = dispatch.resumed_launch_prompt(task, Path("/tmp/wt-child"), "worker-1", full)
+        self.assertTrue(seed.startswith("RESUMED SESSION."))
+        self.assertIn("worker for rt-000000000101", seed)
+        self.assertIn("report-to-cos.sh --task-id rt-c0ffee000001 --attempt-id rt-c0ffee000001.a1.abc", seed)
+        self.assertIn(f"--thread-id {self.NEW_SID}", seed)
+        self.assertIn(f"claude --resume {self.NEW_SID}", seed)
+        self.assertIn("never run its report-to-cos.sh line again", seed)
+        self.assertIn("/tmp/wt-parent is not yours anymore", seed)
+        self.assertIn("ask-cos.sh --task-id rt-c0ffee000001", seed)
+        self.assertIn(full.as_posix(), seed)
+        self.assertIn("Apply option a.", seed)
+        self.assertNotIn(self.PARENT_SID, seed, "the seed never points the worker back at the parent session")
+        unlanded_plan = {**task["steer_resume"], "work": "worktree", "parent_branch": "task/rt-000000000101"}
+        unlanded = dispatch.resumed_launch_prompt({**task, "steer_resume": unlanded_plan},
+                                                  Path("/tmp/wt-child"), "worker-1", full)
+        self.assertIn("not on main: it is still in /tmp/wt-parent on task/rt-000000000101", unlanded)
+
+    def test_seed_carries_the_secondary_clause_for_this_attempt(self) -> None:
+        task = {**self.ROW, "origin": "cos", "prompt": "Steer on rt-000000000101: Apply option a.",
+                "secondary_to": {"id": "rt-c0ffee00aaaa", "tab_title": "Example Notes 1"},
+                "steer_resume": {"resume": True, "session_id": self.PARENT_SID, "from_task": "rt-000000000101", "work": "main"}}
+        seed = dispatch.resumed_launch_prompt(task, Path("/tmp/wt-child"), "worker-1", Path("/tmp/p.full.md"))
+        self.assertIn(dispatch.secondary_clause(task, dispatch.REPO_ROOT), seed)
+
+
+class ForkLaunchEndToEndTests(LaunchFixture):
+    """release_queued → launch for a steer continuation with a resumable parent: the tab's
+    command forks the parent, the row records the fork for this attempt, and the prompt
+    file is the short seed with the full contract beside it."""
+
+    PARENT_SID = "7112046f-33ad-4573-9cbe-af04ab3ad4c3"
+
+    def test_launch_forks_and_writes_the_short_seed(self) -> None:
+        projects = self.repo / "claude-projects"
+        write_transcript(projects, self.PARENT_SID, [121000])
+        real_write = write_ledger
+        plan = {"resume": True, "session_id": self.PARENT_SID, "from_task": "rt-000000000101",
+                "work": "main", "parent_worktree": "/tmp/wt-parent"}
+
+        def with_plan(*rows: dict) -> None:
+            real_write(*[{**r, "continuation_of": "rt-000000000101", "steer_resume": plan} for r in rows])
+
+        with patch.dict(os.environ, {"SWITCHBOARD_AGENT": "claude"}), patch.object(dispatch, "CLAUDE_PROJECTS", projects), \
+                patch(f"{__name__}.write_ledger", with_plan), patch.object(dispatch, "LAUNCH_PROMPTS", self.repo / "prompts"):
+            row = self.launch([ClaudeAgentLaunchTests.CLAUDE_READY], task_id="rt-fk")
+        self.assertEqual(row.get("session_fork_from"), self.PARENT_SID, row)
+        self.assertIn(f"--resume {self.PARENT_SID} --fork-session --session-id {row['session_id']}", self.command)
+        seed = (self.repo / "prompts" / f"switchboard-maintenance-{row['attempt_id']}.md").read_text(encoding="utf-8")
+        full = (self.repo / "prompts" / f"switchboard-maintenance-{row['attempt_id']}.full.md").read_text(encoding="utf-8")
+        self.assertTrue(seed.startswith("RESUMED SESSION."), seed[:200])
+        self.assertIn("You are switchboard worker", full)
+        self.assertLess(len(seed), len(full) / 3, "the seed is short; the fork already has the contract")
+
+
+class RecordOnlySteerTests(HermeticRepo):
+    """--record-only (deliverable 2): a hold, ack or ruling on a finished row is recorded and
+    nothing is spawned. Wrong impls: a continuation worker starts anyway; the ruling reaches
+    neither the row nor main's CONTEXT.md; the row's open question and ruling to-do stay
+    open; the reply line does not say that no worker started; a live row loses the steer
+    because --record-only skipped delivery."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.ctx = self.repo / "workstreams" / "switchboard-maintenance" / "CONTEXT.md"
+        self.ctx.parent.mkdir(parents=True)
+        self.ctx.write_text("# Switchboard Maintenance\n\nStatus: active\n")
+        self._git("add", "--", "workstreams")
+        self._git("commit", "-q", "-m", "ctx")
+        self.noted: list[tuple[str, str]] = []
+        self.retired: list[str] = []
+        self.dispatched: list[Any] = []
+        for p in [patch.object(dispatch, "note_owner_action_steer", lambda tid, text: self.noted.append((tid, text))),
+                  patch.object(dispatch, "retire_review_ask", lambda tid, **kw: self.retired.append(tid)),
+                  patch.object(dispatch, "command_dispatch", lambda ns: self.dispatched.append(ns) or 0)]:
+            p.start()
+            self.addCleanup(p.stop)
+
+    def steer(self, text: str, record_only: bool = True, tid: str = "rt-wt") -> tuple[int, dict]:
+        args = argparse.Namespace(prompt=[text], origin="cos", task_id=tid, no_fallback_dispatch=False, record_only=record_only)
+        out = io.StringIO()
+        with redirect_stdout(out), redirect_stderr(io.StringIO()):
+            code = dispatch.command_steer(args)
+        return code, json.loads(out.getvalue().strip().splitlines()[-1])
+
+    def test_hold_on_a_finished_row_is_recorded_and_spawns_nothing(self) -> None:
+        text = "q3 answer: (c) hold, the owner is reviewing the plan note first."
+        write_ledger(self.worker_row(status="done", finished_at=iso(datetime.now(timezone.utc)),
+                                     worker_questions=[{"id": "q3", "question": "Which option?", "answered": False}]))
+        with patch("owner_action_capture.spawn_sync", lambda *a, **k: None):
+            code, result = self.steer(text)
+        self.assertEqual((code, result["status"], result["spawned"]), (0, "recorded", False), result)
+        self.assertEqual(self.dispatched, [], "no continuation worker")
+        self.assertIn("steer recorded on the row and in the", result["message"])
+        self.assertIn("no worker started", result["message"])
+        row = self.row()
+        self.assertEqual(row["status"], "done")
+        self.assertEqual([d["text"] for d in row["decisions"]], [text])
+        self.assertTrue(row["worker_questions"][0]["answered"])
+        self.assertIn("`rt-wt` · the owner via cos steer: q3 answer: (c) hold", self.ctx.read_text())
+        self.assertTrue(result["context"]["committed"], result)
+        self.assertEqual(self.noted, [("rt-wt", text)])
+        self.assertEqual(self.retired, ["rt-wt"])
+        self.assertEqual([t["id"] for t in ledger.load_payload()["tasks"]], ["rt-wt"])
+
+    def test_without_the_flag_a_finished_row_still_continues(self) -> None:
+        write_ledger(self.worker_row(status="done", finished_at=iso(datetime.now(timezone.utc))))
+        self.steer("Apply option a.", record_only=False)
+        self.assertEqual(len(self.dispatched), 1)
+        self.assertNotIn("the owner decisions", self.ctx.read_text())
+
+    def test_live_row_still_gets_the_steer(self) -> None:
+        write_ledger(self.worker_row(status="active", thread_id="T-live", agent=""))
+        self.agents["T-live"] = {"state": "busy", "workspace_id": "w-40"}
+        code, result = self.steer("Hold for now.")
+        self.assertEqual((code, result["status"], result["thread_id"]), (0, "message", "T-live"), result)
+        self.assertNotIn("decisions", self.row())
+        self.assertEqual(self.dispatched, [])
+
+    def test_record_only_lands_on_the_newest_link_that_holds_the_question(self) -> None:
+        # A finished 5 min ago; its continuation finished 20 s ago with the open q3. A hold sent
+        # to A records on the continuation and answers its question, so its Needs-you card closes.
+        now_ = datetime.now(timezone.utc)
+        write_ledger(self.worker_row(status="done", finished_at=iso(now_ - timedelta(minutes=5)),
+                                     created_at=iso(now_ - timedelta(hours=1))),
+                     self.worker_row(id="rt-wt2", status="done", continuation_of="rt-wt",
+                                     created_at=iso(now_ - timedelta(minutes=4)), finished_at=iso(now_ - timedelta(seconds=20)),
+                                     worker_questions=[{"id": "q3", "question": "Which option?", "answered": False}]))
+        with patch("owner_action_capture.spawn_sync", lambda *a, **k: None):
+            code, result = self.steer("q3: hold for now.")
+        self.assertEqual((code, result["status"], result["recorded_on"]), (0, "recorded", "rt-wt2"), result)
+        self.assertIn("steer recorded on its newest continuation rt-wt2", result["message"])
+        self.assertTrue(self.row("rt-wt2")["worker_questions"][0]["answered"])
+        self.assertEqual([d["text"] for d in self.row("rt-wt2")["decisions"]], ["q3: hold for now."])
+        self.assertEqual(sorted(self.retired), ["rt-wt", "rt-wt2"])
+        self.assertEqual(self.dispatched, [])
+
+    def test_failed_record_leaves_the_question_and_todo_open(self) -> None:
+        write_ledger(self.worker_row(status="done", finished_at=iso(datetime.now(timezone.utc)),
+                                     worker_questions=[{"id": "q3", "question": "Which option?", "answered": False}]))
+        with patch.object(dispatch, "record_ruling", return_value=(False, {"error": "ledger lock timeout"}, {})):
+            code, result = self.steer("hold")
+        self.assertEqual((code, result["status"]), (1, "failed"), result)
+        self.assertIn("steer not recorded: ledger lock timeout", result["message"])
+        self.assertFalse(self.row()["worker_questions"][0]["answered"])
+        self.assertEqual((self.noted, self.retired, self.dispatched), ([], [], []))
 
 if __name__ == "__main__":
     unittest.main()

@@ -647,7 +647,7 @@ def save_private_ask(folder: Path, today: str, heading: str, ask_quote: str, tit
 
 def render_readme() -> None:
     try:
-        subprocess.run([sys.executable, str(README_RENDERER), "--write"],
+        subprocess.run([sys.executable, str(README_RENDERER), "--root", str(REPO_ROOT), "--write"],
                        capture_output=True, timeout=30, check=False)
     except (subprocess.SubprocessError, OSError):
         pass

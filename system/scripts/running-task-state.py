@@ -285,7 +285,7 @@ ATTEMPT_SCOPED = (
     "finished_at", "heartbeat_at", "report_delivered", "report_delivery_unknown", "report_attempted_at",
     "stale_since", "recovery_action", "launching_at", "launched_at", "resume_sent_at", "resume_escalated_at", "landed_commit",
     "tab_title", "stuck_at", "wedged_at", "wedged", "workspace_ref_healed_from", "report_no_destination_at",
-    "resume_worktree", "resume_branch", "resume_from_attempt", "resume_session", "resume_reason",
+    "resume_worktree", "resume_branch", "resume_from_attempt", "resume_session", "resume_reason", "session_fork_from",
     "usage_limit", "paused", "usage_limit_resumed_from", "network_stop", "network_resumes",
     "launch_holds", "launch_hold_since", "launch_hold_reason", "launch_hold_told_at",
 )

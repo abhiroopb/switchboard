@@ -4,6 +4,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import os
+
+os.environ["SWITCHBOARD_TEST_SANDBOX"] = "1"  # todo_cli writes only temp files and makes no calendar call
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]

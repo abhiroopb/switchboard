@@ -437,7 +437,7 @@ case "$action" in
     fi
     # Re-render workstreams README
     if [[ -x "$REPO_ROOT/system/scripts/render-workstreams-readme.py" ]]; then
-      python3 "$REPO_ROOT/system/scripts/render-workstreams-readme.py" --write >/dev/null 2>&1 || true
+      python3 "$REPO_ROOT/system/scripts/render-workstreams-readme.py" --root "$REPO_ROOT" --write >/dev/null 2>&1 || true
     fi
     echo "[$(ts)] $slug archived"
     ;;

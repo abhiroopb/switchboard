@@ -1,9 +1,9 @@
 {
  "counts": {
   "adapter": 156,
-  "amp-only": 96,
+  "amp-only": 98,
   "cmux-only": 76,
-  "portable": 889
+  "portable": 892
  },
  "files": {
   ".agents/skills/asd-ste100/LICENSE": {
@@ -902,6 +902,10 @@
    "class": "amp-only",
    "reason": "Amp plugin bundle"
   },
+  "system/amp-plugins/switchboard/rm-guard-quotes.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
   "system/amp-plugins/switchboard/rm-guard.test.ts": {
    "class": "amp-only",
    "reason": "Amp plugin bundle"
@@ -923,6 +927,10 @@
    "reason": "Amp plugin bundle"
   },
   "system/amp-plugins/switchboard/slack-link-format.test.ts": {
+   "class": "amp-only",
+   "reason": "Amp plugin bundle"
+  },
+  "system/amp-plugins/switchboard/test-fixtures/cos-dispatch-shapes.ts": {
    "class": "amp-only",
    "reason": "Amp plugin bundle"
   },
@@ -2250,6 +2258,10 @@
    "class": "portable",
    "reason": "no harness dependency found"
   },
+  "system/scripts/test_compare_links.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
   "system/scripts/test_cos_autobind.py": {
    "class": "portable",
    "reason": "no harness dependency found"
@@ -2506,11 +2518,19 @@
    "class": "portable",
    "reason": "no harness dependency found"
   },
+  "system/scripts/test_todo_sandbox_guard.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
   "system/scripts/test_todo_short_ids.py": {
    "class": "portable",
    "reason": "no harness dependency found"
   },
   "system/scripts/test_todo_surface_gate.py": {
+   "class": "portable",
+   "reason": "no harness dependency found"
+  },
+  "system/scripts/test_verify_kit_timeout.py": {
    "class": "portable",
    "reason": "no harness dependency found"
   },

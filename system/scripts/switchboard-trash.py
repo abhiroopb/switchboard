@@ -68,6 +68,7 @@ import os
 import posixpath
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -304,7 +305,9 @@ def _freedesktop_trash(path: str) -> str:
 
 class TrashUnavailable(Exception):
     """The target could not be moved to a Trash safely. Nothing was deleted;
-    the caller reports it and the owner decides."""
+    the caller reports it and the owner decides. `now_at` names where the item is
+    when a failed move could not put it back under its own name."""
+    now_at: str = ""
 
 
 # Windows Recycle Bin ------------------------------------------------------
@@ -446,11 +449,137 @@ def _recycle_refusal(path: str) -> str | None:
     return None
 
 
+# Reserved device names. Git Bash turns a /dev/null argument to a native program into
+# `nul`, and Win32 reads `<cwd>\nul` as the NUL device, so `rm -rf /dev/null` looked like
+# a file that existed and the Recycle Bin checks failed on the device. A real file with
+# such a name (`cmd > nul` in Git Bash makes one) is reached through its \\?\ form, and
+# the Recycle Bin (SHFileOperation) cannot take that form, nor a folder holding one. So
+# each such item is renamed to a plain name in its own folder first, deepest first, and
+# the move goes ahead; a failed move renames every one back.
+RESERVED_RENAME = "{name} (switchboard renamed)"
+
+
+def _reserved_safe_name(target: str) -> str:
+    """A plain sibling name for `target` (a plain path whose last name Win32 reads as a device)."""
+    folder, name = ntpath.split(target)
+    base = RESERVED_RENAME.format(name=name.replace(".", "_"))   # no dot: `nul.txt` is reserved on Windows 10
+    candidate, n = ntpath.join(folder, base), 2
+    while os.path.lexists(winlink.extended_path(candidate)) or winlink.device_name(candidate):
+        candidate, n = ntpath.join(folder, f"{base} {n}"), n + 1
+    return candidate
+
+
+def _reserved_inside(folder: str) -> list[tuple[int, str]]:
+    """(depth, plain path) of each item under `folder` whose name Win32 reads as a
+    device. Walked in \\\\?\\ form; never descends into a link or junction."""
+    found: list[tuple[int, str]] = []
+    stack = [(winlink.extended_path(folder), 1)]
+    while stack:
+        current, depth = stack.pop()
+        try:
+            with os.scandir(current) as entries:
+                for entry in entries:
+                    plain = _windows_plain(entry.path)
+                    if winlink.is_reserved_name(entry.name) and winlink.device_name(plain):
+                        found.append((depth, plain))
+                    try:
+                        if entry.is_dir(follow_symlinks=False) and not winlink.is_link(entry.path):
+                            stack.append((entry.path, depth + 1))
+                    except OSError:
+                        continue
+        except OSError:
+            continue
+    return found
+
+
+class _Moves:
+    """Renames made on the way to the Recycle Bin, in order, both sides in \\\\?\\ form,
+    so a failed move can put everything back."""
+
+    def __init__(self) -> None:
+        self.done: list[tuple[str, str]] = []
+
+    def rename(self, source: str, dest: str, why: str) -> None:
+        try:
+            os.rename(winlink.extended_path(source), winlink.extended_path(dest))
+        except OSError as error:
+            raise TrashUnavailable(f"could not {why} ({error.strerror or error})") from error
+        self.done.append((winlink.extended_path(source), winlink.extended_path(dest)))
+
+    def undo(self) -> list[str]:
+        """Rename back, last first, so a renamed parent is back before its child. Returns
+        the current path of each item that could not go back (empty when all did)."""
+        stuck: list[tuple[str, str]] = []   # (original, where it is now)
+
+        def now(path: str) -> str:
+            for original, current in stuck:   # under a parent that stayed renamed
+                if path.lower().startswith(original.lower() + "\\"):
+                    return current + path[len(original):]
+            return path
+        back: list[tuple[str, str]] = []    # (from, to) of each rename that went back
+        for original, renamed in reversed(self.done):
+            source, dest = now(renamed), now(original)
+            if not os.path.lexists(source) or os.path.lexists(dest):
+                continue
+            try:
+                os.rename(source, dest)
+                back.append((source, dest))
+            except OSError:
+                stuck.append((original, source))
+        found = []
+        for _, current in stuck:   # a later rename back can carry a stuck item with it (out of staging)
+            for source, dest in back:
+                if current.lower().startswith(source.lower() + "\\"):
+                    current = dest + current[len(source):]
+            found.append(_windows_plain(current))
+        return found
+
+
 def _recycle_bin(path: str) -> str:
     """Send one path to the Windows Recycle Bin. Raises TrashUnavailable and leaves
-    the path untouched when that cannot be done safely. Never deletes for good."""
+    the path untouched when that cannot be done safely. Never deletes for good.
+    Items with a reserved device name, the path itself or anything inside it, are
+    recycled under a plain name."""
     target = _windows_plain(path)
-    reason = _recycle_refusal(target)
+    device = winlink.device_name(target)
+    real = winlink.real_path(target)
+    if device and not os.path.lexists(real):
+        raise TrashUnavailable(f"{ntpath.basename(target)} is the Windows {device.upper()} device, not a file")
+    if not device:
+        reason = _recycle_refusal(target)   # before any rename: nothing moves for a move that cannot go
+        if reason:
+            raise TrashUnavailable(reason)
+    inside = [] if winlink.is_link(real) or not os.path.isdir(real) else _reserved_inside(target)
+    if not device and not inside:
+        return _recycle_bin_plain(target, checked=True)
+    moves = _Moves()
+    try:
+        if device:
+            inside.append((0, target))
+        for _, item in sorted(inside, key=lambda pair: -pair[0]):   # deepest first: parents' paths stay valid
+            safe = _reserved_safe_name(item)
+            moves.rename(item, safe, f"rename {item}, a name Windows reserves, to recycle it")
+            if item == target:
+                target = safe
+        where = _recycle_bin_plain(target)
+    except TrashUnavailable as error:
+        stuck = moves.undo()
+        if stuck:
+            failure = TrashUnavailable(f"{error}; could not put it back, it is still on disk at: " + "; ".join(stuck[:5]))
+            failure.now_at = stuck[0]
+            raise failure from error
+        raise
+    renamed = [pair for pair in moves.done if winlink.is_reserved_name(ntpath.basename(_windows_plain(pair[0])))]
+    names = sorted({ntpath.basename(_windows_plain(source)) for source, _ in renamed})
+    note = (f"; first renamed {len(renamed)} item(s) named {', '.join(names)} to '<name> (switchboard renamed)', "
+            "since Windows reserves the name") if renamed else ""
+    return where + note
+
+
+def _recycle_bin_plain(target: str, checked: bool = False) -> str:
+    """The Recycle Bin move for a path Win32 reads as itself. `checked`: the caller
+    already ran the safety checks on it, unchanged since."""
+    reason = None if checked else _recycle_refusal(target)
     if reason:
         raise TrashUnavailable(reason)
     exe = _powershell_exe()
@@ -546,9 +675,28 @@ def run(argv: list[str]) -> int:
         # Convert first: a Git Bash /c/... path that skipped MSYS conversion does not
         # exist to Windows Python until it reads C:/....
         path = _absolute(arg)
+        device = winlink.device_name(path)
+        if device:
+            if not os.path.lexists(winlink.extended_path(path)):
+                # Only the device is there: `rm -rf /dev/null` from Git Bash reaches us as `nul`.
+                print(f"switchboard-trash: {arg} is the Windows {device.upper()} device (Git Bash passes /dev/null as nul), "
+                      "not a file; nothing to delete", file=sys.stderr)
+                if not flags["force"]:
+                    status = 1
+                continue
+            path = winlink.extended_path(path)   # a real file named nul: act on that file
         if not os.path.lexists(path):
             if not flags["force"]:
                 print(f"rm: {arg}: No such file or directory", file=sys.stderr)
+                status = 1
+            continue
+        try:
+            mode = os.lstat(path).st_mode
+        except OSError:
+            mode = 0
+        if stat.S_ISCHR(mode) or stat.S_ISBLK(mode):   # /dev/null on macOS or Linux: never a Trash item
+            print(f"switchboard-trash: {arg} is a device, not a file; nothing to delete", file=sys.stderr)
+            if not flags["force"]:
                 status = 1
             continue
         action, reason = classify(path)
@@ -566,6 +714,12 @@ def run(argv: list[str]) -> int:
                 try:
                     dest, via = _move(path)
                 except TrashUnavailable as error:
+                    if error.now_at:
+                        print(f"switchboard-trash: could not move {path} to the Trash ({error}); nothing was deleted. "
+                              "Ask the owner before removing it.", file=sys.stderr)
+                        _record({"action": "failed", "path": path, "now_at": error.now_at, "reason": str(error)})
+                        status = 1
+                        continue
                     print(f"switchboard-trash: could not move {path} to the Trash ({error}); nothing was deleted. "
                           "Ask the owner before removing it.", file=sys.stderr)
                     _record({"action": "failed", "path": path, "reason": str(error)})

@@ -163,6 +163,30 @@ class SandboxedTestLedger(Harness):
         self.assertIn("switchboard-test-sandbox", out.stderr)
 
 
+class ReportLogWithoutARoot(Harness):
+    """On Windows the report-log writer imports flock_compat, and it looked only in
+    $SWITCHBOARD_SCRIPTS_DIR, $SWITCHBOARD_ROOT or ~/Development/switchboard. A fresh kit install elsewhere,
+    with no root in its environment, run from its own root rather than system/scripts,
+    appended nothing: every report went unlogged and two suites failed only in a clean
+    install. Wrong impl: rely on the caller's environment or cwd to find the helper."""
+
+    def test_the_report_log_is_written_with_no_root_set_from_another_folder(self) -> None:
+        home = self.tmp / "home"
+        home.mkdir()
+        env = {k: v for k, v in self.env.items() if k not in ("SWITCHBOARD_ROOT", "SWITCHBOARD_SCRIPTS_DIR")}
+        env.update({"HOME": str(home), "USERPROFILE": str(home)})
+        self.seed("rt-nroot0000001")
+        out = subprocess.run(["bash", str(REPORT), "--task-id", "rt-nroot0000001", "--origin", "cos", "--status", "done",
+                              "--delivery", "direct", "finished: logged with no root"],
+                             env=env, cwd=str(self.tmp), capture_output=True, text=True)
+        self.assertEqual(out.returncode, 0, out.stderr + out.stdout)
+        self.assertNotIn("could not append to the report log", out.stderr)
+        feed = self.state / "thread-status-feed.jsonl"
+        self.assertTrue(feed.is_file(), "no report log written: " + out.stderr[-1500:])
+        rows = [json.loads(l) for l in feed.read_text(encoding="utf-8").splitlines() if l.strip()]
+        self.assertEqual([r["summary"] for r in rows if r["task_id"] == "rt-nroot0000001"], ["finished: logged with no root"])
+
+
 class OpensSharedComparePage(Harness):
     """A delivered report that links a compare page opens it on the owner's machine."""
 
